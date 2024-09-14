@@ -1,4 +1,5 @@
 #include "mpi.h"
+#include "CombBLAS/CombBLAS.h"
 #include <iostream>
 
 int main(int argc, char *argv[]) {
