@@ -34,5 +34,9 @@ git switch matt-test
 mkdir build && cd build
 cmake -DCOMBBLASS_INSTALL=$COMBBLAS_INSTALL -DSLATE_INSTALL=$SLATE_INSTALL ..
 cmake --build .
-mpiexec main
+```
+
+Run source
+```
+sbatch job.sh
 ```

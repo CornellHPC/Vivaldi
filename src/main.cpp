@@ -3,7 +3,7 @@
 
 // This does not compile if you use both includes in the same translation
 // unit because they each define the macro "Error" differently.
-// #include "slate/slate.hh"
+#include "slate/slate.hh"
 
 #include <iostream>
 
