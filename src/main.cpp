@@ -1,5 +1,10 @@
 #include "mpi.h"
-#include "CombBLAS/CombBLAS.h"
+// #include "CombBLAS/CombBLAS.h"
+
+// This does not compile if you use both includes in the same translation
+// unit because they each define the macro "Error" differently.
+// #include "slate/slate.hh"
+
 #include <iostream>
 
 int main(int argc, char *argv[]) {
