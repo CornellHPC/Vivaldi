@@ -29,8 +29,7 @@ endif()
 
 add_executable(main src/main.cpp)
 target_include_directories(main PRIVATE "${COMBBLAS_INSTALL}/include")
-target_link_libraries(main "${COMBBLAS_INSTALL}/lib/libCombBLAS.a")
+target_link_directories(main PRIVATE "${COMBBLAS_INSTALL}/lib")
 target_include_directories(main PRIVATE "${SLATE_INSTALL}/include")
-target_link_libraries(main "${SLATE_INSTALL}/lib64/libblaspp.so")
-target_link_libraries(main "${SLATE_INSTALL}/lib64/liblapackpp.so")
-target_link_libraries(main "${SLATE_INSTALL}/lib64/libslate.so")
+target_link_directories(main PRIVATE "${SLATE_INSTALL}/lib64")
+
