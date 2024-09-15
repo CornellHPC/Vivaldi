@@ -1,11 +1,12 @@
-#include "mpi.h"
-// #include "CombBLAS/CombBLAS.h"
+#include "CombBLAS/CombBLAS.h"
+// Macro "Error" is defined in CombBLAS and SLATE. It is unused in
+// CombBLAS, so we undefine it here to prevent name collisions.
+#undef Error
 
-// This does not compile if you use both includes in the same translation
-// unit because they each define the macro "Error" differently.
 #include "slate/slate.hh"
 
 #include <iostream>
+#include <mpi.h>
 
 int main(int argc, char *argv[]) {
   int rank, nprocs;
