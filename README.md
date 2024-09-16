@@ -15,15 +15,28 @@ export COMBBLAS_INSTALL=$(pwd)
 
 Install SLATE
 ```bash
+export mpi=cray
+export blas=libsci
+export CXX=CC
 git clone --recursive https://github.com/icl-utk-edu/slate.git
-cd slate
-export CXXFLAGS=-DSLATE_HAVE_MT_BCAST
-mkdir _build && mkdir _install
-cd _build
-cmake -DCMAKE_INSTALL_PREFIX=../_install -Dbuild_tests=false ..
-cmake --build . --target install
-cd ../_install
+cd slate/blaspp
+make -j`nproc`
+cd ../lapackpp
+make -j`nproc`
+cd ..
+make -j`nproc`
+mkdir _install
+make install prefix=_install
+cd _install
 export SLATE_INSTALL=$(pwd)
+```
+
+Test SLATE (optional)
+```
+cd slate
+make check
+echo "srun --nodes=4 --ntasks=16 --cpus-per-task=8 ./test/tester gemm" > job.sh
+sbatch job.sh
 ```
 
 Build source
@@ -40,3 +53,10 @@ Run source
 ```
 sbatch job.sh
 ```
+
+Enable CUDA-aware MPI
+```
+export SLATE_GPU_AWARE_MPI=1
+export MPICH_GPU_SUPPORT_ENABLED=1
+```
+

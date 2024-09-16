@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 project(mpiio)
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
 # OpenMP
 find_package(OpenMP REQUIRED)
@@ -48,6 +48,6 @@ target_include_directories(main PRIVATE "${SLATE_INSTALL}/include")
 
 # Libraries
 target_link_directories(main PRIVATE "${COMBBLAS_INSTALL}/lib")
-target_link_directories(main PRIVATE "${SLATE_INSTALL}/lib64")
+target_link_directories(main PRIVATE "${SLATE_INSTALL}/lib")
 target_link_libraries(main gomp cusolver blaspp lapackpp slate CombBLAS)
 
