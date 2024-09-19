@@ -1,84 +1,70 @@
 #include "CombBLAS/CombBLAS.h"
-#include <cstdint>
 // Macro "Error" is defined in CombBLAS and SLATE. It is unused in
 // CombBLAS, so we undefine it here to prevent name collisions.
 #undef Error
 
+#include "mpi.h"
+#include "mpio.h"
 #include "slate/slate.hh"
-
+#include <cmath>
+#include <cstdint>
+#include <cstdlib>
 #include <iostream>
-#include <mpi.h>
 
-// Column-major indexing
-template <typename scalar_type>
-void random_matrix(int64_t m, int64_t n, scalar_type *A, int64_t lda) {
-  for (int64_t j = 0; j < n; ++j) {
-    for (int64_t i = 0; i < m; ++i) {
-      A[i + j * lda] = blas::make_scalar<scalar_type>(
-          rand() / double(RAND_MAX), rand() / double(RAND_MAX));
-    }
-  }
-}
+// Loads matrix at filename with m rows and n columns
+slate::Matrix<float> load_matrix(const char *filename, int64_t m, int64_t n,
+                                 int64_t mb = 2, int64_t nb = 2) {
+  // Get communicator information
+  int rank, size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  int p = std::sqrt(size);
 
-// Column-major indexing
-template <typename matrix_type> void random_matrix(matrix_type &A) {
-  for (int64_t j = 0; j < A.nt(); ++j) {
-    for (int64_t i = 0; i < A.mt(); ++i) {
-      if (A.tileIsLocal(i, j)) {
-        try {
-          auto T = A(i, j);
-          random_matrix(T.mb(), T.nb(), T.data(), T.stride());
-        } catch (...) {
-          // ignore missing tiles
+  // Open file
+  MPI_File fh;
+  MPI_File_open(MPI_COMM_WORLD, filename, MPI_MODE_RDONLY, MPI_INFO_NULL, &fh);
+
+  // Read data
+  float *buf = (float *)malloc(m * n * sizeof(float));
+  MPI_File_read_all(fh, buf, m * n, MPI_FLOAT, MPI_STATUS_IGNORE);
+
+  // Create matrix
+  slate::Matrix<float> M(m, n, mb, nb, p, p, MPI_COMM_WORLD);
+  M.insertLocalTiles();
+
+  // Initialize data
+  for (int64_t j = 0; j < M.nt(); ++j) {   // i loops over block columns
+    for (int64_t i = 0; i < M.mt(); ++i) { // j loops over block rows
+      if (M.tileIsLocal(i, j)) {
+        slate::Tile<float> tile = M(i, j);
+        int64_t lda = tile.stride();
+        float *A = tile.data();
+
+        for (int64_t jj = 0; jj < tile.nb(); ++jj) {   // jj loops over columns
+          for (int64_t ii = 0; ii < tile.mb(); ++ii) { // ii loops over rows
+            int64_t global_row = i * mb + ii;
+            int64_t global_column = j * nb + jj;
+            A[ii + jj * lda] = buf[global_row + global_column * m];
+          }
         }
       }
     }
   }
+
+  // Clean up
+  free(buf);
+  MPI_File_close(&fh);
+
+  return M;
 }
 
 int main(int argc, char *argv[]) {
-  int rank, nprocs;
-
   MPI_Init(&argc, &argv);
 
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-
-  float alpha = 1.0f, beta = 0.0f;
-  int64_t m = 16, n = 16, k = 16, nb = 2;
-
-  slate::Matrix<float> A(m, n, nb, 2, 2, MPI_COMM_WORLD);
-  slate::Matrix<float> B(m, n, nb, 2, 2, MPI_COMM_WORLD);
-  slate::Matrix<float> C(m, n, nb, 2, 2, MPI_COMM_WORLD);
-  A.insertLocalTiles();
-  B.insertLocalTiles();
-  C.insertLocalTiles();
-  random_matrix(A);
-  random_matrix(B);
-  random_matrix(C);
-
-  slate::gemm(alpha, A, B, beta, C);
+  slate::Matrix<float> M = load_matrix(
+      "/global/homes/m/mrrubino/cpp/distributed-popcorn/test", 4, 4);
+  slate::print("M", M);
 
   MPI_Finalize();
-
-  std::cout << "Graceful exit. Yay!" << std::endl;
   return 0;
 }
-
-/*
-
-  MPI_File fh;
-  MPI_Status status;
-  MPI_File_open(MPI_COMM_WORLD, "../DryBeanDataset/Dry_Bean_Dataset.arff",
-                MPI_MODE_RDONLY, MPI_INFO_NULL, &fh);
-
-  constexpr int num_chars = 10;
-  char *buf = (char *)malloc(num_chars * sizeof(char));
-  MPI_File_read(fh, buf, num_chars, MPI_CHAR, &status);
-  MPI_File_close(&fh);
-
-  std::cout << "Rank " << rank << " received ";
-  for (int i = 0; i < num_chars; ++i)
-    std::cout << buf[i];
-  std::cout << std::endl;
-*/
