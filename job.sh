@@ -3,6 +3,7 @@
 #SBATCH --time=00:00:10
 #SBATCH --constraint=cpu
 #SBATCH --qos=debug
+#SBATCH --output=out/%j
 
 cd /global/homes/m/mrrubino/cpp/distributed-popcorn/build
 export DVS_MAXNODES=1__

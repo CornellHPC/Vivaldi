@@ -63,7 +63,13 @@ int main(int argc, char *argv[]) {
 
   slate::Matrix<float> M = load_matrix(
       "/global/homes/m/mrrubino/cpp/distributed-popcorn/test", 4, 4);
-  slate::print("M", M);
+
+  slate::Matrix<float> MT = slate::transpose(M);
+  slate::Matrix<float> C(4, 4, 2, 2, 2, MPI_COMM_WORLD);
+  C.insertLocalTiles();
+
+  slate::gemm(1.0f, M, MT, 0.0f, C);
+  slate::print("C", C);
 
   MPI_Finalize();
   return 0;
