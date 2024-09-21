@@ -1,4 +1,4 @@
-# distributed-popcorn
+# Distributed Popcorn
 
 Install CombBLAS
 ```bash
@@ -59,4 +59,8 @@ Enable CUDA-aware MPI
 export SLATE_GPU_AWARE_MPI=1
 export MPICH_GPU_SUPPORT_ENABLED=1
 ```
+
+## Notes
+
+Make sure to clean everything up before calling `MPI_Finalize`.
 

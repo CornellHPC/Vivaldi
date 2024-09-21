@@ -7,5 +7,9 @@
 
 export DVS_MAXNODES=1__
 
+EXE_PATH=build/main
+POINT_PATH=$PWD/test
+CLUSTERS=3
+
 # Run 4 MPI processes
-srun --ntasks 4 build/main $PWD/test
+srun --ntasks 4 $EXE_PATH $POINT_PATH $CLUSTERS

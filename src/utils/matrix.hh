@@ -21,7 +21,8 @@ void grid_size(int mpi_size, int *p_out, int *q_out) {
 }
 
 template <typename scalar_type>
-void fill_mat_with_buffer(slate::Matrix<scalar_type> M, scalar_type *buf) {
+void fill_slate_mat_with_buffer(slate::Matrix<scalar_type> M,
+                                scalar_type *buf) {
   int64_t m = M.m(), n = M.n(), mb = M.tileMb(0), nb = M.tileNb(0);
   for (int64_t j = 0; j < M.nt(); ++j) {   // i loops over block columns
     for (int64_t i = 0; i < M.mt(); ++i) { // j loops over block rows
@@ -43,33 +44,34 @@ void fill_mat_with_buffer(slate::Matrix<scalar_type> M, scalar_type *buf) {
 }
 
 template <typename scalar_type>
-void fill_mat_with_scalar(slate::Matrix<scalar_type> M, scalar_type value) {
+void fill_slate_mat_with_scalar(slate::Matrix<scalar_type> M,
+                                scalar_type value) {
   int64_t m = M.m(), n = M.n(), mb = M.tileMb(0), nb = M.tileNb(0);
   scalar_type *buf = (scalar_type *)malloc(m * n * sizeof(scalar_type));
   for (int i = 0; i < m * n; ++i)
     buf[i] = value;
-  fill_mat_with_buffer(M, buf);
+  fill_slate_mat_with_buffer(M, buf);
   free(buf);
 }
 
 template <typename scalar_type>
 slate::Matrix<scalar_type>
-point_mat_to_polynomial_kernel_mat(slate::Matrix<scalar_type> M,
-                                   scalar_type gamma, scalar_type c,
-                                   scalar_type r) {
+slate_point_mat_to_polynomial_kernel_mat(slate::Matrix<scalar_type> M,
+                                         scalar_type gamma, scalar_type c,
+                                         scalar_type r) {
   slate::GridOrder order;
   int nprow, npcol, myrow, mycol;
   M.gridinfo(&order, &nprow, &npcol, &myrow, &mycol);
 
   slate::Matrix<scalar_type> MT = slate::transpose(M);
-  slate::Matrix<scalar_type> C(M.m(), M.m(), M.mt(), M.mt(), nprow, npcol,
+  slate::Matrix<scalar_type> K(M.m(), M.m(), M.mt(), M.mt(), nprow, npcol,
                                M.mpiComm());
 
-  C.insertLocalTiles();
-  fill_mat_with_scalar<scalar_type>(C, (scalar_type)c);
-  slate::gemm<scalar_type>(gamma, M, MT, (scalar_type)1, C);
+  K.insertLocalTiles();
+  fill_slate_mat_with_scalar<scalar_type>(K, (scalar_type)c);
+  slate::gemm<scalar_type>(gamma, M, MT, (scalar_type)1, K);
 
-  return C;
+  return K;
 }
 
 template <typename scalar_type>
@@ -81,11 +83,11 @@ slate_mat_to_combblas_dpm(slate::Matrix<scalar_type> M) {
 
   std::shared_ptr<combblas::CommGrid> grid =
       std::make_shared<combblas::CommGrid>(M.mpiComm(), nprow, npcol);
-  combblas::DnParMat<int64_t, scalar_type> A(grid, M.m(), M.n(),
+  combblas::DnParMat<int64_t, scalar_type> D(grid, M.m(), M.n(),
                                              (scalar_type)0);
 
-  // TODO: Copy data
-  return A;
+  // TODO: Copy data from M to D
+  return D;
 }
 
 #endif // DISTRIBUTED_POPCORN_MATRIX_H
