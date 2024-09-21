@@ -5,8 +5,7 @@
 #SBATCH --qos=debug
 #SBATCH --output=out/%j
 
-cd /global/homes/m/mrrubino/cpp/distributed-popcorn/build
 export DVS_MAXNODES=1__
 
 # Run 4 MPI processes
-srun --ntasks 4 main
+srun --ntasks 4 build/main $PWD/test

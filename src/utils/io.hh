@@ -8,9 +8,9 @@
 
 // Loads matrix at filename with m rows and n columns
 template <typename scalar_type>
-slate::Matrix<scalar_type> load_matrix(const char *filename, int mpi_size,
-                                       int64_t m, int64_t n, int64_t mb = 2,
-                                       int64_t nb = 2) {
+slate::Matrix<scalar_type> load_slate_mat(const char *filename, int mpi_size,
+                                          int64_t m, int64_t n, int64_t mb = 2,
+                                          int64_t nb = 2) {
   // Get communicator information
   int p;
   grid_size(mpi_size, &p, &p);
@@ -28,7 +28,7 @@ slate::Matrix<scalar_type> load_matrix(const char *filename, int mpi_size,
   M.insertLocalTiles();
 
   // Initialize data
-  fill_matrix_from_buffer(M, buf);
+  fill_mat_with_buffer(M, buf);
 
   // Clean up
   free(buf);
@@ -37,4 +37,4 @@ slate::Matrix<scalar_type> load_matrix(const char *filename, int mpi_size,
   return M;
 }
 
-#endif  // DISTRIBUTED_POPCORN_IO_H
+#endif // DISTRIBUTED_POPCORN_IO_H
