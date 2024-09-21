@@ -28,7 +28,7 @@ slate::Matrix<scalar_type> load_slate_mat(const char *filename, int mpi_size,
   M.insertLocalTiles();
 
   // Initialize data
-  fill_mat_with_buffer(M, buf);
+  fill_slate_mat_with_buffer(M, buf);
 
   // Clean up
   free(buf);

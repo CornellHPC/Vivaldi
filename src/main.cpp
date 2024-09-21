@@ -22,7 +22,7 @@ void cluster(char *points_path, int k, int rank, int size) {
 
   auto sP = load_slate_mat<float>(points_path, size, 4, 4);
   slate::print("P is", sP);
-  auto sK = point_mat_to_polynomial_kernel_mat(sP, 1.0f, 0.0f, 0.0f);
+  auto sK = slate_point_mat_to_polynomial_kernel_mat(sP, 1.0f, 0.0f, 0.0f);
   slate::print("K is ", sK);
 
   auto cK = slate_mat_to_combblas_dpm(sK);

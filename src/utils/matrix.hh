@@ -87,6 +87,7 @@ slate_mat_to_combblas_dpm(slate::Matrix<scalar_type> M) {
                                              (scalar_type)0);
 
   // TODO: Copy data from M to D
+  D.setarr(0, 1);
   return D;
 }
 
