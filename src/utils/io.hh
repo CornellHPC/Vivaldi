@@ -28,7 +28,7 @@ slate::Matrix<scalar_type> load_slate_mat(const char *filename, int mpi_size,
   // Copy to device
   scalar_type *buf;
   if (CUDA_AVAILABLE) {
-    buf = cudaMalloc(&buf, count));
+    cudaMalloc(&buf, count);
     cudaMemcpy(buf, data, count, cudaMemcpyHostToDevice);
   } else {
     buf = data;

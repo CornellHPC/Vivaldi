@@ -75,3 +75,6 @@ Make sure to clean everything up before calling `MPI_Finalize`.
 
 Define `COMBBLAS_DEBUG` to get extra debugging information printed by CombBLAS.
 
+CombBLAS seems to only support sparse matrix left multiply dense matrix, not right multiply.
+This is problematic since there is no transposition operation defined for distributed dense matrices.
+

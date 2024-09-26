@@ -33,7 +33,8 @@ void fill_slate_mat_with_buffer(slate::Matrix<scalar_type> M,
   for (int64_t j = 0; j < M.nt(); ++j) {   // i loops over block columns
     for (int64_t i = 0; i < M.mt(); ++i) { // j loops over block rows
       if (M.tileIsLocal(i, j)) {
-        slate::Tile<scalar_type> tile = M(i, j);
+        slate::Tile<scalar_type> tile =
+            M.at(i, j, CUDA_AVAILABLE ? slate::AllDevices : slate::HostNum);
         int64_t lda = tile.stride();
         scalar_type *A = tile.data();
 
@@ -43,7 +44,8 @@ void fill_slate_mat_with_buffer(slate::Matrix<scalar_type> M,
 
           if (CUDA_AVAILABLE) {
             cudaMemcpy(A + jj * lda, buf + global_column * m + global_row_start,
-                       sizeof(scalar_type) * tile.mb());
+                       sizeof(scalar_type) * tile.mb(),
+                       cudaMemcpyDeviceToDevice);
           } else {
             memcpy(A + jj * lda, buf + global_column * m + global_row_start,
                    sizeof(scalar_type) * tile.mb());

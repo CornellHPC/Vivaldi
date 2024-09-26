@@ -2,9 +2,6 @@ cmake_minimum_required(VERSION 3.20)
 project(mpiio)
 set(CMAKE_CXX_STANDARD 17)
 
-# Build for GPU target
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCUDA")
-
 # OpenMP
 find_package(OpenMP REQUIRED)
 if (NOT OpenMP_CXX_FOUND)
@@ -22,6 +19,12 @@ set(CMAKE_CXX_COMPILER ${MPI_CXX_COMPILER})
 find_package(CUDA REQUIRED)
 if (NOT CUDA_FOUND)
   message(FATAL_ERROR "Could not find CUDA.")
+endif()
+
+# GPU Support
+option(GPU "Enable GPU support.")
+if (GPU)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCUDA")
 endif()
 
 # CombBLAS
