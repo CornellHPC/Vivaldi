@@ -64,5 +64,14 @@ export MPICH_GPU_SUPPORT_ENABLED=1
 
 ## Notes
 
+Make sure to undefine the macro `Error` after including CombBLAS and before including SLATE
+to prevent the macro name collision (will emit preprocessing error otherwise).
+
+Make sure to use the standard namespace before including CombBLAS.
+
+Make sure to run on GPUs since CombBLAS SpMM requires cuSparse.
+
 Make sure to clean everything up before calling `MPI_Finalize`.
+
+Define `COMBBLAS_DEBUG` to get extra debugging information printed by CombBLAS.
 

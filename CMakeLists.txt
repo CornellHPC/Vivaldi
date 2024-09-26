@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.20)
 project(mpiio)
 set(CMAKE_CXX_STANDARD 17)
 
+# Build for GPU target
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCUDA")
+
 # OpenMP
 find_package(OpenMP REQUIRED)
 if (NOT OpenMP_CXX_FOUND)
@@ -49,5 +52,5 @@ target_include_directories(main PRIVATE "${SLATE_INSTALL}/include")
 # Libraries
 target_link_directories(main PRIVATE "${COMBBLAS_INSTALL}/lib")
 target_link_directories(main PRIVATE "${SLATE_INSTALL}/lib")
-target_link_libraries(main gomp cusolver blaspp lapackpp slate CombBLAS)
+target_link_libraries(main gomp cusparse cusolver blaspp lapackpp slate CombBLAS)
 

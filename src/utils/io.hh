@@ -3,6 +3,7 @@
 
 #include <mpi.h>
 
+#include "cuda.hh"
 #include "matrix.hh"
 #include "slate/slate.hh"
 
@@ -20,18 +21,31 @@ slate::Matrix<scalar_type> load_slate_mat(const char *filename, int mpi_size,
   MPI_File_open(MPI_COMM_WORLD, filename, MPI_MODE_RDONLY, MPI_INFO_NULL, &fh);
 
   // Read data
-  scalar_type *buf = (scalar_type *)malloc(m * n * sizeof(scalar_type));
-  MPI_File_read_all(fh, buf, m * n, MPI_FLOAT, MPI_STATUS_IGNORE);
+  size_t count = m * n * sizeof(scalar_type);
+  scalar_type *data = (scalar_type *)malloc(count);
+  MPI_File_read_all(fh, data, m * n, MPI_FLOAT, MPI_STATUS_IGNORE);
+
+  // Copy to device
+  scalar_type *buf;
+  if (CUDA_AVAILABLE) {
+    buf = cudaMalloc(&buf, count));
+    cudaMemcpy(buf, data, count, cudaMemcpyHostToDevice);
+  } else {
+    buf = data;
+  }
 
   // Create matrix
   slate::Matrix<scalar_type> M(m, n, mb, nb, p, p, MPI_COMM_WORLD);
-  M.insertLocalTiles();
+  M.insertLocalTiles(CUDA_AVAILABLE ? slate::Target::Devices
+                                    : slate::Target::Host);
 
   // Initialize data
   fill_slate_mat_with_buffer(M, buf);
 
   // Clean up
-  free(buf);
+  free(data);
+  if (CUDA_AVAILABLE)
+    cudaFree(buf);
   MPI_File_close(&fh);
 
   return M;
