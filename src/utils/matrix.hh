@@ -34,7 +34,7 @@ void fill_slate_mat_with_buffer(slate::Matrix<scalar_type> M,
     for (int64_t i = 0; i < M.mt(); ++i) { // j loops over block rows
       if (M.tileIsLocal(i, j)) {
         slate::Tile<scalar_type> tile =
-            M.at(i, j, CUDA_AVAILABLE ? slate::AllDevices : slate::HostNum);
+            M.at(i, j, CUDA_AVAILABLE ? M.tileDevice(i, j) : slate::HostNum);
         int64_t lda = tile.stride();
         scalar_type *A = tile.data();
 

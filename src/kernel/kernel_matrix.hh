@@ -27,7 +27,7 @@ slate_point_mat_to_polynomial_kernel_mat(slate::Matrix<scalar_type> M,
       {slate::Option::Target,
        CUDA_AVAILABLE ? slate::Target::Devices : slate::Target::HostTask}};
   slate::gemm<scalar_type>(gamma, M, MT, (scalar_type)1, K, opts);
-  raise_slate_mat_to_power<scalar_type>(K, r);
+  // raise_slate_mat_to_power<scalar_type>(K, r);
 
   return K;
 }
