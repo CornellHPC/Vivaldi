@@ -47,7 +47,12 @@ git clone git@github.com:mattrrubino/distributed-popcorn.git
 cd distributed-popcorn
 git switch matt-test
 mkdir build && cd build
+
+# Host memory
 cmake -DCOMBBLASS_INSTALL=$COMBBLAS_INSTALL -DSLATE_INSTALL=$SLATE_INSTALL ..
+# Device memory
+cmake -DGPU=true -DCOMBBLASS_INSTALL=$COMBBLAS_INSTALL -DSLATE_INSTALL=$SLATE_INSTALL ..
+
 cmake --build .
 ```
 

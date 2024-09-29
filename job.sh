@@ -8,6 +8,8 @@
 #SBATCH --output=out/%j
 
 export DVS_MAXNODES=1__
+export MPICH_GPU_SUPPORT_ENABLED=1
+export SLATE_GPU_AWARE_MPI=1
 
 EXE_PATH=build/main
 POINT_PATH=$PWD/test
