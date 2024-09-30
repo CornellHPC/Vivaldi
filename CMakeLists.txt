@@ -46,7 +46,7 @@ if (NOT IS_DIRECTORY "${SLATE_INSTALL}")
 endif()
 
 # Executable
-set(SOURCES src/main.cpp src/utils/io.cc src/utils/matrix.cc)
+file(GLOB SOURCES "src/main.cc" "src/**/*.cc")
 add_executable(main ${SOURCES})
 
 # Includes

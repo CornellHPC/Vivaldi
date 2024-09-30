@@ -1,8 +1,9 @@
 #include "io.hh"
 
-slate::Matrix<DATA_TYPE> load_slate_mat(const char *filename, int mpi_size,
-                                        int64_t m, int64_t n, int64_t mb,
-                                        int64_t nb) {
+slate::Matrix<DATA_TYPE> matrix::load_slate_mat(const char *filename,
+                                                int mpi_size, int64_t m,
+                                                int64_t n, int64_t mb,
+                                                int64_t nb) {
   // Get communicator information
   int p;
   grid_size(mpi_size, &p, &p);
