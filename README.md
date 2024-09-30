@@ -1,12 +1,10 @@
 # Distributed Popcorn
 
-Install CombBLAS
+Install CombBLAS (our local version, which has some bugfixes for which we should ultimately raise a PR to CombBLAS)
 ```bash
-git clone git@github.com:PASSIONLab/CombBLAS.git
+git clone git@github.com:nakuliyer/CombBLAS.git
 cd CombBLAS
 git switch combblas-gpu
-wget -O arr-setter.patch https://raw.githubusercontent.com/mattrrubino/distributed-popcorn/refs/heads/matt-test/arr-setter.patch?token=GHSAT0AAAAAACTEC2LG3Z5PZYVNZ3M6PBNYZXPJTWQ
-git apply arr-setter.patch
 mkdir _build && mkdir _install
 cd _build
 cmake -DCMAKE_INSTALL_PREFIX=../_install ..

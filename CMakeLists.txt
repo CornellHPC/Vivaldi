@@ -46,7 +46,8 @@ if (NOT IS_DIRECTORY "${SLATE_INSTALL}")
 endif()
 
 # Executable
-add_executable(main src/main.cpp)
+set(SOURCES src/main.cpp src/utils/io.cc src/utils/matrix.cc)
+add_executable(main ${SOURCES})
 
 # Includes
 target_include_directories(main PRIVATE "${COMBBLAS_INSTALL}/include")
@@ -57,3 +58,4 @@ target_link_directories(main PRIVATE "${COMBBLAS_INSTALL}/lib")
 target_link_directories(main PRIVATE "${SLATE_INSTALL}/lib")
 target_link_libraries(main gomp cusparse cusolver blaspp lapackpp slate CombBLAS)
 
+add_definitions(-w) # Ignore warnings

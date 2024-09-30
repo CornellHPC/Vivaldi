@@ -1,12 +1,6 @@
 // CombBLAS assumes this is available
 using namespace std;
 
-#include "CombBLAS/CombBLAS.h"
-
-// Macro "Error" is defined in CombBLAS and SLATE. It is unused in
-// CombBLAS, so we undefine it here to prevent name collisions.
-#undef Error
-
 // C++ standard imports
 #include <cassert>
 #include <cmath>
@@ -17,26 +11,28 @@ using namespace std;
 // Library imports
 #include "mpi.h"
 #include "mpio.h"
-#include "slate/slate.hh"
 
 // Local imports
 #include "kernel/kernel_matrix.hh"
-#include "utils/cuda.hh"
 #include "utils/io.hh"
 #include "utils/matrix.hh"
+#include "common.hh"
 
 // Define CombBLAS semiring
 template <typename UV> using SR = combblas::PlusTimesSRing<UV, UV>;
 
 // Drives the algorithm
 void cluster(char *points_path, int k, int rank, int size) {
-  if (rank == 0)
-    std::cout << "Using CUDA: " << CUDA_AVAILABLE << std::endl;
+  if (rank == 0) std::cout << "Running on: ";
+#ifdef CUDA
+  std::cout << "CUDA" << std::endl;
+#else
+  std::cout << "CPU" << std::endl;
+#endif
 
-  if (rank == 0)
-    std::cout << "Reading data from " << points_path << std::endl;
+  if (rank == 0) std::cout << "Reading data from " << points_path << std::endl;
 
-  auto sP = load_slate_mat<float>(points_path, size, 4, 4);
+  auto sP = load_slate_mat(points_path, size, 4, 4);
   slate::print("P is", sP);
   auto sK = slate_point_mat_to_polynomial_kernel_mat(sP, 1.0f, 1.0f, 2.0f);
   slate::print("K is ", sK);
@@ -44,16 +40,15 @@ void cluster(char *points_path, int k, int rank, int size) {
   auto cK = slate_mat_to_combblas_dpm(sK);
   cK.PrintToFile("out/K");
 
-  if (rank == 0)
-    std::cout << "Wrote K to disc" << std::endl;
+  if (rank == 0) std::cout << "Wrote K to disc" << std::endl;
 
-  auto cV = initialize_combblas_v_matrix<float>(cK);
+  auto cV = initialize_combblas_v_matrix(cK);
   cV.PrintInfo();
   // cV.Dump("out/V");
 
   combblas::spmm_stats stats;
-  auto O = combblas::SpMM_sC<SR<float>, int64_t, float, float, UDER<float>>(
-      cV, cK, stats);
+  auto O = combblas::SpMM_sC<SR<DATA_TYPE>, int64_t, DATA_TYPE, DATA_TYPE,
+                             UDER<DATA_TYPE>>(cV, cK, stats);
   O.PrintToFile("out/O");
 }
 
