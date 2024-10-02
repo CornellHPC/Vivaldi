@@ -50,7 +50,7 @@ void cluster(char *points_path, int k, int rank, int size) {
   if (rank == 0)
     std::cout << "Wrote K to disc" << std::endl;
 
-  auto cV = matrix::initialize_combblas_v_matrix(cK);
+  auto cV = matrix::initialize_combblas_v_matrix(cK.getgnrow(), k);
   cV.PrintInfo();
 
   combblas::spmm_stats stats;

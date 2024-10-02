@@ -14,8 +14,7 @@
 #include "../common.hh"
 
 // Define CombBLAS sparse matrix format
-template <typename UV>
-using UDER = combblas::SpCCols<int64_t, UV>;
+template <typename UV> using UDER = combblas::SpCCols<int64_t, UV>;
 
 namespace matrix {
 
@@ -32,13 +31,12 @@ void fill_slate_mat_with_scalar(slate::Matrix<DATA_TYPE> M, DATA_TYPE value);
 DATA_TYPE get_slate_mat_value(slate::Matrix<DATA_TYPE> M, int64_t ii,
                               int64_t jj);
 
-combblas::DnParMat<int64_t, DATA_TYPE> slate_mat_to_combblas_dpm(
-    slate::Matrix<DATA_TYPE> M);
+combblas::DnParMat<int64_t, DATA_TYPE>
+slate_mat_to_combblas_dpm(slate::Matrix<DATA_TYPE> M);
 
-// TODO: Make this the V matrix
 combblas::SpParMat<int64_t, DATA_TYPE, UDER<DATA_TYPE>>
-initialize_combblas_v_matrix(combblas::DnParMat<int64_t, DATA_TYPE> &K);
+initialize_combblas_v_matrix(int m, int k);
 
-}  // namespace matrix
+} // namespace matrix
 
-#endif  // DISTRIBUTED_POPCORN_MATRIX_H
+#endif // DISTRIBUTED_POPCORN_MATRIX_H

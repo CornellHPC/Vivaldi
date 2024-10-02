@@ -13,7 +13,7 @@ export SLATE_GPU_AWARE_MPI=1
 
 EXE_PATH=build/main
 POINT_PATH=$PWD/test
-CLUSTERS=3
+CLUSTERS=2
 
 # Run 4 MPI processes
 srun --ntasks 4 --gpus 16 $EXE_PATH $POINT_PATH $CLUSTERS
