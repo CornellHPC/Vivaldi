@@ -57,5 +57,3 @@ target_include_directories(main PRIVATE "${SLATE_INSTALL}/include")
 target_link_directories(main PRIVATE "${COMBBLAS_INSTALL}/lib")
 target_link_directories(main PRIVATE "${SLATE_INSTALL}/lib")
 target_link_libraries(main gomp cusparse cusolver blaspp lapackpp slate CombBLAS)
-
-add_definitions(-w) # Ignore warnings
