@@ -22,17 +22,17 @@ void grid_size(int mpi_size, int *p_out, int *q_out);
 
 slate::Options get_slate_opts();
 
-void fill_slate_mat_with_buffer(slate::Matrix<DATA_TYPE> M, DATA_TYPE *buf);
+void fill_slate_mat_with_buffer(slate::Matrix<DATA_TYPE> &M, DATA_TYPE *buf);
 
-void raise_slate_mat_to_power(slate::Matrix<DATA_TYPE> M, DATA_TYPE power);
+void raise_slate_mat_to_power(slate::Matrix<DATA_TYPE> &M, DATA_TYPE power);
 
-void fill_slate_mat_with_scalar(slate::Matrix<DATA_TYPE> M, DATA_TYPE value);
+void fill_slate_mat_with_scalar(slate::Matrix<DATA_TYPE> &M, DATA_TYPE value);
 
-DATA_TYPE get_slate_mat_value(slate::Matrix<DATA_TYPE> M, int64_t ii,
+DATA_TYPE get_slate_mat_value(slate::Matrix<DATA_TYPE> &M, int64_t ii,
                               int64_t jj);
 
 combblas::DnParMat<int64_t, DATA_TYPE>
-slate_mat_to_combblas_dpm(slate::Matrix<DATA_TYPE> M);
+slate_mat_to_combblas_dpm(slate::Matrix<DATA_TYPE> &M);
 
 combblas::SpParMat<int64_t, DATA_TYPE, UDER<DATA_TYPE>>
 initialize_combblas_v_matrix(int m, int k);

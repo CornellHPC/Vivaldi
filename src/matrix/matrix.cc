@@ -1,5 +1,4 @@
 #include "matrix.hh"
-#include <cstdlib>
 
 void matrix::grid_size(int mpi_size, int *p_out, int *q_out) {
   int p, q;
@@ -20,7 +19,7 @@ slate::Options matrix::get_slate_opts() {
 #endif
 }
 
-void matrix::fill_slate_mat_with_buffer(slate::Matrix<DATA_TYPE> M,
+void matrix::fill_slate_mat_with_buffer(slate::Matrix<DATA_TYPE> &M,
                                         DATA_TYPE *buf) {
   int64_t m = M.m(), n = M.n(), mb = M.tileMb(0), nb = M.tileNb(0);
   for (int64_t j = 0; j < M.nt(); ++j) {   // i loops over block columns
@@ -40,7 +39,7 @@ void matrix::fill_slate_mat_with_buffer(slate::Matrix<DATA_TYPE> M,
 
 #ifdef CUDA
           cudaMemcpy(A + jj * lda, buf + global_column * m + global_row_start,
-                     sizeof(DATA_TYPE) * tile.mb(), cudaMemcpyDeviceToDevice);
+                     sizeof(DATA_TYPE) * tile.mb(), cudaMemcpyHostToDevice);
 #else
           memcpy(A + jj * lda, buf + global_column * m + global_row_start,
                  sizeof(DATA_TYPE) * tile.mb());
@@ -51,7 +50,7 @@ void matrix::fill_slate_mat_with_buffer(slate::Matrix<DATA_TYPE> M,
   }
 }
 
-void matrix::raise_slate_mat_to_power(slate::Matrix<DATA_TYPE> M,
+void matrix::raise_slate_mat_to_power(slate::Matrix<DATA_TYPE> &M,
                                       DATA_TYPE power) {
   int64_t m = M.m(), n = M.n(), mb = M.tileMb(0), nb = M.tileNb(0);
   for (int64_t j = 0; j < M.nt(); ++j) {   // i loops over block columns
@@ -71,7 +70,7 @@ void matrix::raise_slate_mat_to_power(slate::Matrix<DATA_TYPE> M,
   }
 }
 
-void matrix::fill_slate_mat_with_scalar(slate::Matrix<DATA_TYPE> M,
+void matrix::fill_slate_mat_with_scalar(slate::Matrix<DATA_TYPE> &M,
                                         DATA_TYPE value) {
   int64_t m = M.m(), n = M.n(), mb = M.tileMb(0), nb = M.tileNb(0);
   DATA_TYPE *buf = (DATA_TYPE *)malloc(m * n * sizeof(DATA_TYPE));
@@ -81,7 +80,7 @@ void matrix::fill_slate_mat_with_scalar(slate::Matrix<DATA_TYPE> M,
   free(buf);
 }
 
-DATA_TYPE matrix::get_slate_mat_value(slate::Matrix<DATA_TYPE> M, int64_t ii,
+DATA_TYPE matrix::get_slate_mat_value(slate::Matrix<DATA_TYPE> &M, int64_t ii,
                                       int64_t jj) {
   int64_t mt = M.mt(), nt = M.nt();
   int64_t i = ii / mt; // Tile row index
@@ -95,7 +94,7 @@ DATA_TYPE matrix::get_slate_mat_value(slate::Matrix<DATA_TYPE> M, int64_t ii,
 }
 
 combblas::DnParMat<int64_t, DATA_TYPE>
-matrix::slate_mat_to_combblas_dpm(slate::Matrix<DATA_TYPE> M) {
+matrix::slate_mat_to_combblas_dpm(slate::Matrix<DATA_TYPE> &M) {
   slate::GridOrder order;
   int nprow, npcol, myrow, mycol;
   M.gridinfo(&order, &nprow, &npcol, &myrow, &mycol);

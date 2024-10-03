@@ -17,15 +17,6 @@ slate::Matrix<DATA_TYPE> matrix::load_slate_mat(const char *filename,
   DATA_TYPE *data = (DATA_TYPE *)malloc(count);
   MPI_File_read_all(fh, data, m * n, MPI_FLOAT, MPI_STATUS_IGNORE);
 
-  // Copy to device
-  DATA_TYPE *buf;
-#ifdef CUDA
-  cudaMalloc(&buf, count);
-  cudaMemcpy(buf, data, count, cudaMemcpyHostToDevice);
-#else
-  buf = data;
-#endif
-
   // Create matrix
   slate::Matrix<DATA_TYPE> M(m, n, mb, nb, p, p, MPI_COMM_WORLD);
 #ifdef CUDA
@@ -35,13 +26,10 @@ slate::Matrix<DATA_TYPE> matrix::load_slate_mat(const char *filename,
 #endif
 
   // Initialize data
-  fill_slate_mat_with_buffer(M, buf);
+  fill_slate_mat_with_buffer(M, data);
 
   // Clean up
   free(data);
-#ifdef CUDA
-  cudaFree(buf);
-#endif
   MPI_File_close(&fh);
 
   return M;

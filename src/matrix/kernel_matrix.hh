@@ -7,8 +7,8 @@
 namespace matrix {
 
 slate::Matrix<DATA_TYPE> slate_point_mat_to_polynomial_kernel_mat(
-    slate::Matrix<DATA_TYPE> M, DATA_TYPE gamma, DATA_TYPE c, DATA_TYPE r);
+    slate::Matrix<DATA_TYPE> &M, DATA_TYPE gamma, DATA_TYPE c, DATA_TYPE r);
 
-}  // namespace matrix
+} // namespace matrix
 
-#endif  // DISTRIBUTED_POPCORN_KERNEL_MATRIX_H
+#endif // DISTRIBUTED_POPCORN_KERNEL_MATRIX_H

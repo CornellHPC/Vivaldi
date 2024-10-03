@@ -1,7 +1,7 @@
 #include "kernel_matrix.hh"
 
 slate::Matrix<DATA_TYPE> matrix::slate_point_mat_to_polynomial_kernel_mat(
-    slate::Matrix<DATA_TYPE> M, DATA_TYPE gamma, DATA_TYPE c, DATA_TYPE r) {
+    slate::Matrix<DATA_TYPE> &M, DATA_TYPE gamma, DATA_TYPE c, DATA_TYPE r) {
   slate::GridOrder order;
   int nprow, npcol, myrow, mycol;
   M.gridinfo(&order, &nprow, &npcol, &myrow, &mycol);
