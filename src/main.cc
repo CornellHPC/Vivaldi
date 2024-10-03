@@ -23,7 +23,7 @@ using namespace std;
 template <typename UV> using SR = combblas::PlusTimesSRing<UV, UV>;
 
 // Drives the algorithm
-void cluster(char *points_path, int k, int rank, int size) {
+void cluster(char *points_path, int m, int n, int k, int rank, int size) {
   if (rank == 0)
 #ifdef CUDA
     std::cout << "Running on: CUDA" << std::endl;
@@ -38,7 +38,7 @@ void cluster(char *points_path, int k, int rank, int size) {
   if (rank == 0)
     std::cout << "Reading data from " << points_path << std::endl;
 
-  auto sP = matrix::load_slate_mat(points_path, size, 4, 4);
+  auto sP = matrix::load_slate_mat(points_path, size, m, n);
   slate::print("P is", sP);
   auto sK =
       matrix::slate_point_mat_to_polynomial_kernel_mat(sP, 1.0f, 1.0f, 2.0f);
@@ -67,8 +67,10 @@ int main(int argc, char *argv[]) {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  assert(argc == 3 && "Must pass valid path to point data and value of k.");
-  cluster(argv[1], std::atoi(argv[2]), rank, size);
+  assert(argc == 5 && "Must pass valid path to point data, number of rows, "
+                      "number of columns, and value of k.");
+  cluster(argv[1], std::atoi(argv[2]), std::atoi(argv[3]), std::atoi(argv[4]),
+          rank, size);
 
   MPI_Finalize();
   return 0;
