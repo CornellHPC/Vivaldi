@@ -13,7 +13,7 @@ cd ../_install
 export COMBBLAS_INSTALL=$(pwd)
 ```
 
-Install SLATE
+Install [SLATE](https://github.com/icl-utk-edu/slate)
 ```bash
 export mpi=cray
 export blas=libsci
@@ -41,15 +41,12 @@ sbatch job.sh
 
 Build source
 ```bash
-git clone git@github.com:mattrrubino/distributed-popcorn.git
-cd distributed-popcorn
-git switch matt-test
 mkdir build && cd build
 
 # Host memory
-cmake -DCOMBBLASS_INSTALL=$COMBBLAS_INSTALL -DSLATE_INSTALL=$SLATE_INSTALL ..
+cmake -DCOMBBLAS_INSTALL=$COMBBLAS_INSTALL -DSLATE_INSTALL=$SLATE_INSTALL ..
 # Device memory
-cmake -DGPU=true -DCOMBBLASS_INSTALL=$COMBBLAS_INSTALL -DSLATE_INSTALL=$SLATE_INSTALL ..
+cmake -DGPU=true -DCOMBBLAS_INSTALL=$COMBBLAS_INSTALL -DSLATE_INSTALL=$SLATE_INSTALL ..
 
 cmake --build .
 ```
