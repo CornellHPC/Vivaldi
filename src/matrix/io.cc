@@ -2,11 +2,10 @@
 
 slate::Matrix<DATA_TYPE> matrix::load_slate_mat(const char *filename,
                                                 int mpi_size, int64_t m,
-                                                int64_t n, int64_t mb,
-                                                int64_t nb) {
+                                                int64_t n) {
   // Get communicator information
-  int p;
-  grid_size(mpi_size, &p, &p);
+  int p, q;
+  grid_size(mpi_size, &p, &q);
 
   // Open file
   MPI_File fh;
@@ -18,7 +17,8 @@ slate::Matrix<DATA_TYPE> matrix::load_slate_mat(const char *filename,
   MPI_File_read_all(fh, data, m * n, MPI_FLOAT, MPI_STATUS_IGNORE);
 
   // Create matrix
-  slate::Matrix<DATA_TYPE> M(m, n, mb, nb, p, p, MPI_COMM_WORLD);
+  slate::Matrix<DATA_TYPE> M(m, n, SLATE_TILE_M, SLATE_TILE_N, p, q,
+                             MPI_COMM_WORLD);
 #ifdef CUDA
   M.insertLocalTiles(slate::Target::Devices);
 #else

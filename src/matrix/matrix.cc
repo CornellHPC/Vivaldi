@@ -13,7 +13,7 @@ void matrix::grid_size(int mpi_size, int *p_out, int *q_out) {
 
 slate::Options matrix::get_slate_opts() {
 #ifdef CUDA
-  return {{slate::Option::Target, slate::Target::Devices}};
+  return {{slate::Option::Target, slate::Target::Devices}, {slate::Option::MethodGemm, slate::MethodGemm::A}};
 #else
   return {{slate::Option::Target, slate::Target::HostTask}};
 #endif

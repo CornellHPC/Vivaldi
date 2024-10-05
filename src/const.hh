@@ -6,5 +6,7 @@
 // Only constants should be defined here.
 
 #define DATA_TYPE float
+#define SLATE_TILE_M 2
+#define SLATE_TILE_N 2
 
 #endif  // DISTRIBUTED_POPCORN_CONST_H

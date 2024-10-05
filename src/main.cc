@@ -20,7 +20,8 @@ using namespace std;
 #include "util.hh"
 
 // Define CombBLAS semiring
-template <typename UV> using SR = combblas::PlusTimesSRing<UV, UV>;
+template <typename UV>
+using SR = combblas::PlusTimesSRing<UV, UV>;
 
 // Drives the algorithm
 void cluster(char *points_path, int m, int n, int k, int rank, int size) {
@@ -35,8 +36,7 @@ void cluster(char *points_path, int m, int n, int k, int rank, int size) {
   wake_gpus(rank);
 #endif
 
-  if (rank == 0)
-    std::cout << "Reading data from " << points_path << std::endl;
+  if (rank == 0) std::cout << "Reading data from " << points_path << std::endl;
 
   auto sP = matrix::load_slate_mat(points_path, size, m, n);
   std::cout << "Rank: " << rank << " at line 42" << std::endl;
@@ -46,12 +46,13 @@ void cluster(char *points_path, int m, int n, int k, int rank, int size) {
       matrix::slate_point_mat_to_polynomial_kernel_mat(sP, 1.0f, 1.0f, 2.0f);
   slate::print("K is ", sK);
 
-  auto cK = matrix::slate_mat_to_combblas_dpm(sK);
-  cK.PrintToFile("out/K");
-  std::cout << "Rank: " << rank << " at line 50" << std::endl;
+  // auto cK = matrix::slate_mat_to_combblas_dpm(sK);
+  // cK.PrintToFile("out/K");
+  // std::cout << "Rank: " << rank << " at line 50" << std::endl;
 
-  if (rank == 0)
-    std::cout << "Wrote K to disc" << std::endl;
+  if (rank == 0) std::cout << "Wrote K to disc" << std::endl;
+
+  MPI_Barrier(MPI_COMM_WORLD);
 
   // auto cV = matrix::initialize_combblas_v_matrix(cK.getgnrow(), k);
   // cV.PrintInfo();
@@ -70,8 +71,9 @@ int main(int argc, char *argv[]) {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  assert(argc == 5 && "Must pass valid path to point data, number of rows, "
-                      "number of columns, and value of k.");
+  assert(argc == 5 &&
+         "Must pass valid path to point data, number of rows, "
+         "number of columns, and value of k.");
   cluster(argv[1], std::atoi(argv[2]), std::atoi(argv[3]), std::atoi(argv[4]),
           rank, size);
 
