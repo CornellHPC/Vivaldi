@@ -9,9 +9,10 @@
 namespace matrix {
 
 // Loads matrix at filename with m rows and n columns
-slate::Matrix<DATA_TYPE> load_slate_mat(const char *filename, int mpi_size,
-                                        int64_t m, int64_t n);
+slate::Matrix<DATA_TYPE> load_slate_mat(const char *filename, int64_t m,
+                                        int64_t n, int64_t mb, int64_t nb,
+                                        MPI_Comm comm);
 
-}  // namespace matrix
+} // namespace matrix
 
-#endif  // DISTRIBUTED_POPCORN_IO_H
+#endif // DISTRIBUTED_POPCORN_IO_H
