@@ -13,7 +13,7 @@ void matrix::grid_size(int mpi_size, int *p_out, int *q_out) {
 
 slate::Options matrix::get_slate_opts() {
 #ifdef CUDA
-  return {{slate::Option::Target, slate::Target::Devices}, {slate::Option::MethodGemm, slate::MethodGemm::A}};
+  return {{slate::Option::Target, slate::Target::Devices}};
 #else
   return {{slate::Option::Target, slate::Target::HostTask}};
 #endif
@@ -55,18 +55,21 @@ DATA_TYPE matrix::get_slate_mat_value(slate::Matrix<DATA_TYPE> &M, int64_t ii,
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  std::cout << "Rank " << rank << " getting index (" << ii << ", " << jj << ")" << std::endl;
+  std::cout << "Rank " << rank << " getting index (" << ii << ", " << jj << ")"
+            << std::endl;
 
-  int64_t mt = M.mt(), nt = M.nt();
-  int64_t i = ii / mt; // Tile row index
-  int64_t j = jj / nt; // Tile column index
-  ii -= i * mt;        // Element row index
-  jj -= j * nt;        // Element column index
+  int64_t i = ii / SLATE_TILE_M; // Tile row index
+  int64_t j = jj / SLATE_TILE_N; // Tile column index
+  ii -= i * SLATE_TILE_M;        // Element row index
+  jj -= j * SLATE_TILE_N;        // Element column index
 
+  std::cout << rank << ": tile (" << i << "," << j
+            << ") is local: " << M.tileIsLocal(i, j) << std::endl;
   slate::Tile<DATA_TYPE> T = M(i, j);
   DATA_TYPE v = T(ii, jj);
 
-  std::cout << "Rank " << rank << " finished index (" << ii << ", " << jj << ")" << std::endl;
+  std::cout << "Rank " << rank << " finished index (" << ii << ", " << jj << ")"
+            << std::endl;
   return v;
 }
 
@@ -74,9 +77,6 @@ combblas::DnParMat<int64_t, DATA_TYPE>
 matrix::slate_mat_to_combblas_dpm(slate::Matrix<DATA_TYPE> &M) {
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-
-
 
   slate::GridOrder order;
   int nprow, npcol, myrow, mycol;
@@ -113,13 +113,15 @@ matrix::slate_mat_to_combblas_dpm(slate::Matrix<DATA_TYPE> &M) {
 }
 
 combblas::SpParMat<int64_t, DATA_TYPE, UDER<DATA_TYPE>>
-matrix::initialize_combblas_v_matrix(const int m, const int k) {
-  // TODO: Dynamic process grid construction
-  std::shared_ptr<combblas::CommGrid> grid =
-      std::make_shared<combblas::CommGrid>(MPI_COMM_WORLD, 2, 2);
+matrix::initialize_combblas_v_matrix(const int m, const int k, MPI_Comm comm) {
+  int size, rank, p, q;
+  MPI_Comm_rank(comm, &rank);
+  MPI_Comm_size(comm, &size);
+  grid_size(size, &p, &q);
 
-  // TODO: Dynamic process count
-  const int P = 2 * 2;
+  std::shared_ptr<combblas::CommGrid> grid =
+      std::make_shared<combblas::CommGrid>(comm, p, q);
+  const int P = p * q;
 
   int *points_per_cluster = (int *)calloc(sizeof(int), k);
   for (int i = 0; i < k; ++i) {
@@ -130,10 +132,6 @@ matrix::initialize_combblas_v_matrix(const int m, const int k) {
   for (int i = 0; i < P; ++i) {
     points_per_process[i] = (m / P) + ((i < m % P) ? 1 : 0);
   }
-
-  int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   int row_start = 0;
   for (int i = 0; i < rank; ++i) {

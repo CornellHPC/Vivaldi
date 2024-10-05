@@ -31,7 +31,7 @@ combblas::DnParMat<int64_t, DATA_TYPE>
 slate_mat_to_combblas_dpm(slate::Matrix<DATA_TYPE> &M);
 
 combblas::SpParMat<int64_t, DATA_TYPE, UDER<DATA_TYPE>>
-initialize_combblas_v_matrix(int m, int k);
+initialize_combblas_v_matrix(int m, int k, MPI_Comm comm);
 
 } // namespace matrix
 
