@@ -39,24 +39,27 @@ void cluster(char *points_path, int m, int n, int k, int rank, int size) {
     std::cout << "Reading data from " << points_path << std::endl;
 
   auto sP = matrix::load_slate_mat(points_path, size, m, n);
+  std::cout << "Rank: " << rank << " at line 42" << std::endl;
   slate::print("P is", sP);
+  // TODO: make gamma, c, r as IO input
   auto sK =
       matrix::slate_point_mat_to_polynomial_kernel_mat(sP, 1.0f, 1.0f, 2.0f);
   slate::print("K is ", sK);
 
   auto cK = matrix::slate_mat_to_combblas_dpm(sK);
   cK.PrintToFile("out/K");
+  std::cout << "Rank: " << rank << " at line 50" << std::endl;
 
   if (rank == 0)
     std::cout << "Wrote K to disc" << std::endl;
 
-  auto cV = matrix::initialize_combblas_v_matrix(cK.getgnrow(), k);
-  cV.PrintInfo();
+  // auto cV = matrix::initialize_combblas_v_matrix(cK.getgnrow(), k);
+  // cV.PrintInfo();
 
-  combblas::spmm_stats stats;
-  auto O = combblas::SpMM_sC<SR<DATA_TYPE>, int64_t, DATA_TYPE, DATA_TYPE,
-                             UDER<DATA_TYPE>>(cV, cK, stats);
-  O.PrintToFile("out/O");
+  // combblas::spmm_stats stats;
+  // auto O = combblas::SpMM_sC<SR<DATA_TYPE>, int64_t, DATA_TYPE, DATA_TYPE,
+  //                            UDER<DATA_TYPE>>(cV, cK, stats);
+  // O.PrintToFile("out/O");
 }
 
 // Handles command-line arguments

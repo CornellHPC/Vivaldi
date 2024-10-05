@@ -9,6 +9,6 @@
 
 #include "slate/slate.hh"
 
-#define DATA_TYPE float
+#include "const.hh"
 
 #endif // DISTRIBUTED_POPCORN_COMMON_H

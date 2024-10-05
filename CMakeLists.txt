@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(mpiio)
+project(distributed_popcorn LANGUAGES CXX CUDA)
 set(CMAKE_CXX_STANDARD 17)
 
 # OpenMP
@@ -46,7 +46,7 @@ if (NOT IS_DIRECTORY "${SLATE_INSTALL}")
 endif()
 
 # Executable
-file(GLOB SOURCES "src/main.cc" "src/**/*.cc")
+file(GLOB SOURCES "src/main.cc" "src/**/*.cc" "src/**/*.cu")
 add_executable(main ${SOURCES})
 
 # Includes

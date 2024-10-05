@@ -24,10 +24,6 @@ slate::Options get_slate_opts();
 
 void fill_slate_mat_with_buffer(slate::Matrix<DATA_TYPE> &M, DATA_TYPE *buf);
 
-void raise_slate_mat_to_power(slate::Matrix<DATA_TYPE> &M, DATA_TYPE power);
-
-void fill_slate_mat_with_scalar(slate::Matrix<DATA_TYPE> &M, DATA_TYPE value);
-
 DATA_TYPE get_slate_mat_value(slate::Matrix<DATA_TYPE> &M, int64_t ii,
                               int64_t jj);
 
