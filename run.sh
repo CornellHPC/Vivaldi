@@ -11,4 +11,5 @@ POINT_PATH=$PWD/test
 CLUSTERS=3
 
 # Run 16 MPI processes
+# srun -n 16 -c 32 --cpu_bind=cores -G 16 --gpu-bind=single:1 $EXE_PATH test 4 4 $CLUSTERS
 srun -n 16 -c 32 --cpu_bind=cores -G 16 --gpu-bind=single:1 $EXE_PATH test_new 8 8 $CLUSTERS
