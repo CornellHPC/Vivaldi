@@ -9,4 +9,6 @@
 
 #include "slate/slate.hh"
 
+#include "const.hh"
+
 #endif // DISTRIBUTED_POPCORN_COMMON_H

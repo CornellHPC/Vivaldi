@@ -23,7 +23,6 @@ using namespace std;
 template <typename UV> using SR = combblas::PlusTimesSRing<UV, UV>;
 
 // Drives the algorithm
-template <typename T>
 void cluster(char *points_path, int m, int n, int k, MPI_Comm comm) {
   int rank, size;
   MPI_Comm_rank(comm, &rank);
@@ -41,8 +40,8 @@ void cluster(char *points_path, int m, int n, int k, MPI_Comm comm) {
     std::cout << "Reading data from " << points_path << std::endl;
 
   int p = square_grid_dim(comm);
-  auto sP = matrix::load_slate_mat<T>(points_path, m, n, tile_dim(comm, m),
-                                      tile_dim(comm, n), comm);
+  auto sP = matrix::load_slate_mat(points_path, m, n, tile_dim(comm, m),
+                                   tile_dim(comm, n), comm);
   slate::print("P is", sP);
   // TODO: make gamma, c, r as IO input
   auto sK =
@@ -56,11 +55,12 @@ void cluster(char *points_path, int m, int n, int k, MPI_Comm comm) {
     std::cout << "Wrote K to disc" << std::endl;
 
   auto cV =
-      matrix::initialize_combblas_v_matrix<T>(cK.getgnrow(), k, sK.mpiComm());
+      matrix::initialize_combblas_v_matrix(cK.getgnrow(), k, sK.mpiComm());
   cV.PrintInfo();
 
   combblas::spmm_stats stats;
-  auto O = combblas::SpMM_sC<SR<T>, int64_t, T, T, UDER<T>>(cV, cK, stats);
+  auto O = combblas::SpMM_sC<SR<DATA_TYPE>, int64_t, DATA_TYPE, DATA_TYPE,
+                             UDER<DATA_TYPE>>(cV, cK, stats);
   O.PrintToFile("out/O");
 }
 
@@ -88,9 +88,7 @@ int main(int argc, char *argv[]) {
   assert(is_square_grid(MPI_COMM_WORLD) &&
          "Must provide square number of ranks.");
 
-  // TODO: Allow user-specified type
-  cluster<float>(points_path, m, n, k, MPI_COMM_WORLD);
-  // TODO: Output result to user
+  cluster(points_path, m, n, k, MPI_COMM_WORLD);
 
   MPI_Finalize();
   return 0;
