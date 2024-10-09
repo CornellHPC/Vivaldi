@@ -26,7 +26,7 @@ void cluster(char *points_path, int m, int n, int k, MPI_Comm comm) {
   int mb = tile_dim(comm, m);
   int nb = tile_dim(comm, n);
   auto sP = DenseMat::load_from_file(points_path, m, n, mb, nb, p, comm);
-  sP.print("P is");
+  sP.print(std::cout, "P is");
 
   auto sB = sP.symmetric_product();
   // TODO: make gamma, c, r as IO input

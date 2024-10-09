@@ -73,11 +73,11 @@ class DenseMat {
   void apply(Kernel& k);
 
   /**
-   * Prints the DenseMat to the provided output stream.
+   * Prints the SparseMat to the provided output stream.
    *
    * @param out is the output stream
    */
-  void print(std::string prefix);
+  void print(std::ostream &out = std::cout, std::string prefix = "");
 
   friend DenseMat gemm(DenseMat &L, DenseMat &R);
 

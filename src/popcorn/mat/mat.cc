@@ -78,7 +78,7 @@ void DenseMat::apply(Kernel& k) {
   }
 }
 
-void DenseMat::print(std::string prefix) {
+void DenseMat::print(std::ostream& out, std::string prefix) {
   assert(sm && "Can only print SLATE metrics!");
   slate::print(prefix.c_str(), *sm);
 }
@@ -96,8 +96,8 @@ slate::Matrix<DATA_TYPE>* slate_gemm_(slate::Matrix<DATA_TYPE>* L,
 DenseMat DenseMat::symmetric_product() {
   assert(sm && "Can only do gemm on SLATE matrices!");
   auto transposed = slate::transpose(*sm);
-  auto B = slate_gemm_(sm, &transposed, rows_per_block,
-                       rows_per_block, grid_dim, comm);
+  auto B = slate_gemm_(sm, &transposed, rows_per_block, rows_per_block,
+                       grid_dim, comm);
   return DenseMat::from_slate(B, rows_per_block, rows_per_block, grid_dim);
 }
 
@@ -107,6 +107,25 @@ DenseMat gemm(DenseMat& L, DenseMat& R) {
                        L.grid_dim, L.comm);
   return DenseMat::from_slate(B, L.rows_per_block, R.cols_per_block,
                               L.grid_dim);
+}
+
+SparseMat::SparseMat(std::vector<float>& row_ids,
+                     std::vector<float>& col_ids,
+                     std::vector<DATA_TYPE>& vals, int64_t rows, int64_t cols,
+                     int64_t grid_dim, MPI_Comm comm) {
+  this->grid_dim = grid_dim;
+  this->comm = comm;
+
+  std::shared_ptr<combblas::CommGrid> grid =
+      std::make_shared<combblas::CommGrid>(comm, grid_dim, grid_dim);
+
+  combblas::FullyDistVec<int64_t, DATA_TYPE> drows(row_ids, grid);
+  combblas::FullyDistVec<int64_t, DATA_TYPE> dcols(col_ids, grid);
+  combblas::FullyDistVec<int64_t, DATA_TYPE> dvals(vals, grid);
+
+  combblas::SpParMat<int64_t, DATA_TYPE, UDER> V{rows,  cols,  drows,
+                                                 dcols, dvals, false};
+  this->cm = V;
 }
 
 }  // namespace popcorn

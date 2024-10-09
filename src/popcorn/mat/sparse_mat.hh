@@ -29,20 +29,24 @@ class SparseMat {
    * the range [i*m//p, (i+1)*m//p). Each point is formed by
    * one entry in rows, cols, and vals.
    *
-   * @param rows is a vector of row indices for each entry
-   * @param cols is a vector of column indices for each entry
+   * @param row_ids is a vector of row indices for each entry
+   * @param col_ids is a vector of column indices for each entry
    * @param vals is a vector of values for each entry
+   * @param rows is num of rows
+   * @param cols is num of cols
+   * @param grid_dim is an int64_t of the MPI grid length (SLATE `p`)
    * @param comm is the MPI communicator used for the matrix distribution
    */
-  SparseMat(std::vector<int64_t> &rows, std::vector<int64_t> &cols,
-            std::vector<DATA_TYPE> &vals, MPI_Comm comm);
+  SparseMat(std::vector<float> &row_ids, std::vector<float> &col_ids,
+            std::vector<DATA_TYPE> &vals, int64_t rows, int64_t cols,
+            int64_t grid_dim, MPI_Comm comm);
 
   /**
    * Prints the SparseMat to the provided output stream.
    *
    * @param out is the output stream
    */
-  void print(std::ostream &out = std::cout);
+  void print(std::ostream &out = std::cout, std::string prefix = "");
 
   /**
    * Performs a SPMM and returns a new DenseMat with the result.
@@ -62,12 +66,17 @@ class SparseMat {
   // Number of nonzeros in the global matrix
   int64_t nonzeros;
 
+  // Grid total size
+  int64_t grid_dim;
+
   // Underlying CombBLAS matrix object
   combblas::SpParMat<int64_t, DATA_TYPE, UDER> cm;
 
   // MPI communicator used for distribution
   MPI_Comm comm;
 };
+
+DenseMat spmm(SparseMat &L, DenseMat &R);
 
 }  // namespace popcorn
 
