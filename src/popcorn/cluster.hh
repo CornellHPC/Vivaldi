@@ -10,13 +10,13 @@ namespace popcorn {
 /**
  * @brief Drives the algorithm
  * 
- * @param points_path 
- * @param m 
- * @param n 
- * @param k 
- * @param comm 
+ * @param data_path Path to data file
+ * @param m Number of rows in data
+ * @param n Number of cols in data
+ * @param k Number of clusters to form
+ * @param comm MPI communicator
  */
-void cluster(char *points_path, int m, int n, int k, MPI_Comm comm);
+void cluster(char *data_path, int m, int n, int k, MPI_Comm comm);
 
 }  // namespace popcorn
 

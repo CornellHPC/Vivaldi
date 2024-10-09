@@ -6,7 +6,7 @@
 
 namespace popcorn {
 
-void cluster(char *points_path, int m, int n, int k, MPI_Comm comm) {
+void cluster(char *data_path, int m, int n, int k, MPI_Comm comm) {
   int rank, size;
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
@@ -20,12 +20,12 @@ void cluster(char *points_path, int m, int n, int k, MPI_Comm comm) {
               << std::endl;
 #endif
 
-  if (rank == 0) std::cout << "Reading data from " << points_path << std::endl;
+  if (rank == 0) std::cout << "Reading data from " << data_path << std::endl;
 
   int p = square_grid_dim(comm);
   int mb = tile_dim(comm, m);
   int nb = tile_dim(comm, n);
-  auto sP = DenseMat::load_from_file(points_path, m, n, mb, nb, p, comm);
+  auto sP = DenseMat::load_from_file(data_path, m, n, mb, nb, p, comm);
   sP.print(std::cout, "P is");
 
   auto sB = sP.symmetric_product();

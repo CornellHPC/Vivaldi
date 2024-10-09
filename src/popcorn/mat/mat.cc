@@ -39,10 +39,10 @@ DenseMat DenseMat::load_from_file(const char* filename, int64_t rows,
 
   // Read data
   size_t count = rows * cols * sizeof(DATA_TYPE);
-  DATA_TYPE* data = (DATA_TYPE*)malloc(count);
+  DATA_TYPE* data = (DATA_TYPE*) malloc(count);
   MPI_File_read_all(fh, data, rows * cols, MPI_FLOAT, MPI_STATUS_IGNORE);
 
-  // Create matrix
+  // Create empty SLATE matrix object of size equal to data
   auto M = new slate::Matrix<DATA_TYPE>(
       rows, cols, rows_per_block, cols_per_block, grid_dim, grid_dim, comm);
   M->insertLocalTiles(slate::Target::Devices);

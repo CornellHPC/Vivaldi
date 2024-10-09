@@ -25,8 +25,11 @@ class DenseMat {
    * Loads a DenseMat from a file.
    *
    * @param filename is a path to the binary file containing the matrix data
-   * @param m is the number of rows in the global matrix
-   * @param n is the number of columns in the global matrix
+   * @param rows is the number of rows in the global matrix
+   * @param cols is the number of columns in the global matrix
+   * @param rows_per_block is the number of rows in a distributed block (mb in SLATE)
+   * @param cols_per_block is the number of cols in a distributed block (nb in SLATE)
+   * @param grid_dim
    * @param comm is the MPI communicator used for the matrix distribution
    */
   static DenseMat load_from_file(const char *filename, int64_t rows,
