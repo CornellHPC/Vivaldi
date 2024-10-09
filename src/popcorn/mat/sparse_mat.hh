@@ -1,13 +1,16 @@
-#ifndef SPARSE_MAT_H
-#define SPARSE_MAT_H
-
-#include <cstdint>
+#ifndef DISTRIBUTED_POPCORN_SPARSE_MAT_H
+#define DISTRIBUTED_POPCORN_SPARSE_MAT_H
 
 #include <mpi.h>
 
-#include "../common.hh"
+#include <cstdint>
 
-template <typename UV> using UDER = combblas::SpCCols<int64_t, UV>;
+#include "../../common.hh"
+
+template <typename UV>
+using UDER = combblas::SpCCols<int64_t, UV>;
+
+namespace popcorn {
 
 class DenseMat;
 
@@ -19,7 +22,7 @@ class DenseMat;
  * in a library-agnostic manner.
  */
 class SparseMat {
-public:
+ public:
   /**
    * Constructor that loads the specified data.
    *
@@ -52,7 +55,7 @@ public:
    */
   friend DenseMat spmm(SparseMat &L, DenseMat &R);
 
-private:
+ private:
   // Number of rows in the global matrix
   int64_t rows;
 
@@ -69,4 +72,6 @@ private:
   MPI_Comm comm;
 };
 
-#endif // SPARSE_MAT_H
+}  // namespace popcorn
+
+#endif  // DISTRIBUTED_POPCORN_SPARSE_MAT_H

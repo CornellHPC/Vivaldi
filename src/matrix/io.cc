@@ -1,5 +1,5 @@
 #include "io.hh"
-#include "../util.hh"
+#include "../popcorn/utils/utils.hh"
 
 slate::Matrix<DATA_TYPE> matrix::load_slate_mat(const char *filename, int64_t m,
                                                 int64_t n, int64_t mb,
@@ -14,7 +14,7 @@ slate::Matrix<DATA_TYPE> matrix::load_slate_mat(const char *filename, int64_t m,
   MPI_File_read_all(fh, data, m * n, MPI_FLOAT, MPI_STATUS_IGNORE);
 
   // Create matrix
-  int p = square_grid_dim(comm);
+  int p = popcorn::square_grid_dim(comm);
   slate::Matrix<DATA_TYPE> M(m, n, mb, nb, p, p, comm);
 #ifdef CUDA
   M.insertLocalTiles(slate::Target::Devices);

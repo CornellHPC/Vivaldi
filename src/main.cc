@@ -17,10 +17,13 @@ using namespace std;
 #include "matrix/io.hh"
 #include "matrix/kernel_matrix.hh"
 #include "matrix/matrix.hh"
-#include "util.hh"
+#include "popcorn/utils/utils.hh"
+
+using namespace popcorn;
 
 // Define CombBLAS semiring
-template <typename UV> using SR = combblas::PlusTimesSRing<UV, UV>;
+template <typename UV>
+using SR = combblas::PlusTimesSRing<UV, UV>;
 
 // Drives the algorithm
 void cluster(char *points_path, int m, int n, int k, MPI_Comm comm) {
@@ -36,8 +39,7 @@ void cluster(char *points_path, int m, int n, int k, MPI_Comm comm) {
     std::cout << "Running on: CPU" << std::endl;
 #endif
 
-  if (rank == 0)
-    std::cout << "Reading data from " << points_path << std::endl;
+  if (rank == 0) std::cout << "Reading data from " << points_path << std::endl;
 
   int p = square_grid_dim(comm);
   auto sP = matrix::load_slate_mat(points_path, m, n, tile_dim(comm, m),
@@ -51,8 +53,7 @@ void cluster(char *points_path, int m, int n, int k, MPI_Comm comm) {
   auto cK = matrix::slate_mat_to_combblas_dpm(sK);
   cK.PrintToFile("out/K");
 
-  if (rank == 0)
-    std::cout << "Wrote K to disc" << std::endl;
+  if (rank == 0) std::cout << "Wrote K to disc" << std::endl;
 
   auto cV =
       matrix::initialize_combblas_v_matrix(cK.getgnrow(), k, sK.mpiComm());
@@ -68,8 +69,9 @@ void cluster(char *points_path, int m, int n, int k, MPI_Comm comm) {
 int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);
 
-  assert(argc == 5 && "Must pass valid path to point data, number of rows, "
-                      "number of columns, and value of k.");
+  assert(argc == 5 &&
+         "Must pass valid path to point data, number of rows, "
+         "number of columns, and value of k.");
 
   char *points_path = argv[1];
   int m = std::atoi(argv[2]);

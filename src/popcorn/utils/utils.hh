@@ -3,9 +3,14 @@
 
 #include "mpi.h"
 
-#ifdef CUDA
+namespace popcorn {
+
+/**
+ * @brief Simple test to make sure GPUs are functioning
+ * 
+ * @param myrank 
+ */
 void wake_gpus(int myrank);
-#endif
 
 int square_grid_dim(MPI_Comm comm);
 
@@ -13,4 +18,6 @@ bool is_square_grid(MPI_Comm comm);
 
 int tile_dim(MPI_Comm comm, int x);
 
-#endif // UTILS_HH
+}  // namespace popcorn
+
+#endif  // UTILS_HH

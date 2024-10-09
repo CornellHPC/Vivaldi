@@ -1,5 +1,7 @@
 #include "matrix.hh"
-#include "../util.hh"
+#include "../popcorn/utils/utils.hh"
+
+using namespace popcorn;
 
 slate::Options matrix::get_slate_opts() {
 #ifdef CUDA

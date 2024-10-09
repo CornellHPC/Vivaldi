@@ -1,5 +1,7 @@
 #include "kernel_matrix.hh"
-#include "../util.hh"
+#include "../popcorn/utils/utils.hh"
+
+using namespace popcorn;
 
 slate::Matrix<DATA_TYPE> matrix::compute_b_mat(slate::Matrix<DATA_TYPE> &sP) {
   MPI_Comm comm = sP.mpiComm();
