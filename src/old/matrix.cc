@@ -91,7 +91,7 @@ matrix::slate_mat_to_combblas_dpm(slate::Matrix<DATA_TYPE> &M) {
   return D;
 }
 
-combblas::SpParMat<int64_t, DATA_TYPE, UDER<DATA_TYPE>>
+combblas::SpParMat<int64_t, DATA_TYPE, UDER>
 matrix::initialize_combblas_v_matrix(const int m, const int k, MPI_Comm comm) {
   int rank, p, P;
   MPI_Comm_rank(comm, &rank);
@@ -129,7 +129,7 @@ matrix::initialize_combblas_v_matrix(const int m, const int k, MPI_Comm comm) {
   combblas::FullyDistVec<int64_t, DATA_TYPE> dcols(lcol_ids, grid);
   combblas::FullyDistVec<int64_t, DATA_TYPE> dvals(lvals, grid);
 
-  combblas::SpParMat<int64_t, DATA_TYPE, UDER<DATA_TYPE>> V{
+  combblas::SpParMat<int64_t, DATA_TYPE, UDER> V{
       m, k, drows, dcols, dvals, false};
   V.Transpose();
 

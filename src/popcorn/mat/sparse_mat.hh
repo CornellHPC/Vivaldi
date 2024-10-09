@@ -7,9 +7,6 @@
 
 #include "../../common.hh"
 
-template <typename UV>
-using UDER = combblas::SpCCols<int64_t, UV>;
-
 namespace popcorn {
 
 class DenseMat;
@@ -66,7 +63,7 @@ class SparseMat {
   int64_t nonzeros;
 
   // Underlying CombBLAS matrix object
-  combblas::SpParMat<int64_t, DATA_TYPE, UDER<DATA_TYPE>> cm;
+  combblas::SpParMat<int64_t, DATA_TYPE, UDER> cm;
 
   // MPI communicator used for distribution
   MPI_Comm comm;

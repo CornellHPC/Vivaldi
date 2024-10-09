@@ -46,7 +46,7 @@ if (NOT IS_DIRECTORY "${SLATE_INSTALL}")
 endif()
 
 # Executable
-file(GLOB SOURCES "src/main.cc" "src/**/*.cc" "src/**/*.cu" "src/popcorn/**/*.cc")
+file(GLOB SOURCES "src/main.cc" "src/**/*.cc" "src/popcorn/**/*.cu" "src/popcorn/**/*.cc")
 add_executable(main ${SOURCES})
 
 # Includes

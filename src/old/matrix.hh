@@ -14,7 +14,7 @@
 #include "../common.hh"
 
 // Define CombBLAS sparse matrix format
-template <typename UV> using UDER = combblas::SpCCols<int64_t, UV>;
+// template <typename UV> using UDER = combblas::SpCCols<int64_t, UV>;
 
 namespace matrix {
 
@@ -30,7 +30,7 @@ DATA_TYPE get_slate_mat_value(slate::Matrix<DATA_TYPE> &M, int64_t ii,
 combblas::DnParMat<int64_t, DATA_TYPE>
 slate_mat_to_combblas_dpm(slate::Matrix<DATA_TYPE> &M);
 
-combblas::SpParMat<int64_t, DATA_TYPE, UDER<DATA_TYPE>>
+combblas::SpParMat<int64_t, DATA_TYPE, UDER>
 initialize_combblas_v_matrix(int m, int k, MPI_Comm comm);
 
 } // namespace matrix

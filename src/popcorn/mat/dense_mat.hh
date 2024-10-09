@@ -6,6 +6,7 @@
 #include <cstdint>
 
 #include "../../common.hh"
+#include "../kernel/linear_kernel.cuh"
 
 namespace popcorn {
 
@@ -28,55 +29,56 @@ class DenseMat {
    * @param n is the number of columns in the global matrix
    * @param comm is the MPI communicator used for the matrix distribution
    */
-  static DenseMat *load_from_file(const char *filename, int64_t rows,
-                                  int64_t cols, int64_t rows_per_block,
-                                  int64_t cols_per_block, int64_t grid_dim,
-                                  MPI_Comm comm);
+  static DenseMat load_from_file(const char *filename, int64_t rows,
+                                 int64_t cols, int64_t rows_per_block,
+                                 int64_t cols_per_block, int64_t grid_dim,
+                                 MPI_Comm comm);
 
   /**
    * Constructor from a SLATE dense matrix.
    *
    * @param sm is the SLATE dense matrix
    */
-  static DenseMat *from_slate(slate::Matrix<DATA_TYPE> *sm,
-                              int64_t rows_per_block, int64_t cols_per_block,
-                              int64_t grid_size);
+  static DenseMat from_slate(slate::Matrix<DATA_TYPE> *sm,
+                             int64_t rows_per_block, int64_t cols_per_block,
+                             int64_t grid_size);
 
   /**
    * Constructor from a CombBLAS dense matrix.
    *
    * @param cm is the CombBLAS dense matrix
    */
-  static DenseMat *from_combblas(
+  static DenseMat from_combblas(
       const combblas::DnParMat<int64_t, DATA_TYPE> &cm);
 
-  /**
-   * Returns a new DenseMat that is transposed.
-   *
-   * @return The transposed DenseMat.
-   */
-  DenseMat transpose();
+  // /**
+  //  * Returns a new DenseMat that is transposed.
+  //  *
+  //  * @return The transposed DenseMat.
+  //  */
+  // DenseMat transpose();
 
   /**
-   * Returns a new DenseMat formed by applying provied function element-wise.
+   * @brief Calculates M*M^T using GEMM and returns the result
+   *
+   * @return DenseMat
+   */
+  DenseMat symmetric_product();
+
+  /**
+   * Applyies the provied kernel to each block of the matrix
    *
    * @param f is the function to apply
    */
-  DenseMat apply(DATA_TYPE f(DATA_TYPE));
+  void apply(Kernel& k);
 
   /**
    * Prints the DenseMat to the provided output stream.
    *
    * @param out is the output stream
    */
-  void print(std::ostream &out = std::cout);
+  void print(std::string prefix);
 
-  /**
-   * Performs a GEMM and returns a new DenseMat with the result.
-   *
-   * @param L is the left matrix
-   * @param R is the right matrix
-   */
   friend DenseMat gemm(DenseMat &L, DenseMat &R);
 
   /**
@@ -86,6 +88,8 @@ class DenseMat {
    * @param R is the right dense matrix
    */
   friend DenseMat spmm(SparseMat &L, DenseMat &R);
+
+  ~DenseMat();
 
  private:
   /**
@@ -136,6 +140,14 @@ class DenseMat {
   // Underlying CombBLAS matrix object
   combblas::DnParMat<int64_t, DATA_TYPE> *cm;
 };
+
+/**
+ * Performs a GEMM and returns a new DenseMat with the result.
+ *
+ * @param L is the left matrix
+ * @param R is the right matrix
+ */
+DenseMat gemm(DenseMat &L, DenseMat &R);
 
 }  // namespace popcorn
 

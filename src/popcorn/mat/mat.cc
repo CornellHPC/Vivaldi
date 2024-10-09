@@ -2,7 +2,7 @@
 #include "dense_mat.hh"
 #include "sparse_mat.hh"
 
-using namespace popcorn;
+namespace popcorn {
 
 void fill_slate_mat_with_buffer(slate::Matrix<DATA_TYPE>* M, DATA_TYPE* buf) {
   int64_t m = M->m(), n = M->n(), mb = M->tileMb(0), nb = M->tileNb(0);
@@ -24,10 +24,15 @@ void fill_slate_mat_with_buffer(slate::Matrix<DATA_TYPE>* M, DATA_TYPE* buf) {
   }
 }
 
-DenseMat* DenseMat::load_from_file(const char* filename, int64_t rows,
-                                   int64_t cols, int64_t rows_per_block,
-                                   int64_t cols_per_block, int64_t grid_dim,
-                                   MPI_Comm comm) {
+DenseMat::~DenseMat() {
+  free(sm);
+  free(cm);
+}
+
+DenseMat DenseMat::load_from_file(const char* filename, int64_t rows,
+                                  int64_t cols, int64_t rows_per_block,
+                                  int64_t cols_per_block, int64_t grid_dim,
+                                  MPI_Comm comm) {
   // Open file
   MPI_File fh;
   MPI_File_open(comm, filename, MPI_MODE_RDONLY, MPI_INFO_NULL, &fh);
@@ -52,9 +57,56 @@ DenseMat* DenseMat::load_from_file(const char* filename, int64_t rows,
   return DenseMat::from_slate(M, rows_per_block, cols_per_block, grid_dim);
 }
 
-DenseMat* DenseMat::from_slate(slate::Matrix<DATA_TYPE>* sm,
-                               int64_t rows_per_block, int64_t cols_per_block,
-                               int64_t grid_dim) {
-  return new DenseMat(sm->m(), sm->n(), sm->mt(), sm->nt(), rows_per_block,
-                      cols_per_block, grid_dim, sm->mpiComm(), sm, NULL);
+DenseMat DenseMat::from_slate(slate::Matrix<DATA_TYPE>* sm,
+                              int64_t rows_per_block, int64_t cols_per_block,
+                              int64_t grid_dim) {
+  return DenseMat(sm->m(), sm->n(), sm->mt(), sm->nt(), rows_per_block,
+                  cols_per_block, grid_dim, sm->mpiComm(), sm, NULL);
 }
+
+void DenseMat::apply(Kernel& k) {
+  assert(sm && "Can only apply kernels on SLATE matrices!");
+
+  for (int64_t j = 0; j < sm->nt(); ++j) {    // i loops over block columns
+    for (int64_t i = 0; i < sm->mt(); ++i) {  // j loops over block rows
+      if (sm->tileIsLocal(i, j)) {
+        slate::Tile<DATA_TYPE> tile = sm->at(i, j, sm->tileDevice(i, j));
+        DATA_TYPE* tile_buf = tile.data();
+        k.f(tile_buf);
+      }
+    }
+  }
+}
+
+void DenseMat::print(std::string prefix) {
+  assert(sm && "Can only print SLATE metrics!");
+  slate::print(prefix.c_str(), *sm);
+}
+
+slate::Matrix<DATA_TYPE>* slate_gemm_(slate::Matrix<DATA_TYPE>* L,
+                                      slate::Matrix<DATA_TYPE>* R, int64_t mb,
+                                      int64_t nb, int64_t p, MPI_Comm comm) {
+  auto B = new slate::Matrix<DATA_TYPE>(L->m(), R->n(), mb, nb, p, p, comm);
+  B->insertLocalTiles(slate::Target::Devices);
+  slate::gemm<DATA_TYPE>(1.0f, *L, *R, 0.0f, *B,
+                         {{slate::Option::Target, slate::Target::Devices}});
+  return B;
+}
+
+DenseMat DenseMat::symmetric_product() {
+  assert(sm && "Can only do gemm on SLATE matrices!");
+  auto transposed = slate::transpose(*sm);
+  auto B = slate_gemm_(sm, &transposed, rows_per_block,
+                       rows_per_block, grid_dim, comm);
+  return DenseMat::from_slate(B, rows_per_block, rows_per_block, grid_dim);
+}
+
+DenseMat gemm(DenseMat& L, DenseMat& R) {
+  assert(L.sm && R.sm && "Can only do gemm on SLATE matrices!");
+  auto B = slate_gemm_(L.sm, R.sm, L.rows_per_block, R.cols_per_block,
+                       L.grid_dim, L.comm);
+  return DenseMat::from_slate(B, L.rows_per_block, R.cols_per_block,
+                              L.grid_dim);
+}
+
+}  // namespace popcorn
