@@ -19,7 +19,7 @@ class DenseMat;
  * in a library-agnostic manner.
  */
 class SparseMat {
- public:
+public:
   /**
    * Constructor that loads the specified data.
    *
@@ -44,9 +44,10 @@ class SparseMat {
   /**
    * Prints the SparseMat to the provided output stream.
    *
+   * @param prefix is the prefix string
    * @param out is the output stream
    */
-  void print(std::ostream &out = std::cout, std::string prefix = "");
+  void print(std::string prefix, std::ostream &out = std::cout);
 
   /**
    * Performs a SPMM and returns a new DenseMat with the result.
@@ -56,7 +57,7 @@ class SparseMat {
    */
   friend DenseMat spmm(SparseMat &L, DenseMat &R);
 
- private:
+private:
   // Number of rows in the global matrix
   int64_t rows;
 
@@ -69,15 +70,15 @@ class SparseMat {
   // Grid total size
   int64_t grid_dim;
 
-  // Underlying CombBLAS matrix object
-  combblas::SpParMat<int64_t, DATA_TYPE, UDER> cm;
-
   // MPI communicator used for distribution
   MPI_Comm comm;
+
+  // Underlying CombBLAS matrix object
+  std::unique_ptr<combblas::SpParMat<int64_t, DATA_TYPE, UDER>> cm;
 };
 
 DenseMat spmm(SparseMat &L, DenseMat &R);
 
-}  // namespace popcorn
+} // namespace popcorn
 
-#endif  // DISTRIBUTED_POPCORN_SPARSE_MAT_H
+#endif // DISTRIBUTED_POPCORN_SPARSE_MAT_H

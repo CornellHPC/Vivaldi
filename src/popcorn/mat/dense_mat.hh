@@ -1,6 +1,7 @@
 #ifndef DISTRIBUTED_POPCORN_DENSE_MAT_H
 #define DISTRIBUTED_POPCORN_DENSE_MAT_H
 
+#include <memory>
 #include <mpi.h>
 
 #include <cstdint>
@@ -20,69 +21,46 @@ class SparseMat;
  * in a library-agnostic manner.
  */
 class DenseMat {
- public:
+public:
   /**
    * Loads a DenseMat from a file.
    *
    * @param filename is a path to the binary file containing the matrix data
    * @param rows is the number of rows in the global matrix
    * @param cols is the number of columns in the global matrix
-   * @param rows_per_block is the number of rows in a distributed block (mb in SLATE)
-   * @param cols_per_block is the number of cols in a distributed block (nb in SLATE)
-   * @param grid_dim
    * @param comm is the MPI communicator used for the matrix distribution
    */
   static DenseMat load_from_file(const char *filename, int64_t rows,
-                                 int64_t cols, int64_t rows_per_block,
-                                 int64_t cols_per_block, int64_t grid_dim,
-                                 MPI_Comm comm);
+                                 int64_t cols, MPI_Comm comm);
 
   /**
-   * Constructor from a SLATE dense matrix.
+   * Returns a new DenseMat that is transposed.
    *
-   * @param sm is the SLATE dense matrix
+   * @return The transposed DenseMat.
    */
-  static DenseMat from_slate(slate::Matrix<DATA_TYPE> *sm,
-                             int64_t rows_per_block, int64_t cols_per_block,
-                             int64_t grid_size);
+  DenseMat transpose();
 
   /**
-   * Constructor from a CombBLAS dense matrix.
-   *
-   * @param cm is the CombBLAS dense matrix
-   */
-  static DenseMat from_combblas(
-      const combblas::DnParMat<int64_t, DATA_TYPE> &cm);
-
-  // /**
-  //  * Returns a new DenseMat that is transposed.
-  //  *
-  //  * @return The transposed DenseMat.
-  //  */
-  // DenseMat transpose();
-
-  /**
-   * @brief Calculates M*M^T using GEMM and returns the result
-   *
-   * @return DenseMat
-   */
-  DenseMat symmetric_product();
-
-  /**
-   * Applyies the provied kernel to each block of the matrix
+   * Applyies the provided kernel to each block of the matrix
    *
    * @param f is the function to apply
    */
-  void apply(Kernel& k);
+  void apply(Kernel &k);
+
+  /**
+   * Performs a GEMM and returns a new DenseMat with the result.
+   *
+   * @param R is the right matrix
+   */
+  DenseMat gemm(DenseMat &R);
 
   /**
    * Prints the SparseMat to the provided output stream.
    *
+   * @param prefix is the prefix string
    * @param out is the output stream
    */
-  void print(std::ostream &out = std::cout, std::string prefix = "");
-
-  friend DenseMat gemm(DenseMat &L, DenseMat &R);
+  void print(std::string prefix, std::ostream &out = std::cout);
 
   /**
    * Performs a SPMM and returns a new DenseMat with the result.
@@ -92,26 +70,20 @@ class DenseMat {
    */
   friend DenseMat spmm(SparseMat &L, DenseMat &R);
 
-  ~DenseMat();
-
- private:
+private:
   /**
-   * Constructor
+   * Constructor from a SLATE dense matrix.
+   *
+   * @param sm is the SLATE dense matrix
    */
-  DenseMat(int64_t rows, int64_t cols, int64_t block_rows, int64_t block_cols,
-           int64_t rows_per_block, int64_t cols_per_block, int64_t grid_dim,
-           MPI_Comm comm, slate::Matrix<DATA_TYPE> *sm = NULL,
-           combblas::DnParMat<int64_t, DATA_TYPE> *cm = NULL)
-      : rows(rows),
-        cols(cols),
-        block_rows(block_rows),
-        block_cols(block_cols),
-        rows_per_block(rows_per_block),
-        cols_per_block(cols_per_block),
-        grid_dim(grid_dim),
-        sm(sm),
-        cm(cm),
-        comm(comm) {};
+  DenseMat(std::unique_ptr<slate::Matrix<DATA_TYPE>> sm);
+
+  /**
+   * Constructor from a CombBLAS dense matrix.
+   *
+   * @param cm is the CombBLAS dense matrix
+   */
+  DenseMat(std::unique_ptr<combblas::DnParMat<int64_t, DATA_TYPE>> cm);
 
   // Number of rows in the global matrix
   int64_t rows;
@@ -138,20 +110,12 @@ class DenseMat {
   MPI_Comm comm;
 
   // Underlying SLATE matrix object
-  slate::Matrix<DATA_TYPE> *sm;
+  std::unique_ptr<slate::Matrix<DATA_TYPE>> sm;
 
   // Underlying CombBLAS matrix object
-  combblas::DnParMat<int64_t, DATA_TYPE> *cm;
+  std::unique_ptr<combblas::DnParMat<int64_t, DATA_TYPE>> cm;
 };
 
-/**
- * Performs a GEMM and returns a new DenseMat with the result.
- *
- * @param L is the left matrix
- * @param R is the right matrix
- */
-DenseMat gemm(DenseMat &L, DenseMat &R);
+} // namespace popcorn
 
-}  // namespace popcorn
-
-#endif  // DISTRIBUTED_POPCORN_DENSE_MAT_H
+#endif // DISTRIBUTED_POPCORN_DENSE_MAT_H

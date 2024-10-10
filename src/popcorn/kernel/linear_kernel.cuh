@@ -6,7 +6,7 @@
 namespace popcorn {
 
 struct Kernel {
-  void f(DATA_TYPE* B);
+  void f(DATA_TYPE *B);
 };
 
 /**
@@ -18,7 +18,7 @@ struct Kernel {
 struct PolynomialKernel : public Kernel {
   PolynomialKernel(int64_t n, DATA_TYPE gamma, DATA_TYPE c, DATA_TYPE r)
       : mb(mb), gamma(gamma), c(c), r(r) {};
-  void f(DATA_TYPE* B);
+  void f(DATA_TYPE *B);
 
   int64_t mb;
   DATA_TYPE gamma;
@@ -26,6 +26,6 @@ struct PolynomialKernel : public Kernel {
   DATA_TYPE r;
 };
 
-}  // namespace popcorn
+} // namespace popcorn
 
-#endif  // DISTRIBUTED_POPCORN_LINEAR_KERNEL
+#endif // DISTRIBUTED_POPCORN_LINEAR_KERNEL
