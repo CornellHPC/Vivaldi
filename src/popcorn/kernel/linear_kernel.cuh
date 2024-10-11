@@ -7,7 +7,7 @@
 namespace popcorn {
 
 struct Kernel {
-  void f(DATA_TYPE *B);
+  virtual void f(DATA_TYPE *B);
 };
 
 /**
