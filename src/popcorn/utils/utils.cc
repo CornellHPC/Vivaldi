@@ -1,11 +1,13 @@
-#include "utils.hh"
-
-#include <cuda_runtime.h>
-
+// C++ standard imports
 #include <cmath>
 #include <iostream>
 
-#include "mpi.h"
+// Library imports
+#include <cuda_runtime.h>
+#include <mpi.h>
+
+// Local imports
+#include "utils.hh"
 
 void popcorn::wake_gpus(int myrank) {
   int ndevices;
@@ -22,13 +24,15 @@ void popcorn::wake_gpus(int myrank) {
     int count = 7;
     int size = count * sizeof(int);
     array = new int[count];
-    for (int j = 0; j < count; j += 1) array[j] = j;
+    for (int j = 0; j < count; j += 1)
+      array[j] = j;
     cudaMalloc(&dArray, size);
     cudaMemcpy(dArray, array, size, cudaMemcpyHostToDevice);
     cudaFree(dArray);
     delete[] array;
   }
-  if (myrank == 0) std::cout << " DONE!\n" << std::flush;
+  if (myrank == 0)
+    std::cout << " DONE!\n" << std::flush;
 }
 
 int popcorn::square_grid_dim(MPI_Comm comm) {

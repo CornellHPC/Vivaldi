@@ -1,7 +1,8 @@
+// Local imports
 #include "cluster.hh"
-
 #include "kernel/linear_kernel.cuh"
 #include "mat/dense_mat.hh"
+#include "mat/sparse_mat.hh"
 #include "utils/utils.hh"
 
 namespace popcorn {
@@ -20,39 +21,37 @@ void cluster(char *data_path, int m, int n, int k, MPI_Comm comm) {
               << std::endl;
 #endif
 
+  // Cull points to make matrix evenly divisible
+  int grid_dim = square_grid_dim(comm);
+  m -= m % grid_dim;
+
   if (rank == 0)
     std::cout << "Reading data from " << data_path << std::endl;
 
+  // Load the point matrix
   auto P = DenseMat::load_from_file(data_path, m, n, comm);
   P.print("P");
 
+  // Make a transposed copy of point matrix
   auto PT = P.transpose();
   PT.print("PT");
 
-  auto B = P.gemm(PT);
-  B.print("B");
-
+  // Compute the K matrix
   // TODO: make gamma, c, r as IO input
   // TODO: pull mb from the matrix instead of passing
+  auto K = P.gemm(PT);
   int mb = tile_dim(comm, m);
   auto poly_kernel = PolynomialKernel(mb, 1.0f, 1.0f, 2.0f);
-  B.apply(poly_kernel);
-  B.print("K");
+  K.apply(poly_kernel);
+  K.print("K");
 
-  // auto cK = matrix::slate_mat_to_combblas_dpm(sK);
-  // cK.PrintToFile("out/K");
+  // Initialize the V matrix
+  auto V = SparseMat::initialize_v(m, k, comm);
+  V.print("V");
 
-  // if (rank == 0) std::cout << "Wrote K to disc" << std::endl;
-
-  // auto cV =
-  //     matrix::initialize_combblas_v_matrix(cK.getgnrow(), k, sK.mpiComm());
-  // cV.PrintInfo();
-
-  // combblas::spmm_stats stats;
-  // auto O =
-  //     combblas::SpMM_sC<SR, int64_t, DATA_TYPE, DATA_TYPE, UDER>(cV, cK,
-  //     stats);
-  // O.PrintToFile("out/O");
+  // Perform SpMM(VK)
+  auto O = V.spmm(K);
+  O.print("O");
 }
 
 } // namespace popcorn

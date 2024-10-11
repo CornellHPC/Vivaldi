@@ -1,7 +1,11 @@
+// C++ standard imports
 #include <math.h>
+
+// Library imports
 #include <thrust/device_ptr.h>
 #include <thrust/transform.h>
 
+// Local imports
 #include "linear_kernel.cuh"
 #include "utils.cuh"
 

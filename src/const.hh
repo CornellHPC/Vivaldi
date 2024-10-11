@@ -6,6 +6,7 @@
 // because they cannot be compiled by NVCC for CUDA. Only constants should be
 // defined here.
 
+// Matrix data type
 #define DATA_TYPE float
 
 #endif // DISTRIBUTED_POPCORN_CONST_H

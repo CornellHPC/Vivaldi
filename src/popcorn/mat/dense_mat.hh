@@ -1,11 +1,14 @@
 #ifndef DISTRIBUTED_POPCORN_DENSE_MAT_H
 #define DISTRIBUTED_POPCORN_DENSE_MAT_H
 
+// C++ standard imports
+#include <cstdint>
 #include <memory>
+
+// Library imports
 #include <mpi.h>
 
-#include <cstdint>
-
+// Local imports
 #include "../../common.hh"
 #include "../kernel/linear_kernel.cuh"
 
@@ -62,13 +65,7 @@ public:
    */
   void print(std::string prefix, std::ostream &out = std::cout);
 
-  /**
-   * Performs a SPMM and returns a new DenseMat with the result.
-   *
-   * @param L is the left sparse matrix
-   * @param R is the right dense matrix
-   */
-  friend DenseMat spmm(SparseMat &L, DenseMat &R);
+  friend class SparseMat;
 
 private:
   /**
@@ -84,6 +81,24 @@ private:
    * @param cm is the CombBLAS dense matrix
    */
   DenseMat(std::unique_ptr<combblas::DnParMat<int64_t, DATA_TYPE>> cm);
+
+  /**
+   * Converts the SLATE representation to CombBLAS.
+   * This routine assumes there exists a 1-to-1 mapping
+   * between SLATE tiles and CombBLAS tiles, which may
+   * require point culling. It also assumes the matrix
+   * is symmetric.
+   */
+  void to_combblas();
+
+  /**
+   * Converts the CombBLAS representation to SLATE.
+   * This routine assumes there exists a 1-to-1 mapping
+   * between CombBLAS tiles and SLATE tiles, which may
+   * require point culling. It also assumes the matrix
+   * is symmetric.
+   */
+  void to_slate();
 
   // Number of rows in the global matrix
   int64_t rows;

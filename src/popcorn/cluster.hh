@@ -1,15 +1,17 @@
 #ifndef DISTRIBUTED_POPCORN_CLUSTER_HH
 #define DISTRIBUTED_POPCORN_CLUSTER_HH
 
-#include "../common.hh"
-
+// Library imports
 #include <mpi.h>
+
+// Local imports
+#include "../common.hh"
 
 namespace popcorn {
 
 /**
- * @brief Drives the algorithm
- * 
+ * @brief Drives the distributed clustering algorithm
+ *
  * @param data_path Path to data file
  * @param m Number of rows in data
  * @param n Number of cols in data
@@ -18,6 +20,6 @@ namespace popcorn {
  */
 void cluster(char *data_path, int m, int n, int k, MPI_Comm comm);
 
-}  // namespace popcorn
+} // namespace popcorn
 
-#endif  // DISTRIBUTED_POPCORN_CLUSTER_HH
+#endif // DISTRIBUTED_POPCORN_CLUSTER_HH

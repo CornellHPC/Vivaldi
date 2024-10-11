@@ -1,18 +1,16 @@
+// C++ standard imports
+#include <cassert>
+#include <memory>
+
+// Local imports
 #include "../utils/utils.hh"
 #include "dense_mat.hh"
 #include "sparse_mat.hh"
-#include <memory>
 
 namespace popcorn {
 
-void fill_slate_mat_with_buffer(slate::Matrix<DATA_TYPE> *M, DATA_TYPE *buf) {}
-
 DenseMat DenseMat::load_from_file(const char *filename, int64_t rows,
                                   int64_t cols, MPI_Comm comm) {
-
-  /////////////////////////////////////////
-  // TODO: Determine points to cull here //
-  /////////////////////////////////////////
 
   // Open file
   MPI_File fh;
@@ -61,15 +59,19 @@ DenseMat DenseMat::load_from_file(const char *filename, int64_t rows,
 
 DenseMat DenseMat::transpose() {
   assert(sm && "Can only transpose SLATE matrices!");
+
   std::unique_ptr<slate::Matrix<DATA_TYPE>> M =
       std::make_unique<slate::Matrix<DATA_TYPE>>();
   *M = slate::transpose(*sm);
+
   return DenseMat(std::move(M));
 }
 
 DenseMat::DenseMat(std::unique_ptr<slate::Matrix<DATA_TYPE>> M) {
+  // Save pointer to matrix
   sm = std::move(M);
 
+  // Populate private fields
   rows = sm->m();
   cols = sm->n();
   block_rows = sm->mt();
@@ -78,6 +80,53 @@ DenseMat::DenseMat(std::unique_ptr<slate::Matrix<DATA_TYPE>> M) {
   cols_per_block = sm->tileNb(0);
   grid_dim = square_grid_dim(sm->mpiComm());
   comm = sm->mpiComm();
+}
+
+DenseMat::DenseMat(std::unique_ptr<combblas::DnParMat<int64_t, DATA_TYPE>> M) {
+  // Save pointer to matrix
+  cm = std::move(M);
+
+  // Populate private fields
+  rows = cm->getgnrow();
+  cols = cm->getgncol();
+  // TODO: Populate the rest of the stuff
+}
+
+void DenseMat::to_combblas() {
+  assert(sm && "SLATE matrix must exist!");
+
+  // Initialize CombBLAS communicator grid
+  MPI_Comm comm = sm->mpiComm();
+  int p = square_grid_dim(comm);
+  std::shared_ptr<combblas::CommGrid> grid =
+      std::make_shared<combblas::CommGrid>(comm, p, p);
+
+  // Initialize CombBLAS distributed dense matrix
+  std::unique_ptr<combblas::DnParMat<int64_t, DATA_TYPE>> C =
+      std::make_unique<combblas::DnParMat<int64_t, DATA_TYPE>>(
+          grid, sm->m(), sm->n(), (DATA_TYPE)0);
+
+  // Copy the tiles 1-to-1
+  for (int64_t j = 0; j < sm->nt(); ++j) {
+    for (int64_t i = 0; i < sm->mt(); ++i) {
+      if (sm->tileIsLocal(i, j)) {
+        slate::Tile<DATA_TYPE> tile = sm->at(i, j, sm->tileDevice(i, j));
+        C->getarr().resize(tile.size());
+
+        DATA_TYPE *src = tile.data();
+        DATA_TYPE *dst = C->getarr().data();
+        cudaMemcpy(dst, src, sizeof(DATA_TYPE) * tile.size(),
+                   cudaMemcpyDeviceToHost);
+      }
+    }
+  }
+
+  // Free resources for SLATE matrix
+  sm.reset();
+  sm = nullptr;
+
+  // Save pointer to CombBLAS matrix
+  cm = std::move(C);
 }
 
 void DenseMat::apply(Kernel &k) {
@@ -95,8 +144,19 @@ void DenseMat::apply(Kernel &k) {
 }
 
 void DenseMat::print(std::string prefix, std::ostream &out) {
-  assert(sm && "Can only print SLATE metrics!");
-  slate::print(prefix.c_str(), *sm);
+  assert((sm || cm) && "Must have a SLATE or CombBLAS matrix to print!");
+
+  // Try printing SLATE matrix
+  if (sm != nullptr) {
+    slate::print(prefix.c_str(), *sm);
+    return;
+  }
+
+  // Try printing CombBLAS matrix
+  if (cm != nullptr) {
+    cm->PrintToFile("out/" + prefix);
+    return;
+  }
 }
 
 slate::Matrix<DATA_TYPE> *slate_gemm_(slate::Matrix<DATA_TYPE> *L,
@@ -106,36 +166,23 @@ slate::Matrix<DATA_TYPE> *slate_gemm_(slate::Matrix<DATA_TYPE> *L,
   B->insertLocalTiles(slate::Target::Devices);
   slate::gemm<DATA_TYPE>(1.0f, *L, *R, 0.0f, *B,
                          {{slate::Option::Target, slate::Target::Devices}});
+
   return B;
 }
 
 DenseMat DenseMat::gemm(DenseMat &R) {
   assert(sm && R.sm && "Can only do gemm on SLATE matrices!");
+
   std::unique_ptr<slate::Matrix<DATA_TYPE>> M =
       std::make_unique<slate::Matrix<DATA_TYPE>>(rows, R.cols, rows_per_block,
                                                  R.cols_per_block, grid_dim,
                                                  grid_dim, comm);
+
   M->insertLocalTiles(slate::Target::Devices);
   slate::gemm<DATA_TYPE>(1.0f, *sm, *R.sm, 0.0f, *M,
                          {{slate::Option::Target, slate::Target::Devices}});
+
   return DenseMat(std::move(M));
-}
-
-SparseMat::SparseMat(std::vector<float> &row_ids, std::vector<float> &col_ids,
-                     std::vector<DATA_TYPE> &vals, int64_t rows, int64_t cols,
-                     int64_t grid_dim, MPI_Comm comm) {
-  this->grid_dim = grid_dim;
-  this->comm = comm;
-
-  std::shared_ptr<combblas::CommGrid> grid =
-      std::make_shared<combblas::CommGrid>(comm, grid_dim, grid_dim);
-
-  combblas::FullyDistVec<int64_t, DATA_TYPE> drows(row_ids, grid);
-  combblas::FullyDistVec<int64_t, DATA_TYPE> dcols(col_ids, grid);
-  combblas::FullyDistVec<int64_t, DATA_TYPE> dvals(vals, grid);
-
-  cm = std::make_unique<combblas::SpParMat<int64_t, DATA_TYPE, UDER>>(
-      rows, cols, drows, dcols, dvals, false);
 }
 
 } // namespace popcorn

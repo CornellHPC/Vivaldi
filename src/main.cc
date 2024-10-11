@@ -1,6 +1,3 @@
-// CombBLAS assumes this is available
-using namespace std;
-
 // C++ standard imports
 #include <cassert>
 #include <cmath>
@@ -14,18 +11,26 @@ using namespace std;
 
 // Local imports
 #include "common.hh"
-#include "popcorn/utils/utils.hh"
 #include "popcorn/cluster.hh"
+#include "popcorn/utils/utils.hh"
 
 using namespace popcorn;
 
-// Handles command-line arguments
+/**
+ * Runs the distributed popcorn clustering algorithm.
+ *
+ * Usage: srun popcorn <path> <m> <n> <k>
+ *
+ * <path> is the path to the point data
+ * <m> is the number of points
+ * <n> is the number of features
+ * <k> is the number of clusters
+ */
 int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);
 
-  assert(argc == 5 &&
-         "Must pass valid path to point data, number of rows, "
-         "number of columns, and value of k.");
+  assert(argc == 5 && "Must pass valid path to point data, number of rows, "
+                      "number of columns, and value of k.");
 
   char *points_path = argv[1];
   int m = std::atoi(argv[2]);

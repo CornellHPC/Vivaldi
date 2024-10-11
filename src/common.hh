@@ -1,6 +1,9 @@
 #ifndef DISTRIBUTED_POPCORN_COMMON_H
 #define DISTRIBUTED_POPCORN_COMMON_H
 
+// This is required by CombBLAS
+using namespace std;
+
 #include "CombBLAS/CombBLAS.h"
 
 // Macro "Error" is defined in CombBLAS and SLATE. It is unused in
@@ -11,7 +14,10 @@
 
 #include "const.hh"
 
+// Sparse column format for CombBLAS
 using UDER = combblas::SpCCols<int64_t, DATA_TYPE>;
+
+// Semiring type for CombBLAS
 using SR = combblas::PlusTimesSRing<DATA_TYPE, DATA_TYPE>;
 
 #endif // DISTRIBUTED_POPCORN_COMMON_H

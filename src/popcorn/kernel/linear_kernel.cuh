@@ -1,6 +1,7 @@
 #ifndef DISTRIBUTED_POPCORN_LINEAR_KERNEL
 #define DISTRIBUTED_POPCORN_LINEAR_KERNEL
 
+// Local imports
 #include "../../const.hh"
 
 namespace popcorn {
