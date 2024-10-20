@@ -54,8 +54,14 @@ void cluster(char *data_path, int m, int n, int k, MPI_Comm comm) {
   ET.print("ET");
 
   // Initialize the z vector
-  // auto z = DenseMat::initialize_z(assignment, ET);
-  // z.print("z");
+  auto z = DenseMat::initialize_z(assignment, ET);
+  if (rank == 0) {
+    std::cout << "Got Z vector: ";
+    for (int i = 0; i < z.size(); ++i) {
+      std::cout << z.at(i) << " ";
+    }
+    std::cout << std::endl;
+  }
 
   // Compute the centroid norms
   // auto C = V.spmm(z);

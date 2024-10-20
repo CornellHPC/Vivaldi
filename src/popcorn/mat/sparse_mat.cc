@@ -102,7 +102,7 @@ DenseMat SparseMat::spmm(DenseMat &R) {
   // Perform SpMM
   *O = combblas::SpMM_sC<SR>(*cm, *R.cm, stats);
 
-  return DenseMat(std::move(O));
+  return DenseMat(std::move(O), R.comm);
 }
 
 } // namespace popcorn

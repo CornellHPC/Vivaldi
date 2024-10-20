@@ -57,6 +57,125 @@ DenseMat DenseMat::load_from_file(const char *filename, int64_t rows,
   return DenseMat(std::move(M));
 }
 
+std::vector<DATA_TYPE> DenseMat::initialize_z(ClusterAssignment &assignment,
+                                              DenseMat &ET) {
+  assert(ET.cm != nullptr && "ET must be a dense CombBLAS matrix!");
+  // std::cout << ET.comm << std::endl;
+
+  // Compute communicator information
+  int rank, size, grid_dim, row_index, col_index;
+  MPI_Comm_rank(ET.comm, &rank);
+  MPI_Comm_size(ET.comm, &size);
+  grid_dim = square_grid_dim(ET.comm);
+  row_index = size / grid_dim;
+  col_index = size % grid_dim;
+
+  // Prepare for MPI
+  long mb = ET.cm->getnrow();
+  long nb = ET.cm->getncol();
+  long *rows = new long[size];
+  long *cols = new long[size];
+
+  // Patch weird local size reporting
+  if (mb == 0 or nb == 0) {
+    mb = 0;
+    nb = 0;
+  }
+
+  // Run communication
+  MPI_Allgather(&mb, 1, MPI_LONG, rows, 1, MPI_LONG, ET.comm);
+  MPI_Allgather(&nb, 1, MPI_LONG, cols, 1, MPI_LONG, ET.comm);
+
+  // Compute row range
+  int row_start = 0;
+  for (int i = rank % grid_dim; i < rank; i += grid_dim) {
+    row_start += rows[i];
+  }
+  int row_end = row_start + rows[rank];
+
+  // Compute col range
+  int col_start = 0;
+  for (int i = rank - (rank % grid_dim); i < rank; ++i) {
+    col_start += cols[i];
+  }
+  int col_end = col_start + cols[rank];
+
+  // Clean up matrix data
+  delete[] rows;
+  delete[] cols;
+
+  std::vector<float> points = assignment.get_points();
+  std::vector<float> clusters = assignment.get_clusters();
+  std::vector<DATA_TYPE> lvals;
+  std::vector<float> lcols;
+  std::vector<DATA_TYPE> arr = ET.cm->getarr();
+
+  // Find local assignments
+  for (int i = 0; i < points.size(); ++i) {
+    float point = points.at(i);
+    float cluster = clusters.at(i);
+
+    if (row_start <= cluster && cluster < row_end && col_start <= point &&
+        point < col_end) {
+      int row = cluster - row_start;
+      int col = point - col_start;
+
+      lvals.push_back(arr.at(row * nb + col));
+      lcols.push_back(point);
+    }
+  }
+
+  // MPI initialization
+  int *recvcounts = new int[size];
+  int *displs = new int[size];
+  DATA_TYPE *zvals = new DATA_TYPE[assignment.get_total_points()];
+  float *zcols = new float[assignment.get_total_points()];
+  int elems = lvals.size();
+
+  // Determine dynamic message sizes
+  MPI_Allgather(&elems, 1, MPI_INT, recvcounts, 1, MPI_INT, ET.comm);
+  displs[0] = 0;
+  for (int i = 1; i < size; ++i) {
+    displs[i] = displs[i - 1] + recvcounts[i - 1];
+  }
+
+  // MPI communication (TODO: dynamically determine MPI type)
+  MPI_Allgatherv(lvals.data(), lvals.size(), MPI_FLOAT, zvals, recvcounts,
+                 displs, MPI_FLOAT, ET.comm);
+  MPI_Allgatherv(lcols.data(), lcols.size(), MPI_FLOAT, zcols, recvcounts,
+                 displs, MPI_FLOAT, ET.comm);
+
+  // Points should be approximately sorted on column, so
+  // insertion sort should be approximately linear time
+  int length = assignment.get_total_points();
+  for (int i = 1; i < length; ++i) {
+    for (int j = i - 1; j >= 0; --j) {
+      if (zcols[j] > zcols[j + 1]) {
+        float tcol = zcols[j];
+        zcols[j] = zcols[j + 1];
+        zcols[j + 1] = tcol;
+
+        DATA_TYPE tval = zvals[j];
+        zvals[j] = zvals[j + 1];
+        zvals[j + 1] = tval;
+      } else {
+        break;
+      }
+    }
+  }
+
+  // Copy heap data to stack (pass via RVO)
+  std::vector<DATA_TYPE> out(zvals, zvals + length);
+
+  // Clean up
+  delete[] recvcounts;
+  delete[] displs;
+  delete[] zvals;
+  delete[] zcols;
+
+  return out;
+}
+
 DenseMat DenseMat::transpose() {
   assert(sm && "Can only transpose SLATE matrices!");
 
@@ -82,13 +201,15 @@ DenseMat::DenseMat(std::unique_ptr<slate::Matrix<DATA_TYPE>> M) {
   comm = sm->mpiComm();
 }
 
-DenseMat::DenseMat(std::unique_ptr<combblas::DnParMat<int64_t, DATA_TYPE>> M) {
+DenseMat::DenseMat(std::unique_ptr<combblas::DnParMat<int64_t, DATA_TYPE>> M,
+                   MPI_Comm comm) {
   // Save pointer to matrix
   cm = std::move(M);
 
   // Populate private fields
-  rows = cm->getgnrow();
-  cols = cm->getgncol();
+  this->rows = cm->getgnrow();
+  this->cols = cm->getgncol();
+  this->comm = comm;
   // TODO: Populate the rest of the stuff
 }
 

@@ -45,7 +45,8 @@ public:
    * @param ET is the dense matrix E transposed.
    * @return the z vector.
    */
-  static DenseMat initialize_z(ClusterAssignment &assignment, DenseMat &ET);
+  static std::vector<DATA_TYPE> initialize_z(ClusterAssignment &assignment,
+                                             DenseMat &ET);
 
   /**
    * Returns a new DenseMat that is transposed.
@@ -90,8 +91,10 @@ private:
    * Constructor from a CombBLAS dense matrix.
    *
    * @param cm is the CombBLAS dense matrix
+   * @param comm is the MPI communicator
    */
-  DenseMat(std::unique_ptr<combblas::DnParMat<int64_t, DATA_TYPE>> cm);
+  DenseMat(std::unique_ptr<combblas::DnParMat<int64_t, DATA_TYPE>> cm,
+           MPI_Comm comm);
 
   /**
    * Converts the SLATE representation to CombBLAS.
