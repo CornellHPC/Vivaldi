@@ -10,7 +10,7 @@
 
 // Local imports
 #include "../../common.hh"
-#include "../kernel/linear_kernel.cuh"
+#include "../kernel/kernel.cuh"
 
 namespace popcorn {
 

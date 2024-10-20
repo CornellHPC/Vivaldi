@@ -1,6 +1,6 @@
 // Local imports
 #include "cluster.hh"
-#include "kernel/linear_kernel.cuh"
+#include "kernel/polynomial_kernel.cuh"
 #include "mat/dense_mat.hh"
 #include "mat/sparse_mat.hh"
 #include "utils/utils.hh"
@@ -40,8 +40,7 @@ void cluster(char *data_path, int m, int n, int k, MPI_Comm comm) {
   // TODO: make gamma, c, r as IO input
   // TODO: pull mb from the matrix instead of passing
   auto K = P.gemm(PT);
-  int mb = tile_dim(comm, m);
-  auto poly_kernel = PolynomialKernel(mb, 1.0f, 1.0f, 2.0f);
+  auto poly_kernel = PolynomialKernel(1.0f, 1.0f, 2.0f);
   K.apply(poly_kernel);
   K.print("K");
 

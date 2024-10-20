@@ -137,7 +137,7 @@ void DenseMat::apply(Kernel &k) {
       if (sm->tileIsLocal(i, j)) {
         slate::Tile<DATA_TYPE> tile = sm->at(i, j, sm->tileDevice(i, j));
         DATA_TYPE *tile_buf = tile.data();
-        k.f(tile_buf);
+        k.f(tile.mb(), tile.nb(), tile_buf);
       }
     }
   }
