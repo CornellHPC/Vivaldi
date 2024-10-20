@@ -14,7 +14,7 @@ __global__ void polynonial_kernel_cu_(int64_t m, int64_t n, DATA_TYPE *B,
                                       DATA_TYPE r) {
   for (int i = threadIdx.x; i < m * n; i += blockDim.x) {
     // we need a for loop in case the block size =/= n^2
-    B[i] = -2.0f * powf(gamma * B[i] + c, r);
+    B[i] = powf(gamma * B[i] + c, r);
   }
 }
 

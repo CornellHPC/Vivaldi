@@ -1,4 +1,5 @@
 // C++ standard imports
+#include <algorithm>
 #include <cassert>
 #include <memory>
 
@@ -42,52 +43,40 @@ SparseMat::SparseMat(
   grid_dim = square_grid_dim(comm);
 }
 
-SparseMat SparseMat::initialize_v(int64_t points, int64_t k, MPI_Comm comm) {
-  int rank;
-  MPI_Comm_rank(comm, &rank);
+SparseMat SparseMat::initialize_v(ClusterAssignment &assignment,
+                                  MPI_Comm comm) {
+  // Get global assignment data
+  int m = assignment.get_total_points();
+  int k = assignment.get_total_clusters();
+  std::vector<float> points = assignment.get_points();
+  std::vector<float> clusters = assignment.get_clusters();
+  std::vector<float> points_per_cluster = assignment.get_points_per_cluster();
 
-  int grid_dim = square_grid_dim(comm);
-  int P = grid_dim * grid_dim;
+  // Get communicator information
+  int rank, grid_dim, P;
+  MPI_Comm_rank(comm, &rank);
+  grid_dim = square_grid_dim(comm);
+  P = grid_dim * grid_dim;
+
+  // Find local range of points
+  int start = (m / P) * rank + std::min(m % P, rank);
+  int end = start + (m / P) + ((rank < m % P) ? 1 : 0);
+
+  // Compute local entries
+  std::vector<float> lrows, lcols;
+  std::vector<DATA_TYPE> lvals;
+  for (int point = start; point < end; ++point) {
+    int cluster = clusters.at(point);
+    lrows.push_back(cluster);
+    lcols.push_back(point);
+    lvals.push_back(((DATA_TYPE)1) / points_per_cluster.at(cluster));
+  }
 
   // Initialize CombBLAS communicator grid
   std::shared_ptr<combblas::CommGrid> grid =
       std::make_shared<combblas::CommGrid>(comm, grid_dim, grid_dim);
 
-  // Compute points per cluster assuming round-robin assignment
-  int *points_per_cluster = (int *)calloc(sizeof(int), k);
-  for (int i = 0; i < k; ++i) {
-    points_per_cluster[i] = (points / k) + ((i < points % k) ? 1 : 0);
-  }
-
-  // Compute points per process assuming round-robin assignment
-  int *points_per_process = (int *)calloc(sizeof(int), P);
-  for (int i = 0; i < P; ++i) {
-    points_per_process[i] = (points / P) + ((i < points % P) ? 1 : 0);
-  }
-
-  // Compute sparse matrix row partition for which this rank is responsible
-  int row_start = 0;
-  for (int i = 0; i < rank; ++i) {
-    row_start += points_per_process[i];
-  }
-  int row_end = row_start + points_per_process[rank];
-
-  // Compute sparse matrix entry positions and values
-  std::vector<float> lrow_ids, lcol_ids, lvals;
-  for (int row = row_start, col = row_start % k; row < row_end;
-       ++row, col = (col + 1) % k) {
-    lrow_ids.push_back(row);
-    lcol_ids.push_back(col);
-    lvals.push_back(1.0f / points_per_cluster[col]);
-  }
-
-  // Clean up
-  free(points_per_cluster);
-  free(points_per_process);
-
-  SparseMat out = SparseMat(lrow_ids, lcol_ids, lvals, points, k, comm);
-  out.transpose();
-  return out;
+  return SparseMat(lrows, lcols, lvals, k, m, comm);
 }
 
 void SparseMat::transpose() { cm->Transpose(); }

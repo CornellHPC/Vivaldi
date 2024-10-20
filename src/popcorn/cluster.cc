@@ -1,5 +1,6 @@
 // Local imports
 #include "cluster.hh"
+#include "cluster_assignment.hh"
 #include "kernel/polynomial_kernel.cuh"
 #include "mat/dense_mat.hh"
 #include "mat/sparse_mat.hh"
@@ -38,19 +39,31 @@ void cluster(char *data_path, int m, int n, int k, MPI_Comm comm) {
 
   // Compute the K matrix
   // TODO: make gamma, c, r as IO input
-  // TODO: pull mb from the matrix instead of passing
   auto K = P.gemm(PT);
-  auto poly_kernel = PolynomialKernel(1.0f, 1.0f, 2.0f);
+  auto poly_kernel = PolynomialKernel(1.0f, 1.0f, 1.0f);
   K.apply(poly_kernel);
   K.print("K");
 
   // Initialize the V matrix
-  auto V = SparseMat::initialize_v(m, k, comm);
+  ClusterAssignment assignment = ClusterAssignment::round_robin(m, k);
+  auto V = SparseMat::initialize_v(assignment, comm);
   V.print("V");
 
   // Perform SpMM(VK)
-  auto O = V.spmm(K);
-  O.print("O");
+  auto ET = V.spmm(K);
+  ET.print("ET");
+
+  // Initialize the z vector
+  // auto z = DenseMat::initialize_z(assignment, ET);
+  // z.print("z");
+
+  // Compute the centroid norms
+  // auto C = V.spmm(z);
+  // C.print("C");
+
+  // TODO: Compute the D matrix
+  // TODO: Update V matrix
+  // TODO: Iterate
 }
 
 } // namespace popcorn

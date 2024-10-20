@@ -15,6 +15,7 @@
 namespace popcorn {
 
 class SparseMat;
+class ClusterAssignment;
 
 /**
  * A distributed dense matrix.
@@ -32,9 +33,19 @@ public:
    * @param rows is the number of rows in the global matrix
    * @param cols is the number of columns in the global matrix
    * @param comm is the MPI communicator used for the matrix distribution
+   * @return the loaded dense matrix.
    */
   static DenseMat load_from_file(const char *filename, int64_t rows,
                                  int64_t cols, MPI_Comm comm);
+
+  /**
+   * Initializes and returns the z vector for popcorn.
+   *
+   * @param assignment is the cluster assignment.
+   * @param ET is the dense matrix E transposed.
+   * @return the z vector.
+   */
+  static DenseMat initialize_z(ClusterAssignment &assignment, DenseMat &ET);
 
   /**
    * Returns a new DenseMat that is transposed.
