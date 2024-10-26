@@ -9,12 +9,10 @@
 
 // Local imports
 #include "../../common.hh"
-#include "../cluster_assignment.hh"
 
 namespace popcorn {
 
 class DenseMat;
-class ClusterAssignment;
 
 /**
  * A distributed sparse matrix.
@@ -47,11 +45,12 @@ public:
 
   /**
    * Initializes and returns the V matrix for popcorn.
+   * This does a round-robin assignment of points to clusters.
    *
-   * @param assignment is the cluster assignment
-   * @param comm is the communicator to use for distribution
+   * @param points is the number of points to cluster
+   * @param k is the number of clusters.
    */
-  static SparseMat initialize_v(ClusterAssignment &assignment, MPI_Comm comm);
+  static SparseMat initialize_v(int64_t points, int64_t k, MPI_Comm comm);
 
   /**
    * Transposes the sparse matrix in-place.

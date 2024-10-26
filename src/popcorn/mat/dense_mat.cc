@@ -57,123 +57,33 @@ DenseMat DenseMat::load_from_file(const char *filename, int64_t rows,
   return DenseMat(std::move(M));
 }
 
-std::vector<DATA_TYPE> DenseMat::initialize_z(ClusterAssignment &assignment,
-                                              DenseMat &ET) {
-  assert(ET.cm != nullptr && "ET must be a dense CombBLAS matrix!");
-  // std::cout << ET.comm << std::endl;
+std::vector<DATA_TYPE> DenseMat::initialize_cnorm(SparseMat &V, DenseMat &ET) {
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  // Compute communicator information
-  int rank, size, grid_dim, row_index, col_index;
-  MPI_Comm_rank(ET.comm, &rank);
-  MPI_Comm_size(ET.comm, &size);
-  grid_dim = square_grid_dim(ET.comm);
-  row_index = size / grid_dim;
-  col_index = size % grid_dim;
+  int ml = V.cm->getlocalrows();
+  int nl = V.cm->getlocalcols();
+  UDER *spSeq = V.cm->seqptr();
 
-  // Prepare for MPI
-  long mb = ET.cm->getnrow();
-  long nb = ET.cm->getncol();
-  long *rows = new long[size];
-  long *cols = new long[size];
-
-  // Patch weird local size reporting
-  if (mb == 0 or nb == 0) {
-    mb = 0;
-    nb = 0;
-  }
-
-  // Run communication
-  MPI_Allgather(&mb, 1, MPI_LONG, rows, 1, MPI_LONG, ET.comm);
-  MPI_Allgather(&nb, 1, MPI_LONG, cols, 1, MPI_LONG, ET.comm);
-
-  // Compute row range
-  int row_start = 0;
-  for (int i = rank % grid_dim; i < rank; i += grid_dim) {
-    row_start += rows[i];
-  }
-  int row_end = row_start + rows[rank];
-
-  // Compute col range
-  int col_start = 0;
-  for (int i = rank - (rank % grid_dim); i < rank; ++i) {
-    col_start += cols[i];
-  }
-  int col_end = col_start + cols[rank];
-
-  // Clean up matrix data
-  delete[] rows;
-  delete[] cols;
-
-  std::vector<float> points = assignment.get_points();
-  std::vector<float> clusters = assignment.get_clusters();
-  std::vector<DATA_TYPE> lvals;
-  std::vector<float> lcols;
-  std::vector<DATA_TYPE> arr = ET.cm->getarr();
-
-  // Find local assignments
-  for (int i = 0; i < points.size(); ++i) {
-    float point = points.at(i);
-    float cluster = clusters.at(i);
-
-    if (row_start <= cluster && cluster < row_end && col_start <= point &&
-        point < col_end) {
-      int row = cluster - row_start;
-      int col = point - col_start;
-
-      lvals.push_back(arr.at(row * nb + col));
-      lcols.push_back(point);
+  std::vector<DATA_TYPE> zl(nl, 0);
+  for (typename UDER::SpColIter colit = spSeq->begcol();
+       colit != spSeq->endcol(); ++colit) {
+    for (typename UDER::SpColIter::NzIter nzit = spSeq->begnz(colit);
+         nzit != spSeq->endnz(colit); ++nzit) {
+      int i = nzit.rowid();
+      int j = colit.colid();
+      zl[j] = ET.cm->getarr().at(i * nl + j);
     }
   }
 
-  // MPI initialization
-  int *recvcounts = new int[size];
-  int *displs = new int[size];
-  DATA_TYPE *zvals = new DATA_TYPE[assignment.get_total_points()];
-  float *zcols = new float[assignment.get_total_points()];
-  int elems = lvals.size();
+  std::vector<DATA_TYPE> cl(ml, 0);
+  // TODO: Compute cl = SpMV(Vzl)
 
-  // Determine dynamic message sizes
-  MPI_Allgather(&elems, 1, MPI_INT, recvcounts, 1, MPI_INT, ET.comm);
-  displs[0] = 0;
-  for (int i = 1; i < size; ++i) {
-    displs[i] = displs[i - 1] + recvcounts[i - 1];
-  }
+  std::vector<DATA_TYPE> c(ml, 0);
+  MPI_Comm row_world = V.cm->getcommgrid()->GetRowWorld();
+  MPI_Allreduce(cl.data(), c.data(), cl.size(), MPI_FLOAT, MPI_SUM, row_world);
 
-  // MPI communication (TODO: dynamically determine MPI type)
-  MPI_Allgatherv(lvals.data(), lvals.size(), MPI_FLOAT, zvals, recvcounts,
-                 displs, MPI_FLOAT, ET.comm);
-  MPI_Allgatherv(lcols.data(), lcols.size(), MPI_FLOAT, zcols, recvcounts,
-                 displs, MPI_FLOAT, ET.comm);
-
-  // Points should be approximately sorted on column, so
-  // insertion sort should be approximately linear time
-  int length = assignment.get_total_points();
-  for (int i = 1; i < length; ++i) {
-    for (int j = i - 1; j >= 0; --j) {
-      if (zcols[j] > zcols[j + 1]) {
-        float tcol = zcols[j];
-        zcols[j] = zcols[j + 1];
-        zcols[j + 1] = tcol;
-
-        DATA_TYPE tval = zvals[j];
-        zvals[j] = zvals[j + 1];
-        zvals[j + 1] = tval;
-      } else {
-        break;
-      }
-    }
-  }
-
-  // Copy heap data to stack (pass via RVO)
-  std::vector<DATA_TYPE> out(zvals, zvals + length);
-
-  // Clean up
-  delete[] recvcounts;
-  delete[] displs;
-  delete[] zvals;
-  delete[] zcols;
-
-  return out;
+  return c;
 }
 
 DenseMat DenseMat::transpose() {

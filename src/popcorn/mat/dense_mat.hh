@@ -15,7 +15,6 @@
 namespace popcorn {
 
 class SparseMat;
-class ClusterAssignment;
 
 /**
  * A distributed dense matrix.
@@ -39,14 +38,12 @@ public:
                                  int64_t cols, MPI_Comm comm);
 
   /**
-   * Initializes and returns the z vector for popcorn.
+   * Initializes and returns the cnorm vector for popcorn.
    *
-   * @param assignment is the cluster assignment.
+   * @param V is the sparse cluster assignment matrix.
    * @param ET is the dense matrix E transposed.
-   * @return the z vector.
    */
-  static std::vector<DATA_TYPE> initialize_z(ClusterAssignment &assignment,
-                                             DenseMat &ET);
+  static std::vector<DATA_TYPE> initialize_cnorm(SparseMat &V, DenseMat &ET);
 
   /**
    * Returns a new DenseMat that is transposed.
