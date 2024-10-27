@@ -32,14 +32,14 @@ DenseMat DenseMat::load_from_file(const char *filename, int64_t rows,
 
   // Fill data
   int64_t m = M->m(), n = M->n(), mb = M->tileMb(0), nb = M->tileNb(0);
-  for (int64_t j = 0; j < M->nt(); ++j) {    // i loops over block columns
-    for (int64_t i = 0; i < M->mt(); ++i) {  // j loops over block rows
+  for (int64_t j = 0; j < M->nt(); ++j) {   // i loops over block columns
+    for (int64_t i = 0; i < M->mt(); ++i) { // j loops over block rows
       if (M->tileIsLocal(i, j)) {
         slate::Tile<DATA_TYPE> tile = M->at(i, j, M->tileDevice(i, j));
         int64_t lda = tile.stride();
         DATA_TYPE *A = tile.data();
 
-        for (int64_t jj = 0; jj < tile.nb(); ++jj) {  // jj loops over columns
+        for (int64_t jj = 0; jj < tile.nb(); ++jj) { // jj loops over columns
           int64_t global_column = j * nb + jj;
           int64_t global_row_start = i * mb;
           cudaMemcpy(A + jj * lda, data + global_column * m + global_row_start,
@@ -59,7 +59,8 @@ DenseMat DenseMat::load_from_file(const char *filename, int64_t rows,
 std::vector<DATA_TYPE> DenseMat::initialize_cnorm(SparseMat &V, DenseMat &ET) {
   // TODO: opportunity to apply threading, especially since csc_gespmv_dense
   // is not particularly advanced or accelerated
-  // alternatively, we can use cusparse SPMV to speed up acceleration in the future
+  // alternatively, we can use cusparse SPMV to speed up acceleration in the
+  // future
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -68,7 +69,7 @@ std::vector<DATA_TYPE> DenseMat::initialize_cnorm(SparseMat &V, DenseMat &ET) {
   int nl = V.cm->getlocalcols();
   UDER *spSeq = V.cm->seqptr();
 
-  DATA_TYPE *zl = (DATA_TYPE *) calloc(nl, sizeof(DATA_TYPE));
+  DATA_TYPE *zl = (DATA_TYPE *)calloc(nl, sizeof(DATA_TYPE));
   for (typename UDER::SpColIter colit = spSeq->begcol();
        colit != spSeq->endcol(); ++colit) {
     for (typename UDER::SpColIter::NzIter nzit = spSeq->begnz(colit);
@@ -79,12 +80,16 @@ std::vector<DATA_TYPE> DenseMat::initialize_cnorm(SparseMat &V, DenseMat &ET) {
     }
   }
 
-  DATA_TYPE *cl = (DATA_TYPE *) calloc(ml, sizeof(DATA_TYPE));
+  DATA_TYPE *cl = (DATA_TYPE *)calloc(ml, sizeof(DATA_TYPE));
   combblas::csc_gespmv_dense<SR>(*spSeq, zl, cl);
 
   std::vector<DATA_TYPE> c(ml, 0);
   MPI_Comm row_world = V.cm->getcommgrid()->GetRowWorld();
   MPI_Allreduce(cl, c.data(), ml, MPI_FLOAT, MPI_SUM, row_world);
+
+  // Clean up
+  free(zl);
+  free(cl);
 
   return c;
 }
@@ -166,8 +171,8 @@ void DenseMat::to_combblas() {
 void DenseMat::apply(Kernel &k) {
   assert(sm && "Can only apply kernels on SLATE matrices!");
 
-  for (int64_t j = 0; j < sm->nt(); ++j) {    // i loops over block columns
-    for (int64_t i = 0; i < sm->mt(); ++i) {  // j loops over block rows
+  for (int64_t j = 0; j < sm->nt(); ++j) {   // i loops over block columns
+    for (int64_t i = 0; i < sm->mt(); ++i) { // j loops over block rows
       if (sm->tileIsLocal(i, j)) {
         slate::Tile<DATA_TYPE> tile = sm->at(i, j, sm->tileDevice(i, j));
         DATA_TYPE *tile_buf = tile.data();
@@ -219,4 +224,4 @@ DenseMat DenseMat::gemm(DenseMat &R) {
   return DenseMat(std::move(M));
 }
 
-}  // namespace popcorn
+} // namespace popcorn
