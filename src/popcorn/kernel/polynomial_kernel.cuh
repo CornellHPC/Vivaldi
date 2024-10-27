@@ -15,13 +15,13 @@ namespace popcorn {
 struct PolynomialKernel : public Kernel {
   PolynomialKernel(DATA_TYPE gamma, DATA_TYPE c, DATA_TYPE r)
       : gamma(gamma), c(c), r(r) {};
-  void f(int64_t m, int64_t n, DATA_TYPE *B);
+  void f(int64_t m, int64_t n, DATA_TYPE* B);
 
   DATA_TYPE gamma;
   DATA_TYPE c;
   DATA_TYPE r;
 };
 
-} // namespace popcorn
+}  // namespace popcorn
 
-#endif // DISTRIBUTED_POPCORN_POLYNOMIAL_KERNEL
+#endif  // DISTRIBUTED_POPCORN_POLYNOMIAL_KERNEL

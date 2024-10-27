@@ -9,7 +9,7 @@
 #include "polynomial_kernel.cuh"
 #include "utils.cuh"
 
-__global__ void polynonial_kernel_cu_(int64_t m, int64_t n, DATA_TYPE *B,
+__global__ void polynonial_kernel_cu_(int64_t m, int64_t n, DATA_TYPE* B,
                                       DATA_TYPE gamma, DATA_TYPE c,
                                       DATA_TYPE r) {
   for (int i = threadIdx.x; i < m * n; i += blockDim.x) {
@@ -20,7 +20,7 @@ __global__ void polynonial_kernel_cu_(int64_t m, int64_t n, DATA_TYPE *B,
 
 namespace popcorn {
 
-void PolynomialKernel::f(int64_t m, int64_t n, DATA_TYPE *B) {
+void PolynomialKernel::f(int64_t m, int64_t n, DATA_TYPE* B) {
   // quick return
   if (m == 0 || n == 0)
     return;
@@ -31,4 +31,4 @@ void PolynomialKernel::f(int64_t m, int64_t n, DATA_TYPE *B) {
   polynonial_kernel_cu_<<<1, nthreads>>>(m, n, B, gamma, c, r);
 }
 
-} // namespace popcorn
+}  // namespace popcorn

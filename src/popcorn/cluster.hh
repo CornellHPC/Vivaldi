@@ -18,8 +18,8 @@ namespace popcorn {
  * @param k Number of clusters to form
  * @param comm MPI communicator
  */
-void cluster(char *data_path, int m, int n, int k, MPI_Comm comm);
+void cluster(char* data_path, int m, int n, int k, MPI_Comm comm);
 
-} // namespace popcorn
+}  // namespace popcorn
 
-#endif // DISTRIBUTED_POPCORN_CLUSTER_HH
+#endif  // DISTRIBUTED_POPCORN_CLUSTER_HH

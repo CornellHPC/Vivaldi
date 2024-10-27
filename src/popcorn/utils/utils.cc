@@ -19,8 +19,8 @@ void popcorn::wake_gpus(int myrank) {
   int ts = 0;
   for (int i = 0; i < ndevices; ++i) {
     cudaSetDevice(i);
-    int *array;
-    int *dArray;
+    int* array;
+    int* dArray;
     int count = 7;
     int size = count * sizeof(int);
     array = new int[count];

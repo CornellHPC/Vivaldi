@@ -24,7 +24,7 @@ class SparseMat;
  * in a library-agnostic manner.
  */
 class DenseMat {
-public:
+ public:
   /**
    * Loads a DenseMat from a file.
    *
@@ -34,7 +34,7 @@ public:
    * @param comm is the MPI communicator used for the matrix distribution
    * @return the loaded dense matrix.
    */
-  static DenseMat load_from_file(const char *filename, int64_t rows,
+  static DenseMat load_from_file(const char* filename, int64_t rows,
                                  int64_t cols, MPI_Comm comm);
 
   /**
@@ -43,7 +43,7 @@ public:
    * @param V is the sparse cluster assignment matrix.
    * @param ET is the dense matrix E transposed.
    */
-  static std::vector<DATA_TYPE> initialize_cnorm(SparseMat &V, DenseMat &ET);
+  static std::vector<DATA_TYPE> initialize_cnorm(SparseMat& V, DenseMat& ET);
 
   /**
    * Returns a new DenseMat that is transposed.
@@ -57,14 +57,14 @@ public:
    *
    * @param f is the function to apply
    */
-  void apply(Kernel &k);
+  void apply(Kernel& k);
 
   /**
    * Performs a GEMM and returns a new DenseMat with the result.
    *
    * @param R is the right matrix
    */
-  DenseMat gemm(DenseMat &R);
+  DenseMat gemm(DenseMat& R);
 
   /**
    * Prints the SparseMat to the provided output stream.
@@ -72,11 +72,11 @@ public:
    * @param prefix is the prefix string
    * @param out is the output stream
    */
-  void print(std::string prefix, std::ostream &out = std::cout);
+  void print(std::string prefix, std::ostream& out = std::cout);
 
   friend class SparseMat;
 
-private:
+ private:
   /**
    * Constructor from a SLATE dense matrix.
    *
@@ -142,6 +142,6 @@ private:
   std::unique_ptr<combblas::DnParMat<int64_t, DATA_TYPE>> cm;
 };
 
-} // namespace popcorn
+}  // namespace popcorn
 
-#endif // DISTRIBUTED_POPCORN_DENSE_MAT_H
+#endif  // DISTRIBUTED_POPCORN_DENSE_MAT_H

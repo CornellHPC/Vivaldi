@@ -20,4 +20,4 @@ using UDER = combblas::SpCCols<int64_t, DATA_TYPE>;
 // Semiring type for CombBLAS
 using SR = combblas::PlusTimesSRing<DATA_TYPE, DATA_TYPE>;
 
-#endif // DISTRIBUTED_POPCORN_COMMON_H
+#endif  // DISTRIBUTED_POPCORN_COMMON_H

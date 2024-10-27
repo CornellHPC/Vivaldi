@@ -9,4 +9,4 @@
 // Matrix data type
 #define DATA_TYPE float
 
-#endif // DISTRIBUTED_POPCORN_CONST_H
+#endif  // DISTRIBUTED_POPCORN_CONST_H

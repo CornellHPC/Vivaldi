@@ -10,8 +10,8 @@
 
 namespace popcorn {
 
-SparseMat::SparseMat(std::vector<float> &row_ids, std::vector<float> &col_ids,
-                     std::vector<DATA_TYPE> &vals, int64_t rows, int64_t cols,
+SparseMat::SparseMat(std::vector<float>& row_ids, std::vector<float>& col_ids,
+                     std::vector<DATA_TYPE>& vals, int64_t rows, int64_t cols,
                      MPI_Comm comm) {
   this->grid_dim = square_grid_dim(comm);
   this->comm = comm;
@@ -55,13 +55,13 @@ SparseMat SparseMat::initialize_v(int64_t points, int64_t k, MPI_Comm comm) {
       std::make_shared<combblas::CommGrid>(comm, grid_dim, grid_dim);
 
   // Compute points per cluster assuming round-robin assignment
-  int *points_per_cluster = (int *)calloc(sizeof(int), k);
+  int* points_per_cluster = (int*)calloc(sizeof(int), k);
   for (int i = 0; i < k; ++i) {
     points_per_cluster[i] = (points / k) + ((i < points % k) ? 1 : 0);
   }
 
   // Compute points per process assuming round-robin assignment
-  int *points_per_process = (int *)calloc(sizeof(int), P);
+  int* points_per_process = (int*)calloc(sizeof(int), P);
   for (int i = 0; i < P; ++i) {
     points_per_process[i] = (points / P) + ((i < points % P) ? 1 : 0);
   }
@@ -91,13 +91,15 @@ SparseMat SparseMat::initialize_v(int64_t points, int64_t k, MPI_Comm comm) {
   return out;
 }
 
-void SparseMat::transpose() { cm->Transpose(); }
+void SparseMat::transpose() {
+  cm->Transpose();
+}
 
-void SparseMat::print(std::string prefix, std::ostream &out) {
+void SparseMat::print(std::string prefix, std::ostream& out) {
   cm->PrintInfo();
 }
 
-DenseMat SparseMat::spmm(DenseMat &R) {
+DenseMat SparseMat::spmm(DenseMat& R) {
   assert(cm && "Must have a CombBLAS sparse matrix!");
   assert((R.cm || R.sm) && "Must have a SLATE or CombBLAS dense matrix!");
 
@@ -117,4 +119,4 @@ DenseMat SparseMat::spmm(DenseMat &R) {
   return DenseMat(std::move(O), R.comm);
 }
 
-} // namespace popcorn
+}  // namespace popcorn

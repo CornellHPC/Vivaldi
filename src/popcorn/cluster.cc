@@ -7,7 +7,7 @@
 
 namespace popcorn {
 
-void cluster(char *data_path, int m, int n, int k, MPI_Comm comm) {
+void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
   int rank, size;
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
@@ -68,4 +68,4 @@ void cluster(char *data_path, int m, int n, int k, MPI_Comm comm) {
   // TODO: Iterate
 }
 
-} // namespace popcorn
+}  // namespace popcorn

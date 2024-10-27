@@ -26,13 +26,14 @@ using namespace popcorn;
  * <n> is the number of features
  * <k> is the number of clusters
  */
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   MPI_Init(&argc, &argv);
 
-  assert(argc == 5 && "Must pass valid path to point data, number of rows, "
-                      "number of columns, and value of k.");
+  assert(argc == 5 &&
+         "Must pass valid path to point data, number of rows, "
+         "number of columns, and value of k.");
 
-  char *points_path = argv[1];
+  char* points_path = argv[1];
   int m = std::atoi(argv[2]);
   int n = std::atoi(argv[3]);
   int k = std::atoi(argv[4]);

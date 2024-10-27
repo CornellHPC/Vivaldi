@@ -22,7 +22,7 @@ class DenseMat;
  * in a library-agnostic manner.
  */
 class SparseMat {
-public:
+ public:
   /**
    * Constructor that loads the specified data.
    *
@@ -39,8 +39,8 @@ public:
    * @param cols is num of cols
    * @param comm is the MPI communicator used for the matrix distribution
    */
-  SparseMat(std::vector<float> &row_ids, std::vector<float> &col_ids,
-            std::vector<DATA_TYPE> &vals, int64_t rows, int64_t cols,
+  SparseMat(std::vector<float>& row_ids, std::vector<float>& col_ids,
+            std::vector<DATA_TYPE>& vals, int64_t rows, int64_t cols,
             MPI_Comm comm);
 
   /**
@@ -60,7 +60,7 @@ public:
   /**
    * @param R is the right dense matrix
    */
-  DenseMat spmm(DenseMat &R);
+  DenseMat spmm(DenseMat& R);
 
   /**
    * Prints the SparseMat to the provided output stream.
@@ -68,11 +68,11 @@ public:
    * @param prefix is the prefix string
    * @param out is the output stream
    */
-  void print(std::string prefix, std::ostream &out = std::cout);
+  void print(std::string prefix, std::ostream& out = std::cout);
 
   friend class DenseMat;
 
-private:
+ private:
   /**
    * Constructor from a CombBLAS dense matrix.
    *
@@ -99,8 +99,8 @@ private:
   std::unique_ptr<combblas::SpParMat<int64_t, DATA_TYPE, UDER>> cm;
 };
 
-DenseMat spmm(SparseMat &L, DenseMat &R);
+DenseMat spmm(SparseMat& L, DenseMat& R);
 
-} // namespace popcorn
+}  // namespace popcorn
 
-#endif // DISTRIBUTED_POPCORN_SPARSE_MAT_H
+#endif  // DISTRIBUTED_POPCORN_SPARSE_MAT_H
