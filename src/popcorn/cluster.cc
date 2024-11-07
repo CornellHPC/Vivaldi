@@ -48,27 +48,38 @@ void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
   auto V = SparseMat::initialize_v(m, k, comm);
   V.print("V");
 
-  // Perform SpMM(VK)
-  auto ET = V.spmm(K);
-  ET.print("ET");
+  for (int i = 0; i < 1; ++i) {
+    // Perform SpMM(VK)
+    auto ET = V.spmm(K);
+    ET.print("ET");
 
-  // Compute the centroid norms
-  auto C = DenseMat::initialize_cnorm(V, ET);
-  std::cout << rank << " " << C.size() << std::endl;
+    // Compute the centroid norms
+    auto C = DenseMat::initialize_cnorm(V, ET);
 
-  MPI_Barrier(comm);
-  if (rank == 12) {
-    for (auto it = C.begin(); it != C.end(); ++it) {
-      std::cout << *it << " ";
+    // Compute the D matrix
+    auto dist_kernel = DistKernel();
+    auto D = dist_kernel.kernel(ET.rows_per_block, ET.cols_per_block, ET.data(),
+                                C.data());
+
+    if (rank == 12) {
+      for (auto& x : C) {
+        std::cout << x << " ";
+      }
+      std::cout << std::endl;
+
+      for (int i = 0; i < ET.rows_per_block; ++i) {
+        for (int j = 0; j < ET.cols_per_block; ++j) {
+          std::cout << D[i * ET.cols_per_block + j] << " ";
+        }
+        std::cout << std::endl;
+      }
     }
-    std::cout << std::endl;
+
+    // Update V matrix (TODO: Implement)
+    V = SparseMat::initialize_v(m, k, D, comm);
   }
 
-  auto D = DistKernel().kernel(ET.rows_per_block, ET.cols_per_block, ET.data(), C.data());
-
-  // TODO: Compute the D matrix
-  // TODO: Update V matrix
-  // TODO: Iterate
+  // TODO: Output using V here
 }
 
 }  // namespace popcorn

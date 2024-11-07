@@ -14,6 +14,8 @@ SparseMat::SparseMat(std::vector<float>& row_ids, std::vector<float>& col_ids,
                      std::vector<DATA_TYPE>& vals, int64_t rows, int64_t cols,
                      MPI_Comm comm) {
   this->grid_dim = square_grid_dim(comm);
+  this->rows = rows;
+  this->cols = cols;
   this->comm = comm;
 
   // Initialize CombBLAS communicator grid
@@ -88,6 +90,15 @@ SparseMat SparseMat::initialize_v(int64_t points, int64_t k, MPI_Comm comm) {
 
   SparseMat out = SparseMat(lrow_ids, lcol_ids, lvals, points, k, comm);
   out.transpose();
+  return out;
+}
+
+// TODO: Implement
+SparseMat SparseMat::initialize_v(int64_t points, int64_t k, float* D,
+                                  MPI_Comm comm) {
+  std::vector<float> lrow_ids, lcol_ids;
+  std::vector<DATA_TYPE> lvals;
+  SparseMat out = SparseMat(lrow_ids, lcol_ids, lvals, points, k, comm);
   return out;
 }
 

@@ -48,9 +48,22 @@ class SparseMat {
    * This does a round-robin assignment of points to clusters.
    *
    * @param points is the number of points to cluster
-   * @param k is the number of clusters.
+   * @param k is the number of clusters
+   * @param comm is the MPI communicator
    */
   static SparseMat initialize_v(int64_t points, int64_t k, MPI_Comm comm);
+
+  /**
+   * Initializes and returns the V matrix for popcorn.
+   * This does assignment based on the distance matrix.
+   *
+   * @param points is the number of points to cluster
+   * @param k is the number of clusters
+   * @param D is the distance matrix
+   * @param comm is the MPI communicator
+   */
+  static SparseMat initialize_v(int64_t points, int64_t k, float* D,
+                                MPI_Comm comm);
 
   /**
    * Transposes the sparse matrix in-place.

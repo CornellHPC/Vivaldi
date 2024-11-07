@@ -12,13 +12,14 @@ __global__ void dist_kernel_cu_(int64_t m, int64_t n, DATA_TYPE* ET,
                                 DATA_TYPE* c) {
   for (int64_t i = threadIdx.x; i < m * n; i += blockDim.x) {
     // we need a for loop in case the block size =/= n^2
-    ET[i] = c[i / m] - 2 * ET[i];
+    ET[i] = c[i / n] - 2 * ET[i];
   }
 }
 
 namespace popcorn {
 
-DATA_TYPE* DistKernel::kernel(int64_t m, int64_t n, DATA_TYPE* ET, DATA_TYPE* c) {
+DATA_TYPE* DistKernel::kernel(int64_t m, int64_t n, DATA_TYPE* ET,
+                              DATA_TYPE* c) {
   // quick return
   if (m == 0 || n == 0)
     return NULL;
