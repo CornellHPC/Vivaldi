@@ -67,6 +67,13 @@ class DenseMat {
   DenseMat gemm(DenseMat& R);
 
   /**
+   * @brief Gets underlying data representation
+   * 
+   * @return DATA_TYPE*
+   */
+  DATA_TYPE* data();
+
+  /**
    * Prints the SparseMat to the provided output stream.
    *
    * @param prefix is the prefix string
@@ -75,6 +82,27 @@ class DenseMat {
   void print(std::string prefix, std::ostream& out = std::cout);
 
   friend class SparseMat;
+
+  // Number of rows in the global matrix
+  int64_t rows;
+
+  // Number of columns in the global matrix
+  int64_t cols;
+
+  // Number of block rows in the global matrix
+  int64_t block_rows;
+
+  // Number of block columns in the global matrix
+  int64_t block_cols;
+
+  // Number of rows per block in the standard block size
+  int64_t rows_per_block;
+
+  // Number of columns per block in the standard block size
+  int64_t cols_per_block;
+
+  // Grid total size
+  int64_t grid_dim;
 
  private:
   /**
@@ -110,27 +138,6 @@ class DenseMat {
    * is symmetric.
    */
   void to_slate();
-
-  // Number of rows in the global matrix
-  int64_t rows;
-
-  // Number of columns in the global matrix
-  int64_t cols;
-
-  // Number of block rows in the global matrix
-  int64_t block_rows;
-
-  // Number of block columns in the global matrix
-  int64_t block_cols;
-
-  // Number of rows per block in the standard block size
-  int64_t rows_per_block;
-
-  // Number of columns per block in the standard block size
-  int64_t cols_per_block;
-
-  // Grid total size
-  int64_t grid_dim;
 
   // MPI communicator used for distribution
   MPI_Comm comm;

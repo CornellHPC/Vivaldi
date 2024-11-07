@@ -1,5 +1,6 @@
 // Local imports
 #include "cluster.hh"
+#include "kernel/dist_kernel.cuh"
 #include "kernel/polynomial_kernel.cuh"
 #include "mat/dense_mat.hh"
 #include "mat/sparse_mat.hh"
@@ -62,6 +63,8 @@ void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
     }
     std::cout << std::endl;
   }
+
+  auto D = DistKernel().kernel(ET.rows_per_block, ET.cols_per_block, ET.data(), C.data());
 
   // TODO: Compute the D matrix
   // TODO: Update V matrix

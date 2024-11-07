@@ -128,6 +128,8 @@ DenseMat::DenseMat(std::unique_ptr<combblas::DnParMat<int64_t, DATA_TYPE>> M,
   this->rows = cm->getgnrow();
   this->cols = cm->getgncol();
   this->comm = comm;
+  this->rows_per_block = cm->getnrow();
+  this->cols_per_block = cm->getncol();
   // TODO: Populate the rest of the stuff
 }
 
@@ -222,6 +224,16 @@ DenseMat DenseMat::gemm(DenseMat& R) {
                          {{slate::Option::Target, slate::Target::Devices}});
 
   return DenseMat(std::move(M));
+}
+
+DATA_TYPE* DenseMat::data() {
+  if (cm != NULL) {
+    return cm->getarr().data();
+  } else if (sm != NULL) {
+    // TODO
+    throw std::runtime_error("unimplemented");
+  }
+  throw std::runtime_error("no data");
 }
 
 }  // namespace popcorn
