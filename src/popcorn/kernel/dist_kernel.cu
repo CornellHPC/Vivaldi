@@ -41,6 +41,10 @@ DATA_TYPE* DistKernel::kernel(int64_t m, int64_t n, DATA_TYPE* ET,
 
   DATA_TYPE* D = (DATA_TYPE*)malloc(d_size);
   cudaMemcpy(D, dET, d_size, cudaMemcpyDeviceToHost);
+
+  cudaFree(dET);
+  cudaFree(dc);
+
   return D;
 }
 
