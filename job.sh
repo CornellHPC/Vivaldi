@@ -15,5 +15,5 @@ EXE_PATH=build/main
 CLUSTERS=2
 
 # Run 4 MPI processes
-srun --ntasks 4 --gpus 16 $EXE_PATH test 4 4 $CLUSTERS
-# srun --ntasks 4 --gpus 16 $EXE_PATH test_new 8 8 $CLUSTERS
+srun --ntasks 4 --gpus 16 $EXE_PATH data/test 4 4 $CLUSTERS
+# srun --ntasks 4 --gpus 16 $EXE_PATH data/test_new 8 8 $CLUSTERS
