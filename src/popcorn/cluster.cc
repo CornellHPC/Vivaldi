@@ -1,5 +1,9 @@
+// C++ standard imports
+#include <cstdlib>
+
 // Local imports
 #include "cluster.hh"
+#include "kernel/argmin_kernel.cuh"
 #include "kernel/dist_kernel.cuh"
 #include "kernel/polynomial_kernel.cuh"
 #include "mat/dense_mat.hh"
@@ -75,8 +79,22 @@ void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
       }
     }
 
+    // Compute argmin
+    auto argmin_kernel = ArgminKernel();
+    auto M = argmin_kernel.kernel(ET.rows_per_block, ET.cols_per_block, D);
+
+    if (rank == 12) {
+      for (int j = 0; j < ET.cols_per_block; ++j) {
+        std::cout << j << ": " << M[j].value << "," << M[j].index << std::endl;
+      }
+    }
+
     // Update V matrix (TODO: Implement)
     V = SparseMat::initialize_v(m, k, D, comm);
+
+    // Assuming D and M are stored on host
+    free(D);
+    free(M);
   }
 
   // TODO: Output using V here
