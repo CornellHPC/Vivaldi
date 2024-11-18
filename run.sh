@@ -11,5 +11,5 @@ DATA_PATH=$PWD/data/test
 CLUSTERS=3
 
 # Run 16 MPI processes
-# srun -n 16 -c 32 --cpu_bind=cores -G 16 --gpu-bind=single:1 $EXE_PATH $DATA_PATH 4 4 $CLUSTERS
-srun -n 16 -c 32 --cpu_bind=cores -G 16 --gpu-bind=single:1 $EXE_PATH $DATA_PATH 8 8 $CLUSTERS
+# srun -n 16 -c 32 --cpu_bind=cores -G 16 $EXE_PATH $DATA_PATH 4 4 $CLUSTERS
+srun -n 16 -c 32 --cpu_bind=cores -G 16 $EXE_PATH $DATA_PATH 8 8 $CLUSTERS
