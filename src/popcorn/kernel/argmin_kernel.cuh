@@ -8,7 +8,7 @@ namespace popcorn {
 
 struct Argmin {
   DATA_TYPE value;
-  int64_t index;
+  int index;
 };
 
 struct ArgminKernel {
@@ -17,9 +17,10 @@ struct ArgminKernel {
    *
    * @param m rows in D
    * @param n rows in D
+   * @param gm global row offset
    * @param D_host D (NOT ON GPU)
    */
-  Argmin* kernel(int64_t m, int64_t n, DATA_TYPE* D_host);
+  Argmin* kernel(int m, int n, int gm, DATA_TYPE* D_host);
 };
 
 }  // namespace popcorn

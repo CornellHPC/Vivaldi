@@ -54,16 +54,17 @@ class SparseMat {
   static SparseMat initialize_v(int64_t points, int64_t k, MPI_Comm comm);
 
   /**
-   * Initializes and returns the V matrix for popcorn.
+   * Initializes the updated V matrix for popcorn.
    * This does assignment based on the distance matrix.
    *
-   * @param points is the number of points to cluster
+   * @param m is the number of points to cluster
    * @param k is the number of clusters
-   * @param D is the distance matrix
-   * @param comm is the MPI communicator
+   * @param mloc is the number of points in D
+   * @param kloc is the number of clusters in D
+   * @param D is the kloc by mloc distance matrix
    */
-  static SparseMat initialize_v(int64_t points, int64_t k, float* D,
-                                MPI_Comm comm);
+  SparseMat initialize_v(int64_t m, int64_t k, int64_t mloc, int64_t kloc,
+                         float* D);
 
   /**
    * Transposes the sparse matrix in-place.
@@ -105,8 +106,8 @@ class SparseMat {
   // Grid total size
   int64_t grid_dim;
 
-  // MPI communicator used for distribution
-  MPI_Comm comm;
+  // The communicator grid used for distribution
+  std::shared_ptr<combblas::CommGrid> grid;
 
   // Underlying CombBLAS matrix object
   std::unique_ptr<combblas::SpParMat<int64_t, DATA_TYPE, UDER>> cm;

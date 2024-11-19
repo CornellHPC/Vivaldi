@@ -1,9 +1,13 @@
 // C++ standard imports
 #include <algorithm>
 #include <cassert>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
 #include <memory>
 
 // Local imports
+#include "../kernel/argmin_kernel.cuh"
 #include "../utils/utils.hh"
 #include "dense_mat.hh"
 #include "sparse_mat.hh"
@@ -16,11 +20,9 @@ SparseMat::SparseMat(std::vector<float>& row_ids, std::vector<float>& col_ids,
   this->grid_dim = square_grid_dim(comm);
   this->rows = rows;
   this->cols = cols;
-  this->comm = comm;
 
   // Initialize CombBLAS communicator grid
-  std::shared_ptr<combblas::CommGrid> grid =
-      std::make_shared<combblas::CommGrid>(comm, grid_dim, grid_dim);
+  this->grid = std::make_shared<combblas::CommGrid>(comm, grid_dim, grid_dim);
 
   // Initialize distributed data vectors
   combblas::FullyDistVec<int64_t, DATA_TYPE> drows(row_ids, grid);
@@ -28,7 +30,7 @@ SparseMat::SparseMat(std::vector<float>& row_ids, std::vector<float>& col_ids,
   combblas::FullyDistVec<int64_t, DATA_TYPE> dvals(vals, grid);
 
   // Initialize distributed sparse matrix
-  cm = std::make_unique<combblas::SpParMat<int64_t, DATA_TYPE, UDER>>(
+  this->cm = std::make_unique<combblas::SpParMat<int64_t, DATA_TYPE, UDER>>(
       rows, cols, drows, dcols, dvals, false);
 }
 
@@ -41,8 +43,8 @@ SparseMat::SparseMat(
   rows = cm->getnrow();
   cols = cm->getncol();
   nonzeros = cm->getnnz();
-  comm = cm->getcommgrid()->GetWorld();
-  grid_dim = square_grid_dim(comm);
+  grid = cm->getcommgrid();
+  grid_dim = square_grid_dim(grid->GetWorld());
 }
 
 SparseMat SparseMat::initialize_v(int64_t points, int64_t k, MPI_Comm comm) {
@@ -93,12 +95,68 @@ SparseMat SparseMat::initialize_v(int64_t points, int64_t k, MPI_Comm comm) {
   return out;
 }
 
-// TODO: Implement
-SparseMat SparseMat::initialize_v(int64_t points, int64_t k, float* D,
-                                  MPI_Comm comm) {
+SparseMat SparseMat::initialize_v(int64_t m, int64_t k, int64_t mloc,
+                                  int64_t kloc, float* D) {
+  // Clamp local dimension
+  if (mloc == 0 || kloc == 0) {
+    mloc = 0;
+    kloc = 0;
+  }
+
+  auto grid = cm->getcommgrid();
+
+  // TODO: Compute global offset without collective
+  int64_t row_offset = 0;
+  int64_t col_offset = 0;
+  MPI_Exscan(&kloc, &row_offset, 1, MPI_LONG, MPI_SUM, grid->GetColWorld());
+  MPI_Exscan(&mloc, &col_offset, 1, MPI_LONG, MPI_SUM, grid->GetRowWorld());
+
+  // Compute argmin
+  auto argmin_kernel = ArgminKernel();
+  auto M = argmin_kernel.kernel(kloc, mloc, row_offset, D);
+
+  // Pad to target
+  int64_t mtar = m / grid->GetGridCols();
+  M = (Argmin*)realloc(M, sizeof(Argmin) * mtar);
+  for (int i = mloc; i < mtar; ++i) {
+    M[i] = Argmin{INFINITY, 0};
+  }
+
+  // Perform column reduction
+  auto gM = (Argmin*)malloc(sizeof(Argmin) * mtar);
+  int root = grid->GetRank() % grid->GetGridCols();
+  MPI_Reduce(M, gM, mtar, MPI_FLOAT_INT, MPI_MINLOC, root, grid->GetColWorld());
+
+  // Prepare to construct sparse matrix
   std::vector<float> lrow_ids, lcol_ids;
   std::vector<DATA_TYPE> lvals;
-  SparseMat out = SparseMat(lrow_ids, lcol_ids, lvals, points, k, comm);
+
+  // Perform row reduction on top row
+  if (grid->GetRank() < grid->GetColWorld()) {
+    auto c = (int*)calloc(k, sizeof(int));
+    auto gc = (int*)calloc(k, sizeof(int));
+    for (int i = 0; i < mtar; ++i) {
+      Argmin a = gM[i];
+      c[a.index]++;
+    }
+
+    MPI_Allreduce(c, gc, k, MPI_INT, MPI_SUM, grid->GetRowWorld());
+    for (int i = 0; i < mtar; ++i) {
+      Argmin a = gM[i];
+      lrow_ids.push_back(a.index);
+      lcol_ids.push_back(col_offset + i);
+      lvals.push_back(1.0f / c[a.index]);
+    }
+
+    free(c);
+    free(gc);
+  }
+
+  SparseMat out =
+      SparseMat(lrow_ids, lcol_ids, lvals, m, k, cm->getcommgrid()->GetWorld());
+
+  free(M);
+  free(gM);
   return out;
 }
 

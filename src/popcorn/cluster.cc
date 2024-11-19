@@ -52,7 +52,7 @@ void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
   auto V = SparseMat::initialize_v(m, k, comm);
   V.print("V");
 
-  for (int i = 0; i < 1; ++i) {
+  for (int i = 0; i < 100; ++i) {
     // Perform SpMM(VK)
     auto ET = V.spmm(K);
     ET.print("ET");
@@ -65,36 +65,11 @@ void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
     auto D = dist_kernel.kernel(ET.rows_per_block, ET.cols_per_block, ET.data(),
                                 C.data());
 
-    if (rank == 12) {
-      for (auto& x : C) {
-        std::cout << x << " ";
-      }
-      std::cout << std::endl;
+    // Update V matrix
+    V.initialize_v(m, k, ET.cols_per_block, ET.rows_per_block, D);
 
-      for (int i = 0; i < ET.rows_per_block; ++i) {
-        for (int j = 0; j < ET.cols_per_block; ++j) {
-          std::cout << D[i * ET.cols_per_block + j] << " ";
-        }
-        std::cout << std::endl;
-      }
-    }
-
-    // Compute argmin
-    auto argmin_kernel = ArgminKernel();
-    auto M = argmin_kernel.kernel(ET.rows_per_block, ET.cols_per_block, D);
-
-    if (rank == 12) {
-      for (int j = 0; j < ET.cols_per_block; ++j) {
-        std::cout << j << ": " << M[j].value << "," << M[j].index << std::endl;
-      }
-    }
-
-    // Update V matrix (TODO: Implement)
-    V = SparseMat::initialize_v(m, k, D, comm);
-
-    // Assuming D and M are stored on host
+    // Assuming D is stored on host
     free(D);
-    free(M);
   }
 
   // TODO: Output using V here
