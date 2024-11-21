@@ -57,14 +57,9 @@ class SparseMat {
    * Initializes the updated V matrix for popcorn.
    * This does assignment based on the distance matrix.
    *
-   * @param m is the number of points to cluster
-   * @param k is the number of clusters
-   * @param mloc is the number of points in D
-   * @param kloc is the number of clusters in D
-   * @param D is the kloc by mloc distance matrix
+   * @param D is the distance matrix data transposed and flattened.
    */
-  SparseMat initialize_v(int64_t m, int64_t k, int64_t mloc, int64_t kloc,
-                         float* D);
+  SparseMat initialize_v(float* D);
 
   /**
    * Saves the cluster assignments to disk.
