@@ -73,7 +73,12 @@ void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
     free(D);
   }
 
-  // TODO: Output using V here
+  // Output V
+  V.save_assignments("out/assignments");
+
+  // Output result
+  if (rank == 0)
+    std::cout << "Done!" << std::endl;
 }
 
 }  // namespace popcorn

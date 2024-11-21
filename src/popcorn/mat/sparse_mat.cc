@@ -6,6 +6,9 @@
 #include <cstring>
 #include <memory>
 
+// Library imports
+#include "mpio.h"
+
 // Local imports
 #include "../kernel/argmin_kernel.cuh"
 #include "../utils/utils.hh"
@@ -158,6 +161,37 @@ SparseMat SparseMat::initialize_v(int64_t m, int64_t k, int64_t mloc,
   free(M);
   free(gM);
   return out;
+}
+
+void SparseMat::save_assignments(const char* filename) {
+  // Compute global offsets
+  int row_offset = cm->getcommgrid()->GetRankInProcCol() *
+                   (cm->getnrow() / cm->getcommgrid()->GetGridRows());
+  int col_offset = cm->getcommgrid()->GetRankInProcRow() *
+                   (cm->getncol() / cm->getcommgrid()->GetGridCols());
+
+  // Open the file
+  MPI_File fh;
+  MPI_File_open(cm->getcommgrid()->GetWorld(), filename,
+                MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
+
+  // Write the assignments
+  UDER* spSeq = cm->seqptr();
+  for (typename UDER::SpColIter colit = spSeq->begcol();
+       colit != spSeq->endcol(); ++colit) {
+    for (typename UDER::SpColIter::NzIter nzit = spSeq->begnz(colit);
+         nzit != spSeq->endnz(colit); ++nzit) {
+      int cluster = row_offset + nzit.rowid();
+      int point = col_offset + colit.colid();
+
+      // TODO: Optimize the writes to be sequential
+      MPI_File_write_at(fh, sizeof(int) * point, &cluster, 1, MPI_INT,
+                        MPI_STATUS_IGNORE);
+    }
+  }
+
+  // Clean up
+  MPI_File_close(&fh);
 }
 
 void SparseMat::transpose() {

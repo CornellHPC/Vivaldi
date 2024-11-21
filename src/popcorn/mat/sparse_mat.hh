@@ -67,6 +67,14 @@ class SparseMat {
                          float* D);
 
   /**
+   * Saves the cluster assignments to disk.
+   * It computes the final assignment based on the distance matrix.
+   *
+   * @param filename is the name of the output file
+   */
+  void save_assignments(const char* filename);
+
+  /**
    * Transposes the sparse matrix in-place.
    */
   void transpose();
