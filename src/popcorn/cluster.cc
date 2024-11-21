@@ -3,7 +3,6 @@
 
 // Local imports
 #include "cluster.hh"
-#include "kernel/argmin_kernel.cuh"
 #include "kernel/dist_kernel.cuh"
 #include "kernel/polynomial_kernel.cuh"
 #include "mat/dense_mat.hh"
@@ -55,7 +54,9 @@ void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
   for (int i = 0; i < 100; ++i) {
     // Perform SpMM(VK)
     auto ET = V.spmm(K);
-    ET.print("ET");
+    if (i == 0) {
+      ET.print("ET");
+    }
 
     // Compute the centroid norms
     auto C = DenseMat::initialize_cnorm(V, ET);
