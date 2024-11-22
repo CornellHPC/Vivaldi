@@ -26,7 +26,8 @@ class SparseMat;
 class DenseMat {
  public:
   /**
-   * Loads a DenseMat from a file.
+   * Loads a DenseMat from a file. 
+   * This returns the transposed DenseMat of the provided file.
    *
    * @param filename is a path to the binary file containing the matrix data
    * @param rows is the number of rows in the global matrix

@@ -13,10 +13,10 @@ namespace popcorn {
  * @brief Drives the distributed clustering algorithm
  *
  * @param data_path Path to data file
- * @param m Number of rows in data
- * @param n Number of cols in data
+ * @param m Number of rows in data (number of points)
+ * @param n Number of cols in data (number of features)
  * @param k Number of clusters to form
- * @param comm MPI communicator
+ * @param comm MPI communicator object
  */
 void cluster(char* data_path, int m, int n, int k, MPI_Comm comm);
 
