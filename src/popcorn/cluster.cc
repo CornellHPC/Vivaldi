@@ -32,13 +32,13 @@ void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
   if (rank == 0)
     std::cout << "Reading data from " << data_path << std::endl;
 
-  // Load the point matrix
-  auto P = DenseMat::load_from_file(data_path, m, n, comm);
-  P.print("P");
+  // Load the original data with SLATE, this will be transposed
+  auto PT = DenseMat::load_from_file(data_path, m, n, comm);
+  // PT.print("PT");
 
-  // Make a transposed copy of point matrix
-  auto PT = P.transpose();
-  PT.print("PT");
+  // Transpose back to obtain the original matrix
+  auto P = PT.transpose();
+  // P.print("P");
 
   // Compute the K matrix
   // TODO: make gamma, c, r as IO input
