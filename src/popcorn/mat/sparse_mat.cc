@@ -6,6 +6,9 @@
 #include <cstring>
 #include <memory>
 
+// Library imports
+#include "mpio.h"
+
 // Local imports
 #include "../kernel/argmin_kernel.cuh"
 #include "../utils/utils.hh"
@@ -95,37 +98,47 @@ SparseMat SparseMat::initialize_v(int64_t points, int64_t k, MPI_Comm comm) {
   return out;
 }
 
-SparseMat SparseMat::initialize_v(int64_t m, int64_t k, int64_t mloc,
-                                  int64_t kloc, float* D) {
-  // Clamp local dimension
-  if (mloc == 0 || kloc == 0) {
-    mloc = 0;
-    kloc = 0;
-  }
-
+SparseMat SparseMat::initialize_v(float* D) {
+  // Initialize parameters
+  int64_t clusters = cm->getnrow();
+  int64_t points = cm->getncol();
+  int64_t clusters_loc = cm->getlocalrows();
+  int64_t points_loc = cm->getlocalcols();
   auto grid = cm->getcommgrid();
 
-  // TODO: Compute global offset without collective
-  int64_t row_offset = 0;
-  int64_t col_offset = 0;
-  MPI_Exscan(&kloc, &row_offset, 1, MPI_LONG, MPI_SUM, grid->GetColWorld());
-  MPI_Exscan(&mloc, &col_offset, 1, MPI_LONG, MPI_SUM, grid->GetRowWorld());
+  // Clamp local dimension
+  if (clusters_loc == 0 || points_loc == 0) {
+    clusters_loc = 0;
+    points_loc = 0;
+  }
+
+  // ---------------------- WARNING ----------------------
+  // D is transposed so local submatrix is actually of size
+  // kloc by mloc (i.e. clusters are rows and points are cols)
+  // ---------------------- WARNING ----------------------
+
+  // Get global offsets
+  int64_t cluster_offset =
+      grid->GetRankInProcCol() * (clusters / grid->GetGridRows());
+  int64_t point_offset =
+      grid->GetRankInProcRow() * (points / grid->GetGridCols());
 
   // Compute argmin
   auto argmin_kernel = ArgminKernel();
-  auto M = argmin_kernel.kernel(kloc, mloc, row_offset, D);
+  auto M = argmin_kernel.kernel(clusters_loc, points_loc, cluster_offset, D);
 
   // Pad to target
-  int64_t mtar = m / grid->GetGridCols();
-  M = (Argmin*)realloc(M, sizeof(Argmin) * mtar);
-  for (int i = mloc; i < mtar; ++i) {
+  int64_t points_tar = points / grid->GetGridCols();
+  M = (Argmin*)realloc(M, sizeof(Argmin) * points_tar);
+  for (int i = points_loc; i < points_tar; ++i) {
     M[i] = Argmin{INFINITY, 0};
   }
 
   // Perform column reduction
-  auto gM = (Argmin*)malloc(sizeof(Argmin) * mtar);
+  auto gM = (Argmin*)malloc(sizeof(Argmin) * points_tar);
   int root = grid->GetRank() % grid->GetGridCols();
-  MPI_Reduce(M, gM, mtar, MPI_FLOAT_INT, MPI_MINLOC, root, grid->GetColWorld());
+  MPI_Reduce(M, gM, points_tar, MPI_FLOAT_INT, MPI_MINLOC, root,
+             grid->GetColWorld());
 
   // Prepare to construct sparse matrix
   std::vector<float> lrow_ids, lcol_ids;
@@ -133,18 +146,18 @@ SparseMat SparseMat::initialize_v(int64_t m, int64_t k, int64_t mloc,
 
   // Perform row reduction on top row
   if (grid->GetRank() < grid->GetColWorld()) {
-    auto c = (int*)calloc(k, sizeof(int));
-    auto gc = (int*)calloc(k, sizeof(int));
-    for (int i = 0; i < mtar; ++i) {
+    auto c = (int*)calloc(clusters, sizeof(int));
+    auto gc = (int*)calloc(clusters, sizeof(int));
+    for (int i = 0; i < points_tar; ++i) {
       Argmin a = gM[i];
       c[a.index]++;
     }
 
-    MPI_Allreduce(c, gc, k, MPI_INT, MPI_SUM, grid->GetRowWorld());
-    for (int i = 0; i < mtar; ++i) {
+    MPI_Allreduce(c, gc, clusters, MPI_INT, MPI_SUM, grid->GetRowWorld());
+    for (int i = 0; i < points_tar; ++i) {
       Argmin a = gM[i];
       lrow_ids.push_back(a.index);
-      lcol_ids.push_back(col_offset + i);
+      lcol_ids.push_back(point_offset + i);
       lvals.push_back(1.0f / c[a.index]);
     }
 
@@ -152,12 +165,43 @@ SparseMat SparseMat::initialize_v(int64_t m, int64_t k, int64_t mloc,
     free(gc);
   }
 
-  SparseMat out =
-      SparseMat(lrow_ids, lcol_ids, lvals, m, k, cm->getcommgrid()->GetWorld());
+  SparseMat out = SparseMat(lrow_ids, lcol_ids, lvals, clusters, points,
+                            cm->getcommgrid()->GetWorld());
 
   free(M);
   free(gM);
   return out;
+}
+
+void SparseMat::save_assignments(const char* filename) {
+  // Compute global offsets
+  int row_offset = cm->getcommgrid()->GetRankInProcCol() *
+                   (cm->getnrow() / cm->getcommgrid()->GetGridRows());
+  int col_offset = cm->getcommgrid()->GetRankInProcRow() *
+                   (cm->getncol() / cm->getcommgrid()->GetGridCols());
+
+  // Open the file
+  MPI_File fh;
+  MPI_File_open(cm->getcommgrid()->GetWorld(), filename,
+                MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
+
+  // Write the assignments
+  UDER* spSeq = cm->seqptr();
+  for (typename UDER::SpColIter colit = spSeq->begcol();
+       colit != spSeq->endcol(); ++colit) {
+    for (typename UDER::SpColIter::NzIter nzit = spSeq->begnz(colit);
+         nzit != spSeq->endnz(colit); ++nzit) {
+      int cluster = row_offset + nzit.rowid();
+      int point = col_offset + colit.colid();
+
+      // TODO: Optimize the writes to be sequential
+      MPI_File_write_at(fh, sizeof(int) * point, &cluster, 1, MPI_INT,
+                        MPI_STATUS_IGNORE);
+    }
+  }
+
+  // Clean up
+  MPI_File_close(&fh);
 }
 
 void SparseMat::transpose() {

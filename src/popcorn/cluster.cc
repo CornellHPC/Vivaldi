@@ -67,13 +67,18 @@ void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
                                 C.data());
 
     // Update V matrix
-    V.initialize_v(m, k, ET.cols_per_block, ET.rows_per_block, D);
+    V = V.initialize_v(D);
 
     // Assuming D is stored on host
     free(D);
   }
 
-  // TODO: Output using V here
+  // Output V
+  V.save_assignments("out/assignments");
+
+  // Output result
+  if (rank == 0)
+    std::cout << "Done!" << std::endl;
 }
 
 }  // namespace popcorn
