@@ -9,7 +9,7 @@ __global__ void argmin_kernel_cu_(int m, int n, int gm, DATA_TYPE* D,
                                   popcorn::Argmin* M) {
   for (int j = threadIdx.x; j < n; j += blockDim.x) {
     DATA_TYPE mn = D[j];
-    int mni = 0;
+    int mni = gm;
 
     for (int i = 1; i < m; ++i) {
       DATA_TYPE v = D[i * n + j];

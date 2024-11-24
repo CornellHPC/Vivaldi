@@ -123,7 +123,7 @@ SparseMat SparseMat::initialize_v(float* D) {
   int64_t point_offset =
       grid->GetRankInProcRow() * (points / grid->GetGridCols());
 
-  // Compute argmin
+  // Compute local argmin
   auto argmin_kernel = ArgminKernel();
   auto M = argmin_kernel.kernel(clusters_loc, points_loc, cluster_offset, D);
 
@@ -135,9 +135,8 @@ SparseMat SparseMat::initialize_v(float* D) {
   }
 
   // Perform column reduction
-  auto gM = (Argmin*)malloc(sizeof(Argmin) * points_tar);
-  int root = grid->GetRank() % grid->GetGridCols();
-  MPI_Reduce(M, gM, points_tar, MPI_FLOAT_INT, MPI_MINLOC, root,
+  auto gM = (Argmin*)calloc(sizeof(Argmin), points_tar);
+  MPI_Reduce(M, gM, points_tar, MPI_FLOAT_INT, MPI_MINLOC, 0,
              grid->GetColWorld());
 
   // Prepare to construct sparse matrix
@@ -145,7 +144,7 @@ SparseMat SparseMat::initialize_v(float* D) {
   std::vector<DATA_TYPE> lvals;
 
   // Perform row reduction on top row
-  if (grid->GetRank() < grid->GetColWorld()) {
+  if (grid->GetRankInProcCol() == 0) {
     auto c = (int*)calloc(clusters, sizeof(int));
     auto gc = (int*)calloc(clusters, sizeof(int));
     for (int i = 0; i < points_tar; ++i) {
@@ -158,7 +157,7 @@ SparseMat SparseMat::initialize_v(float* D) {
       Argmin a = gM[i];
       lrow_ids.push_back(a.index);
       lcol_ids.push_back(point_offset + i);
-      lvals.push_back(1.0f / c[a.index]);
+      lvals.push_back(1.0f / gc[a.index]);
     }
 
     free(c);
