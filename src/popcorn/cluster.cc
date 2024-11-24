@@ -21,11 +21,14 @@ void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
   if (rank == 0)
 #ifdef CUDA
     std::cout << "Running on: CUDA" << std::endl;
-  wake_gpus(rank);
 #else
     std::cout << "CUDA is unavailable. Some things may not work properly."
               << std::endl;
 #endif
+#endif
+
+#ifdef CUDA
+  wake_gpus(rank);
 #endif
 
   // Cull points to make matrix evenly divisible
