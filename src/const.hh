@@ -9,4 +9,13 @@
 // Matrix data type
 #define DATA_TYPE float
 
+// Enables popcorn debug information
+#define P_DEBUG
+
+// Enables popcorn timing instrumentation
+#define P_BENCHMARK
+
+// Enables detailed debug information
+// #define DEBUG
+
 #endif  // DISTRIBUTED_POPCORN_CONST_H

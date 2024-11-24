@@ -1,4 +1,5 @@
 // C++ standard imports
+#include <chrono>
 #include <cstdlib>
 
 // Local imports
@@ -16,6 +17,7 @@ void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
 
+#ifdef P_DEBUG
   if (rank == 0)
 #ifdef CUDA
     std::cout << "Running on: CUDA" << std::endl;
@@ -24,17 +26,27 @@ void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
     std::cout << "CUDA is unavailable. Some things may not work properly."
               << std::endl;
 #endif
+#endif
 
   // Cull points to make matrix evenly divisible
   int grid_dim = square_grid_dim(comm);
   m -= m % grid_dim;
 
+#ifdef P_DEBUG
   if (rank == 0)
     std::cout << "Reading data from " << data_path << std::endl;
+#endif
 
   // Load the original data with SLATE, this will be transposed
   auto PT = DenseMat::load_from_file(data_path, m, n, comm);
+#ifdef P_DEBUG
   // PT.print("PT");
+#endif
+
+#ifdef P_BENCHMARK
+  // Start the timer (after IO)
+  auto start = std::chrono::high_resolution_clock::now();
+#endif
 
   // Transpose back to obtain the original matrix
   auto P = PT.transpose();
@@ -45,17 +57,23 @@ void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
   auto K = P.gemm(PT);
   auto poly_kernel = PolynomialKernel(1.0f, 1.0f, 1.0f);
   K.apply(poly_kernel);
-  K.print("K");
+#ifdef P_DEBUG
+  // K.print("K");
+#endif
 
   // Initialize the V matrix
   auto V = SparseMat::initialize_v(m, k, comm);
+#ifdef P_DEBUG
   V.print("V");
+#endif
 
   for (int i = 0; i < 100; ++i) {
     // Perform SpMM(VK)
     auto ET = V.spmm(K);
+#ifdef P_DEBUG
     if (i == 0)
       ET.print("ET");
+#endif
 
     // Compute the centroid norms
     auto C = DenseMat::initialize_cnorm(V, ET);
@@ -72,12 +90,18 @@ void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
     free(D);
   }
 
-  // Output V
-  V.save_assignments("out/assignments");
+#ifdef P_BENCHMARK
+  // Stop the timer (before IO)
+  auto end = std::chrono::high_resolution_clock::now();
 
-  // Output result
+  // Output runtime
+  std::chrono::duration<double> elapsed = end - start;
   if (rank == 0)
-    std::cout << "Done!" << std::endl;
+    std::cout << "Runtime: " << elapsed.count() << " seconds" << std::endl;
+#endif
+
+  // Output cluster assignments
+  V.save_assignments("out/assignments");
 }
 
 }  // namespace popcorn
