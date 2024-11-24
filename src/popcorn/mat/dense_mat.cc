@@ -16,30 +16,31 @@ DenseMat DenseMat::load_from_file(const char* filename, int64_t rows,
   MPI_File_open(comm, filename, MPI_MODE_RDONLY, MPI_INFO_NULL, &fh);
 
   // Read data
-  size_t count = rows * cols * sizeof(DATA_TYPE);
+  size_t count = cols * rows * sizeof(DATA_TYPE);
   DATA_TYPE* data = (DATA_TYPE*)malloc(count);
-  MPI_File_read_all(fh, data, rows * cols, MPI_FLOAT, MPI_STATUS_IGNORE);
+  MPI_File_read_all(fh, data, cols * rows, MPI_FLOAT, MPI_STATUS_IGNORE);
 
   // Compute tile size
   int grid_dim = square_grid_dim(comm);
-  int rows_per_block = tile_dim(comm, rows);
   int cols_per_block = tile_dim(comm, cols);
+  int rows_per_block = tile_dim(comm, rows);
 
   // Create empty SLATE matrix object of size equal to data
   auto M = std::make_unique<slate::Matrix<DATA_TYPE>>(
-      rows, cols, rows_per_block, cols_per_block, grid_dim, grid_dim, comm);
+      cols, rows, cols_per_block, rows_per_block, grid_dim, grid_dim, comm);
   M->insertLocalTiles(slate::Target::Devices);
 
   // Fill data
   int64_t m = M->m(), n = M->n(), mb = M->tileMb(0), nb = M->tileNb(0);
-  for (int64_t j = 0; j < M->nt(); ++j) {    // i loops over block columns
-    for (int64_t i = 0; i < M->mt(); ++i) {  // j loops over block rows
+  for (int64_t j = 0; j < M->nt(); ++j) {    // j loops over block columns
+    for (int64_t i = 0; i < M->mt(); ++i) {  // i loops over block rows
       if (M->tileIsLocal(i, j)) {
         slate::Tile<DATA_TYPE> tile = M->at(i, j, M->tileDevice(i, j));
         int64_t lda = tile.stride();
         DATA_TYPE* A = tile.data();
 
-        for (int64_t jj = 0; jj < tile.nb(); ++jj) {  // jj loops over columns
+        for (int64_t jj = 0; jj < tile.nb();
+             ++jj) {  // jj loops over tile columns
           int64_t global_column = j * nb + jj;
           int64_t global_row_start = i * mb;
           cudaMemcpy(A + jj * lda, data + global_column * m + global_row_start,
