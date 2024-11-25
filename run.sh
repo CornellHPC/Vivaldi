@@ -14,4 +14,13 @@ CLUSTERS=8
 # srun -n 16 -c 32 --cpu_bind=cores -G 16 $EXE_PATH $DATA_PATH 4 4 $CLUSTERS
 # srun -n 16 -c 32 --cpu_bind=cores --gpus-per-node=1 -G 16 $EXE_PATH $DATA_PATH 128 128 $CLUSTERS
 srun --nodes=4 --ntasks-per-node=4 --cpus-per-task=32 --cpu-bind=cores --gpu-bind=single:1 $EXE_PATH $DATA_PATH 128 128 $CLUSTERS
-# srun --nodes=1 --ntasks-per-node=4 --cpus-per-task=32 --cpu-bind=cores --gpus=4 --gpu-bind=single:1 $EXE_PATH $DATA_PATH 8 2 $CLUSTERS
+
+# Samples
+# srun --nodes=1 --ntasks-per-node=4 --cpus-per-task=32 --cpu-bind=cores --gpus=4 --gpu-bind=single:1 $EXE_PATH $PWD/data/samples 8 2 2
+
+# Australian
+# srun --nodes=1 --ntasks-per-node=4 --cpus-per-task=32 --cpu-bind=cores --gpus=4 --gpu-bind=single:1 $EXE_PATH $PWD/data/australian 690 14 2
+
+# Svmguide1
+# srun --nodes=4 --ntasks-per-node=4 --cpus-per-task=32 --cpu-bind=cores --gpus=16 --gpu-bind=single:1 $EXE_PATH $PWD/data/svmguide1 3089 4 2
+
