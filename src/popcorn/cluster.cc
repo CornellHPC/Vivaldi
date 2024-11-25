@@ -104,7 +104,9 @@ void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
 #endif
 
   // Output cluster assignments
-  V.save_assignments("out/assignments");
+  std::string prefix = std::string(data_path);
+  std::string suffix = "_out";
+  V.save_assignments((prefix + suffix).c_str());
 }
 
 }  // namespace popcorn
