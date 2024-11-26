@@ -80,7 +80,6 @@ if __name__ == "__main__":
     for iter in range(maxiter):
         E = -2 * (K @ V.T)
         z = -0.5 * np.array([E[i][clusters[i]] for i in range(n)])
-        z = -0.5 * z
         C = V @ z.T
         D = E + P + C
 
