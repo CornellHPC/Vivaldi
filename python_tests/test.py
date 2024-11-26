@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.sparse import csc_matrix
-from sklearn.cluster import KMeans
+# from sklearn.cluster import KMeans
 
 from collections import defaultdict
 
@@ -30,7 +30,6 @@ def read_data(fname):
 
 def polynomial_kernel(data, gamma, c, r):
     B = data @ data.T
-    print(B)
     K = np.power(gamma * B + c, r)
     return K
 
@@ -58,8 +57,7 @@ if __name__ == "__main__":
 
     # Read Data
     data = read_data(fname)  # read data and construct matrix
-    cutoff = (len(data) // num_processes) * num_processes  # remove n % p points of data
-    cutoff = 8
+    cutoff = len(data) - (len(data) % num_processes)
     data = data[:cutoff]
     n = data.shape[0]
 
@@ -81,7 +79,7 @@ if __name__ == "__main__":
     last_C = None
     for iter in range(maxiter):
         E = -2 * (K @ V.T)
-        z = np.array([E[i][clusters[i]] for i in range(n)])
+        z = -0.5 * np.array([E[i][clusters[i]] for i in range(n)])
         z = -0.5 * z
         C = V @ z.T
         D = E + P + C
@@ -100,4 +98,6 @@ if __name__ == "__main__":
         V = csc_matrix(V)
         # print(iter)
     
-    # print(clusters)
+    clusters = clusters.astype(np.int32)
+    clusters.tofile(fname+"_out")
+
