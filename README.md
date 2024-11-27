@@ -42,12 +42,7 @@ sbatch job.sh
 Build source
 ```bash
 mkdir build && cd build
-
-# Host memory
 cmake -DCOMBBLAS_INSTALL=$COMBBLAS_INSTALL -DSLATE_INSTALL=$SLATE_INSTALL ..
-# Device memory
-cmake -DGPU=true -DCOMBBLAS_INSTALL=$COMBBLAS_INSTALL -DSLATE_INSTALL=$SLATE_INSTALL ..
-
 cmake --build .
 ```
 

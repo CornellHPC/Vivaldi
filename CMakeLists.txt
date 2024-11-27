@@ -22,10 +22,7 @@ if (NOT CUDA_FOUND)
 endif()
 
 # GPU Support
-option(GPU "Enable GPU support.")
-if (GPU)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCUDA")
-endif()
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCUDA")
 
 # CombBLAS
 option(COMBBLAS_INSTALL	"Path to CombBLAS installation directory.")
@@ -49,6 +46,12 @@ endif()
 file(GLOB SOURCES "src/main.cc" "src/**/*.cc" "src/popcorn/**/*.cu" "src/popcorn/**/*.cc")
 add_executable(main ${SOURCES})
 
+# Sanitizers
+if (SANITIZE)
+  target_compile_options(main PRIVATE -fsanitize=address,leak -fno-omit-frame-pointer)
+  target_link_options(main PRIVATE -fsanitize=address,leak -fno-omit-frame-pointer)
+endif()
+
 # Includes
 target_include_directories(main PRIVATE "${COMBBLAS_INSTALL}/include")
 target_include_directories(main PRIVATE "${SLATE_INSTALL}/include")
@@ -57,3 +60,4 @@ target_include_directories(main PRIVATE "${SLATE_INSTALL}/include")
 target_link_directories(main PRIVATE "${COMBBLAS_INSTALL}/lib")
 target_link_directories(main PRIVATE "${SLATE_INSTALL}/lib")
 target_link_libraries(main gomp cusparse cusolver blaspp lapackpp slate CombBLAS)
+
