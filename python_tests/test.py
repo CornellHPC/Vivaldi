@@ -21,10 +21,11 @@ def read_data(fname):
                 list(map(lambda feature: float(feature.split(':')[1]), features)))
             data.append(features)
     
-    data = np.array(data)
-    out = open(fname, 'wb')
-    data.tofile(out)
-    out.close()
+    # dump data as binary
+    # data = np.array(data)
+    # out = open(fname, 'wb')
+    # data.tofile(out)
+    # out.close()
 
     return data
 
@@ -51,13 +52,13 @@ def construct_v(clusters, cluster_size, k, n):
     return V
 
 if __name__ == "__main__":
-    fname = "svmguide1"
+    fname = "letter"
     num_processes = 16
-    k = 2  # number of clusterings
+    k = 26  # number of clusterings
 
     # Read Data
     data = read_data(fname)  # read data and construct matrix
-    cutoff = len(data) - (len(data) % num_processes)
+    cutoff = len(data) - (len(data) % int(np.sqrt(num_processes)))
     data = data[:cutoff]
     n = data.shape[0]
 
@@ -66,7 +67,6 @@ if __name__ == "__main__":
 
     # Construct Kernel Matrix and P tilde
     K = polynomial_kernel(data, 1, 1, 1)  # kernel matrix
-    # print(K)
     P = np.tile(np.diag(K), (k, 1)).T  # P tilde
 
     # Initialize cluster assignments and V sparse matrix
@@ -85,8 +85,9 @@ if __name__ == "__main__":
 
         new_clusters = np.argmin(D, axis=1)
 
-        if np.all(clusters == new_clusters):
-            break
+        # Convergence check
+        # if np.all(clusters == new_clusters):
+        #     break
 
         clusters = new_clusters
         clusters_size = np.zeros(k)
@@ -95,7 +96,7 @@ if __name__ == "__main__":
 
         V = construct_v(clusters, clusters_size, k, n)
         V = csc_matrix(V)
-        # print(iter)
+        # print('Iteration', iter, 'complete')
     
     clusters = clusters.astype(np.int32)
     clusters.tofile(fname+"_out")
