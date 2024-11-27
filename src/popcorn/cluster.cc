@@ -43,7 +43,7 @@ void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
   // Load the original data with SLATE, this will be transposed
   auto PT = DenseMat::load_from_file(data_path, m, n, comm);
 #ifdef P_DEBUG
-  // PT.print("PT");
+  PT.print("PT");
 #endif
 
 #ifdef P_BENCHMARK
@@ -53,7 +53,9 @@ void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
 
   // Transpose back to obtain the original matrix
   auto P = PT.transpose();
-  // P.print("P");
+#ifdef P_DEBUG
+  P.print("P");
+#endif
 
   // Compute the K matrix
   // TODO: make gamma, c, r as IO input
@@ -61,7 +63,7 @@ void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
   auto poly_kernel = PolynomialKernel(1.0f, 1.0f, 1.0f);
   K.apply(poly_kernel);
 #ifdef P_DEBUG
-  // K.print("K");
+  K.print("K");
 #endif
 
   // Initialize the V matrix
