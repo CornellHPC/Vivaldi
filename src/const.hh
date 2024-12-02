@@ -10,7 +10,7 @@
 #define DATA_TYPE float
 
 // Enables popcorn debug information
-#define P_DEBUG
+// #define P_DEBUG
 
 // Enables popcorn timing instrumentation
 #define P_BENCHMARK

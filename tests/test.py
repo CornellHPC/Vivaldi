@@ -1,11 +1,12 @@
+import sys
+
 import numpy as np
 from scipy.sparse import csc_matrix
-# from sklearn.cluster import KMeans
 
-from collections import defaultdict
+from sklearn.cluster import KMeans
 
 def read_data(fname):
-    path = fname + ".txt"
+    path = "../data/" + fname + ".txt"
     data = []
     labels = []
 
@@ -15,15 +16,18 @@ def read_data(fname):
         rows = [line.rstrip() for line in file]
         for features in rows:
             features = features.split(' ')
+
+            # extract label, not really needed tbh
             label = features.pop(0)
             labels.append(label)
+
             features = np.float32(
                 list(map(lambda feature: float(feature.split(':')[1]), features)))
             data.append(features)
     
     # dump data as binary
-    # data = np.array(data)
-    # out = open(fname, 'wb')
+    data = np.array(data)
+    # out = open("../data/" + fname, 'wb')
     # data.tofile(out)
     # out.close()
 
@@ -51,19 +55,32 @@ def construct_v(clusters, cluster_size, k, n):
         V[cluster][i] = 1 / cluster_size[cluster]
     return V
 
+def calculate_score(data, clusters, k):
+    score = 0
+
+    for i in range(k):
+        cluster = data[clusters == i]
+        centroid = np.mean(cluster, axis=0)
+        dists = cluster - centroid
+        norms = np.linalg.norm(dists, axis=1)
+        score += np.sum(norms ** 2)
+
+    return score
+
 if __name__ == "__main__":
-    fname = "letter"
-    num_processes = 16
-    k = 26  # number of clusterings
+    fname = sys.argv[1]
+    ranks = int(sys.argv[2])
+    k = int(sys.argv[3])
 
     # Read Data
     data = read_data(fname)  # read data and construct matrix
-    cutoff = len(data) - (len(data) % int(np.sqrt(num_processes)))
+    cutoff = len(data) - (len(data) % int(np.sqrt(ranks)))
     data = data[:cutoff]
     n = data.shape[0]
 
-    # kmeans = KMeans(n_clusters=26, random_state=0, n_init=10).fit(data)
-    # print(kmeans.labels_)
+    model = KMeans(n_clusters=k, random_state=0, n_init='auto')
+    model.fit(data)
+    print('sklearn kmeans inertia (not kernelized):', model.inertia_)
 
     # Construct Kernel Matrix and P tilde
     K = polynomial_kernel(data, 1, 1, 1)  # kernel matrix
@@ -86,8 +103,9 @@ if __name__ == "__main__":
         new_clusters = np.argmin(D, axis=1)
 
         # Convergence check
-        # if np.all(clusters == new_clusters):
-        #     break
+        if np.all(clusters == new_clusters):
+            print('Converged after', iter + 1, 'iterations')
+            break
 
         clusters = new_clusters
         clusters_size = np.zeros(k)
@@ -96,8 +114,10 @@ if __name__ == "__main__":
 
         V = construct_v(clusters, clusters_size, k, n)
         V = csc_matrix(V)
-        # print('Iteration', iter, 'complete')
+        # print('Finished Iteration', iter)
     
-    clusters = clusters.astype(np.int32)
-    clusters.tofile(fname+"_out")
+    score = calculate_score(data, clusters, k)
+    print('kernel kmeans score (sum of squared dists):', score)
 
+    clusters = clusters.astype(np.int32)
+    clusters.tofile("../results/" + fname + "_py")
