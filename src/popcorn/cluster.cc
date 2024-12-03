@@ -10,6 +10,9 @@
 #include "mat/sparse_mat.hh"
 #include "utils/utils.hh"
 
+typedef std::chrono::seconds s;
+typedef std::chrono::milliseconds ms;
+
 namespace popcorn {
 
 void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
@@ -49,6 +52,12 @@ void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
 #ifdef P_BENCHMARK
   // Start the timer (after IO)
   auto start = std::chrono::high_resolution_clock::now();
+  double k_elapsed = 0;
+  double v_elapsed = 0;
+  double vk_elapsed = 0;
+  double c_elapsed = 0;
+  double d_elapsed = 0;
+  double vr_elapsed = 0;
 #endif
 
   // Transpose back to obtain the original matrix
@@ -57,39 +66,102 @@ void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
   P.print("P");
 #endif
 
+#ifdef P_BENCHMARK
+  auto k_start = std::chrono::high_resolution_clock::now();
+#endif
+
   // Compute the K matrix
   // TODO: make gamma, c, r as IO input
   auto K = P.gemm(PT);
   auto poly_kernel = PolynomialKernel(1.0f, 1.0f, 1.0f);
   K.apply(poly_kernel);
+
+#ifdef P_BENCHMARK
+  k_elapsed += std::chrono::duration_cast<ms>(
+                   std::chrono::high_resolution_clock::now() - k_start)
+                   .count();
+#endif
+
 #ifdef P_DEBUG
   K.print("K");
 #endif
 
+#ifdef P_BENCHMARK
+  auto v_start = std::chrono::high_resolution_clock::now();
+#endif
+
   // Initialize the V matrix
   auto V = SparseMat::initialize_v(m, k, comm);
+
+#ifdef P_BENCHMARK
+  v_elapsed += std::chrono::duration_cast<ms>(
+                   std::chrono::high_resolution_clock::now() - v_start)
+                   .count();
+#endif
+
 #ifdef P_DEBUG
   V.print("V");
 #endif
 
   for (int i = 0; i < 100; ++i) {
+#ifdef P_BENCHMARK
+    auto vk_start = std::chrono::high_resolution_clock::now();
+#endif
+
     // Perform SpMM(VK)
     auto ET = V.spmm(K);
+
+#ifdef P_BENCHMARK
+    vk_elapsed += std::chrono::duration_cast<ms>(
+                      std::chrono::high_resolution_clock::now() - vk_start)
+                      .count();
+#endif
+
 #ifdef P_DEBUG
     if (i == 0)
       ET.print("ET");
 #endif
 
+#ifdef P_BENCHMARK
+    auto c_start = std::chrono::high_resolution_clock::now();
+#endif
+
     // Compute the centroid norms
     auto C = DenseMat::initialize_cnorm(V, ET);
+
+#ifdef P_BENCHMARK
+    c_elapsed += std::chrono::duration_cast<ms>(
+                     std::chrono::high_resolution_clock::now() - c_start)
+                     .count();
+#endif
+
+#ifdef P_BENCHMARK
+    auto d_start = std::chrono::high_resolution_clock::now();
+#endif
 
     // Compute the D matrix
     auto dist_kernel = DistKernel();
     auto D = dist_kernel.kernel(ET.rows_per_block, ET.cols_per_block, ET.data(),
                                 C.data());
 
+#ifdef P_BENCHMARK
+    d_elapsed += std::chrono::duration_cast<ms>(
+                     std::chrono::high_resolution_clock::now() - d_start)
+                     .count();
+#endif
+
+#ifdef P_BENCHMARK
+    auto vr_start = std::chrono::high_resolution_clock::now();
+#endif
+
     // Update V matrix
     V = V.initialize_v(D);
+
+#ifdef P_BENCHMARK
+    vr_elapsed += std::chrono::duration_cast<ms>(
+                      std::chrono::high_resolution_clock::now() - vr_start)
+                      .count();
+#endif
 
     // Assuming D is stored on host
     free(D);
@@ -100,9 +172,16 @@ void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
   auto end = std::chrono::high_resolution_clock::now();
 
   // Output runtime
-  std::chrono::duration<double> elapsed = end - start;
-  if (rank == 0)
-    std::cout << "Runtime: " << elapsed.count() << " seconds" << std::endl;
+  double elapsed = std::chrono::duration_cast<ms>(end - start).count();
+  if (rank == 0) {
+    std::cout << "Runtime: " << elapsed << " ms" << std::endl;
+    std::cout << "K: " << k_elapsed << " ms" << std::endl;
+    std::cout << "V: " << v_elapsed << " ms" << std::endl;
+    std::cout << "VK: " << vk_elapsed << " ms" << std::endl;
+    std::cout << "C: " << c_elapsed << " ms" << std::endl;
+    std::cout << "D: " << d_elapsed << " ms" << std::endl;
+    std::cout << "V (re): " << vr_elapsed << " ms" << std::endl;
+  }
 #endif
 
   // Output cluster assignments
