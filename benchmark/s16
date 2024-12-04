@@ -3,7 +3,13 @@ Running strong scaling test on 16 ranks!
 Trial 1
 Number of GPUs per node 1
 Waking the GPUs... DONE!
-Runtime: 22.8063 seconds
+Runtime: 22881 ms
+K: 84 ms
+V: 6 ms
+VK: 20613 ms
+C: 129 ms
+D: 59 ms
+V (re): 1803 ms
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
@@ -22,11 +28,17 @@ Runtime: 22.8063 seconds
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 
 Trial 2
-srun: Job 33370309 step creation temporarily disabled, retrying (Requested nodes are busy)
-srun: Step created for StepId=33370309.1
+srun: Job 33526712 step creation temporarily disabled, retrying (Requested nodes are busy)
+srun: Step created for StepId=33526712.1
 Number of GPUs per node 1
 Waking the GPUs... DONE!
-Runtime: 22.7624 seconds
+Runtime: 22751 ms
+K: 45 ms
+V: 10 ms
+VK: 20621 ms
+C: 113 ms
+D: 55 ms
+V (re): 1706 ms
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
@@ -45,10 +57,16 @@ Runtime: 22.7624 seconds
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 
 Trial 3
-srun: Step created for StepId=33370309.2
+srun: Step created for StepId=33526712.2
 Number of GPUs per node 1
 Waking the GPUs... DONE!
-Runtime: 22.6423 seconds
+Runtime: 23311 ms
+K: 51 ms
+V: 102 ms
+VK: 20592 ms
+C: 109 ms
+D: 72 ms
+V (re): 2210 ms
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
@@ -67,10 +85,16 @@ Runtime: 22.6423 seconds
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 
 Trial 4
-srun: Step created for StepId=33370309.3
+srun: Step created for StepId=33526712.3
 Number of GPUs per node 1
 Waking the GPUs... DONE!
-Runtime: 22.7563 seconds
+Runtime: 22880 ms
+K: 254 ms
+V: 6 ms
+VK: 20175 ms
+C: 121 ms
+D: 76 ms
+V (re): 2082 ms
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
@@ -89,25 +113,4 @@ Runtime: 22.7563 seconds
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 
 Trial 5
-srun: Step created for StepId=33370309.4
-Number of GPUs per node 1
-Waking the GPUs... DONE!
-Runtime: 22.805 seconds
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-
-Done!
+slurmstepd: error: *** JOB 33526712 ON nid003341 CANCELLED AT 2024-12-04T00:28:34 DUE TO TIME LIMIT ***

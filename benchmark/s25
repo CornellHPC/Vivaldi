@@ -3,7 +3,13 @@ Running strong scaling test on 25 ranks!
 Trial 1
 Number of GPUs per node 1
 Waking the GPUs... DONE!
-Runtime: 23.1458 seconds
+Runtime: 23252 ms
+K: 91 ms
+V: 12 ms
+VK: 20914 ms
+C: 165 ms
+D: 57 ms
+V (re): 1836 ms
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
@@ -31,11 +37,15 @@ Runtime: 23.1458 seconds
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 
 Trial 2
-srun: Job 33370311 step creation temporarily disabled, retrying (Requested nodes are busy)
-srun: Step created for StepId=33370311.1
 Number of GPUs per node 1
 Waking the GPUs... DONE!
-Runtime: 22.8591 seconds
+Runtime: 24080 ms
+K: 250 ms
+V: 211 ms
+VK: 21050 ms
+C: 173 ms
+D: 53 ms
+V (re): 2170 ms
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
@@ -63,10 +73,16 @@ Runtime: 22.8591 seconds
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 
 Trial 3
-srun: Step created for StepId=33370311.2
+srun: Step created for StepId=33526738.2
 Number of GPUs per node 1
 Waking the GPUs... DONE!
-Runtime: 23.0689 seconds
+Runtime: 23987 ms
+K: 234 ms
+V: 8 ms
+VK: 21203 ms
+C: 265 ms
+D: 47 ms
+V (re): 2053 ms
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
@@ -94,10 +110,16 @@ Runtime: 23.0689 seconds
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 
 Trial 4
-srun: Step created for StepId=33370311.3
+srun: Step created for StepId=33526738.3
 Number of GPUs per node 1
 Waking the GPUs... DONE!
-Runtime: 22.8262 seconds
+Runtime: 23445 ms
+K: 42 ms
+V: 212 ms
+VK: 20831 ms
+C: 150 ms
+D: 48 ms
+V (re): 1972 ms
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
@@ -125,10 +147,16 @@ Runtime: 22.8262 seconds
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 
 Trial 5
-srun: Step created for StepId=33370311.4
+srun: Step created for StepId=33526738.4
 Number of GPUs per node 1
 Waking the GPUs... DONE!
-Runtime: 23.3265 seconds
+Runtime: 23543 ms
+K: 49 ms
+V: 10 ms
+VK: 20952 ms
+C: 278 ms
+D: 52 ms
+V (re): 2036 ms
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries

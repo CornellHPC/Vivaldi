@@ -3,61 +3,31 @@ Running strong scaling test on 1 rank!
 Trial 1
 Number of GPUs per node 1
 Waking the GPUs... DONE!
-Runtime: 41982 ms
-K: 86 ms
-V: 77 ms
-VK: 37226 ms
-C: 398 ms
-D: 1370 ms
-V (re): 2692 ms
+Runtime: 41.8635 seconds
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 
 Trial 2
 Number of GPUs per node 1
 Waking the GPUs... DONE!
-Runtime: 41562 ms
-K: 29 ms
-V: 76 ms
-VK: 36869 ms
-C: 398 ms
-D: 1375 ms
-V (re): 2679 ms
+Runtime: 41.7921 seconds
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 
 Trial 3
 Number of GPUs per node 1
 Waking the GPUs... DONE!
-Runtime: 41603 ms
-K: 35 ms
-V: 78 ms
-VK: 36897 ms
-C: 398 ms
-D: 1309 ms
-V (re): 2677 ms
+Runtime: 41.7406 seconds
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 
 Trial 4
 Number of GPUs per node 1
 Waking the GPUs... DONE!
-Runtime: 44612 ms
-K: 25 ms
-V: 77 ms
-VK: 39859 ms
-C: 398 ms
-D: 1392 ms
-V (re): 2711 ms
+Runtime: 41.6521 seconds
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 
 Trial 5
 Number of GPUs per node 1
 Waking the GPUs... DONE!
-Runtime: 41455 ms
-K: 23 ms
-V: 77 ms
-VK: 36763 ms
-C: 398 ms
-D: 1362 ms
-V (re): 2694 ms
+Runtime: 41.5186 seconds
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 
 Done!
