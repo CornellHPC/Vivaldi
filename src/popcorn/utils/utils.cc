@@ -1,10 +1,10 @@
 // C++ standard imports
 #include <cmath>
+#include <fstream>
 #include <iostream>
 
 // Library imports
 #include <cuda_runtime.h>
-#include <mpi.h>
 
 // Local imports
 #include "utils.hh"

@@ -1,7 +1,11 @@
 #ifndef UTILS_HH
 #define UTILS_HH
 
-#include "mpi.h"
+// Library imports
+#include <mpi.h>
+
+// Local imports
+#include "../../common.hh"
 
 namespace popcorn {
 

@@ -18,11 +18,10 @@ __global__ void dist_kernel_cu_(int64_t m, int64_t n, DATA_TYPE* ET,
 
 namespace popcorn {
 
-DATA_TYPE* DistKernel::kernel(int64_t m, int64_t n, DATA_TYPE* ET,
-                              DATA_TYPE* c) {
+void DistKernel::kernel(int64_t m, int64_t n, DATA_TYPE* ET, DATA_TYPE* c) {
   // quick return
   if (m == 0 || n == 0)
-    return NULL;
+    return;
 
   // Max threads/block=1024 for current CUDA compute capability (<= 7.5)
   int64_t nthreads = std::min(int64_t(1024), m * n);
@@ -39,13 +38,13 @@ DATA_TYPE* DistKernel::kernel(int64_t m, int64_t n, DATA_TYPE* ET,
 
   dist_kernel_cu_<<<1, nthreads>>>(m, n, dET, dc);
 
-  DATA_TYPE* D = (DATA_TYPE*)malloc(d_size);
-  cudaMemcpy(D, dET, d_size, cudaMemcpyDeviceToHost);
+  // DATA_TYPE* D = (DATA_TYPE*)malloc(d_size);
+  cudaMemcpy(ET, dET, d_size, cudaMemcpyDeviceToHost);
 
   cudaFree(dET);
   cudaFree(dc);
 
-  return D;
+  // return D;
 }
 
 }  // namespace popcorn

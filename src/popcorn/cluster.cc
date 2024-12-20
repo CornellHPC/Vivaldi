@@ -1,17 +1,18 @@
 // C++ standard imports
 #include <chrono>
 #include <cstdlib>
+#include <fstream>
 
 // Local imports
 #include "cluster.hh"
-#include "kernel/dist_kernel.cuh"
+// #include "kernel/dist_kernel.cuh"
 #include "kernel/polynomial_kernel.cuh"
-#include "mat/dense_mat.hh"
-#include "mat/sparse_mat.hh"
+// #include "mat/dense_mat.hh"
+// #include "mat/sparse_mat.hh"
 #include "utils/utils.hh"
 
-typedef std::chrono::seconds s;
-typedef std::chrono::milliseconds ms;
+#include "mat/cpop_blas.hh"
+#include "mat/cpop_slate.hh"
 
 namespace popcorn {
 
@@ -20,20 +21,13 @@ void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
 
-#ifdef P_DEBUG
+#ifndef CUDA
   if (rank == 0)
-#ifdef CUDA
-    std::cout << "Running on: CUDA" << std::endl;
-#else
-    std::cout << "CUDA is unavailable. Some things may not work properly."
-              << std::endl;
-#endif
+    std::cout << "CUDA is unavailable. Exiting..." << std::endl;
+  return;
 #endif
 
-#ifdef CUDA
   wake_gpus(rank);
-#endif
-
   // Cull points to make matrix evenly divisible
   int grid_dim = square_grid_dim(comm);
   m -= m % grid_dim;
@@ -44,14 +38,14 @@ void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
 #endif
 
   // Load the original data with SLATE, this will be transposed
-  auto PT = DenseMat::load_from_file(data_path, m, n, comm);
+  auto PT = load_from_file(data_path, m, n, comm);
 #ifdef P_DEBUG
   PT.print("PT");
 #endif
 
 #ifdef P_BENCHMARK
   // Start the timer (after IO)
-  auto start = std::chrono::high_resolution_clock::now();
+  auto start = hrc::now();
   double k_elapsed = 0;
   double v_elapsed = 0;
   double vk_elapsed = 0;
@@ -60,116 +54,82 @@ void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
   double vr_elapsed = 0;
 #endif
 
-  // Transpose back to obtain the original matrix
-  auto P = PT.transpose();
-#ifdef P_DEBUG
-  P.print("P");
-#endif
-
-#ifdef P_BENCHMARK
-  auto k_start = std::chrono::high_resolution_clock::now();
-#endif
-
-  // Compute the K matrix
+  // Compute the K matrix (internally, this will tranpose P and apply the kernel function)
   // TODO: make gamma, c, r as IO input
-  auto K = P.gemm(PT);
-  auto poly_kernel = PolynomialKernel(1.0f, 1.0f, 1.0f);
-  K.apply(poly_kernel);
-
 #ifdef P_BENCHMARK
-  k_elapsed += std::chrono::duration_cast<ms>(
-                   std::chrono::high_resolution_clock::now() - k_start)
-                   .count();
+  auto k_start = hrc::now();
 #endif
-
+  auto poly_kernel = PolynomialKernel(1.0f, 1.0f, 1.0f);
+  auto K = compute_k(PT, poly_kernel);
+#ifdef P_BENCHMARK
+  k_elapsed += std::chrono::duration_cast<ms>(hrc::now() - k_start).count();
+#endif
 #ifdef P_DEBUG
   K.print("K");
 #endif
 
-#ifdef P_BENCHMARK
-  auto v_start = std::chrono::high_resolution_clock::now();
-#endif
-
   // Initialize the V matrix
-  auto V = SparseMat::initialize_v(m, k, comm);
-
 #ifdef P_BENCHMARK
-  v_elapsed += std::chrono::duration_cast<ms>(
-                   std::chrono::high_resolution_clock::now() - v_start)
-                   .count();
+  auto v_start = hrc::now();
 #endif
-
+  auto V = initialize_v(m, k, comm);
+#ifdef P_BENCHMARK
+  v_elapsed += std::chrono::duration_cast<ms>(hrc::now() - v_start).count();
+#endif
 #ifdef P_DEBUG
   V.print("V");
 #endif
 
+  // Convert K to CombBLAS
+  auto cK = to_combblas(K);
+
+  // Begin the main K means clustering loop
   for (int i = 0; i < 100; ++i) {
-#ifdef P_BENCHMARK
-    auto vk_start = std::chrono::high_resolution_clock::now();
-#endif
 
     // Perform SpMM(VK)
-    auto ET = V.spmm(K);
-
 #ifdef P_BENCHMARK
-    vk_elapsed += std::chrono::duration_cast<ms>(
-                      std::chrono::high_resolution_clock::now() - vk_start)
-                      .count();
+    auto vk_start = hrc::now();
 #endif
-
+    auto ET = spmm(V, cK);
+#ifdef P_BENCHMARK
+    vk_elapsed += std::chrono::duration_cast<ms>(hrc::now() - vk_start).count();
+#endif
 #ifdef P_DEBUG
     if (i == 0)
       ET.print("ET");
 #endif
 
+      // Compute the centroid norms
 #ifdef P_BENCHMARK
-    auto c_start = std::chrono::high_resolution_clock::now();
+    auto c_start = hrc::now();
 #endif
-
-    // Compute the centroid norms
-    auto C = DenseMat::initialize_cnorm(V, ET);
-
+    auto C = initialize_cnorm(V, ET);
 #ifdef P_BENCHMARK
-    c_elapsed += std::chrono::duration_cast<ms>(
-                     std::chrono::high_resolution_clock::now() - c_start)
-                     .count();
-#endif
-
-#ifdef P_BENCHMARK
-    auto d_start = std::chrono::high_resolution_clock::now();
+    c_elapsed += std::chrono::duration_cast<ms>(hrc::now() - c_start).count();
 #endif
 
     // Compute the D matrix
-    auto dist_kernel = DistKernel();
-    auto D = dist_kernel.kernel(ET.rows_per_block, ET.cols_per_block, ET.data(),
-                                C.data());
-
 #ifdef P_BENCHMARK
-    d_elapsed += std::chrono::duration_cast<ms>(
-                     std::chrono::high_resolution_clock::now() - d_start)
-                     .count();
+    auto d_start = hrc::now();
+#endif
+    compute_d(ET, C);
+#ifdef P_BENCHMARK
+    d_elapsed += std::chrono::duration_cast<ms>(hrc::now() - d_start).count();
 #endif
 
+    // Reinitialize V matrix
 #ifdef P_BENCHMARK
-    auto vr_start = std::chrono::high_resolution_clock::now();
+    auto vr_start = hrc::now();
 #endif
-
-    // Update V matrix
-    V = V.initialize_v(D);
-
+    V = reinitialize_v(V, ET);
 #ifdef P_BENCHMARK
-    vr_elapsed += std::chrono::duration_cast<ms>(
-                      std::chrono::high_resolution_clock::now() - vr_start)
-                      .count();
+    vr_elapsed += std::chrono::duration_cast<ms>(hrc::now() - vr_start).count();
 #endif
-
-    // Assuming D is stored on host
-    free(D);
   }
 
 #ifdef P_BENCHMARK
   // Stop the timer (before IO)
-  auto end = std::chrono::high_resolution_clock::now();
+  auto end = hrc::now();
 
   // Output runtime
   double elapsed = std::chrono::duration_cast<ms>(end - start).count();
@@ -187,7 +147,7 @@ void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
   // Output cluster assignments
   std::string prefix = std::string(data_path);
   std::string suffix = "_out";
-  V.save_assignments((prefix + suffix).c_str());
+  save_assignments(V, (prefix + suffix).c_str());
 }
 
 }  // namespace popcorn

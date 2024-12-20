@@ -1,0 +1,4 @@
+Running on: CUDA
+Number of GPUs per node 1
+Waking the GPUs... DONE!
+Reading data from /global/homes/n/npi2/distributed-popcorn/test
