@@ -21,6 +21,7 @@ using UDER = combblas::SpCCols<int64_t, DATA_TYPE>;
 using SR = combblas::PlusTimesSRing<DATA_TYPE, DATA_TYPE>;
 
 // Type defs for SLATE and CombBLAS matrix pointers
+using slate_matrix = std::unique_ptr<slate::Matrix<float>>;
 using sm_ptr = std::unique_ptr<slate::Matrix<DATA_TYPE>>;
 using c_dn_ptr = std::unique_ptr<combblas::DnParMat<int64_t, DATA_TYPE>>;
 using c_sp_ptr = std::unique_ptr<combblas::SpParMat<int64_t, DATA_TYPE, UDER>>;
