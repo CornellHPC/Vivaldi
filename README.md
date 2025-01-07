@@ -1,18 +1,5 @@
 # Distributed Popcorn
 
-Install CombBLAS (our local version, which has some bugfixes for which we should ultimately raise a PR to CombBLAS)
-```bash
-git clone git@github.com:nakuliyer/CombBLAS.git
-cd CombBLAS
-git switch combblas-gpu
-mkdir _build && mkdir _install
-cd _build
-cmake -DCMAKE_INSTALL_PREFIX=../_install ..
-cmake --build . --target install
-cd ../_install
-export COMBBLAS_INSTALL=$(pwd)
-```
-
 Install [SLATE](https://github.com/icl-utk-edu/slate)
 ```bash
 export mpi=cray
@@ -31,7 +18,7 @@ cd _install
 export SLATE_INSTALL=$(pwd)
 ```
 
-Test SLATE (optional)
+Test SLATE (Optional)
 ```
 cd slate
 make check

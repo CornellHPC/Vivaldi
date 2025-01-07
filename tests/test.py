@@ -1,4 +1,5 @@
 import sys
+import time
 
 import numpy as np
 from scipy.sparse import csc_matrix
@@ -27,9 +28,9 @@ def read_data(fname):
     
     # dump data as binary
     data = np.array(data)
-    # out = open("../data/" + fname, 'wb')
-    # data.tofile(out)
-    # out.close()
+    out = open("../data/" + fname, 'wb')
+    data.tofile(out)
+    out.close()
 
     return data
 
@@ -74,16 +75,17 @@ if __name__ == "__main__":
 
     # Read Data
     data = read_data(fname)  # read data and construct matrix
-    cutoff = len(data) - (len(data) % int(np.sqrt(ranks)))
-    data = data[:cutoff]
     n = data.shape[0]
 
     model = KMeans(n_clusters=k, random_state=0, n_init='auto')
     model.fit(data)
     print('sklearn kmeans inertia (not kernelized):', model.inertia_)
 
+    start_time = time.time()
+
     # Construct Kernel Matrix and P tilde
     K = polynomial_kernel(data, 1, 1, 1)  # kernel matrix
+    print(K)
     P = np.tile(np.diag(K), (k, 1)).T  # P tilde
 
     # Initialize cluster assignments and V sparse matrix
@@ -103,9 +105,9 @@ if __name__ == "__main__":
         new_clusters = np.argmin(D, axis=1)
 
         # Convergence check
-        if np.all(clusters == new_clusters):
-            print('Converged after', iter + 1, 'iterations')
-            break
+        # if np.all(clusters == new_clusters):
+        #     print('Converged after', iter + 1, 'iterations')
+        #     break
 
         clusters = new_clusters
         clusters_size = np.zeros(k)
@@ -115,6 +117,11 @@ if __name__ == "__main__":
         V = construct_v(clusters, clusters_size, k, n)
         V = csc_matrix(V)
         # print('Finished Iteration', iter)
+
+    end_time = time.time()
+
+    elapsed_time = end_time - start_time
+    print("Elapsed time:", elapsed_time, "seconds")
     
     score = calculate_score(data, clusters, k)
     print('kernel kmeans score (sum of squared dists):', score)

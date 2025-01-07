@@ -24,15 +24,6 @@ endif()
 # GPU Support
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCUDA")
 
-# CombBLAS
-option(COMBBLAS_INSTALL	"Path to CombBLAS installation directory.")
-if (NOT COMBBLAS_INSTALL)
-  message(FATAL_ERROR "COMBBLAS_INSTALL option must be set.")
-endif()
-if (NOT IS_DIRECTORY "${COMBBLAS_INSTALL}")
-  message(FATAL_ERROR "COMBBLAS_INSTALL path does not exist.")
-endif()
-
 # SLATE
 option(SLATE_INSTALL "Path to SLATE installation directory.")
 if (NOT SLATE_INSTALL)
@@ -43,7 +34,7 @@ if (NOT IS_DIRECTORY "${SLATE_INSTALL}")
 endif()
 
 # Executable
-file(GLOB SOURCES "src/main.cc" "src/**/*.cc" "src/popcorn/**/*.cu" "src/popcorn/**/*.cc")
+file(GLOB SOURCES "src/main.cc" "src/**/*.cu" "src/**/*.cc" "src/popcorn/**/*.cu" "src/popcorn/**/*.cc")
 add_executable(main ${SOURCES})
 
 # Sanitizers
@@ -53,11 +44,8 @@ if (SANITIZE)
 endif()
 
 # Includes
-target_include_directories(main PRIVATE "${COMBBLAS_INSTALL}/include")
 target_include_directories(main PRIVATE "${SLATE_INSTALL}/include")
 
 # Libraries
-target_link_directories(main PRIVATE "${COMBBLAS_INSTALL}/lib")
 target_link_directories(main PRIVATE "${SLATE_INSTALL}/lib")
-target_link_libraries(main gomp cusparse cusolver blaspp lapackpp slate CombBLAS)
-
+target_link_libraries(main gomp cusparse cusolver blaspp lapackpp slate)

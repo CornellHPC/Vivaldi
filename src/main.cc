@@ -12,9 +12,8 @@
 #include "common.hh"
 
 #include "popcorn/utils/utils.hh"
-#include "popcorn/kernel/polynomial_kernel.cuh"
-#include "popcorn/mat/cpop_blas.hh"
-#include "popcorn/mat/cpop_slate.hh"
+// #include "popcorn/kernel/polynomial_kernel.cuh"
+#include "popcorn/kernel_matrix.hh"
 
 using namespace popcorn;
 
@@ -30,6 +29,11 @@ using namespace popcorn;
 int main(int argc, char* argv[]) {
   assert(argc == 5 && "Invalid args. Must provide params [path] [m] [n] [k]");
 
+#ifndef CUDA
+  std::cout << "CUDA is unavailable. Exiting..." << std::endl;
+  return;
+#endif
+
   MPI_Init(&argc, &argv);
 
   int rank, size;
@@ -41,17 +45,11 @@ int main(int argc, char* argv[]) {
   int n = std::atoi(argv[3]);
   int k = std::atoi(argv[4]);
 
-#ifndef CUDA
-  if (rank == 0)
-    std::cout << "CUDA is unavailable. Exiting..." << std::endl;
-  return;
-#endif
-
   wake_gpus(rank);
 
   // Load the original data with SLATE, this will be transposed
   auto PT = load_data(fpath, m, n);
-  slate::print("P Transpose: ", *PT);
+  // slate::print("PT", *PT);
 
 #ifdef P_BENCHMARK
   // Start the timer (after IO)
@@ -69,100 +67,80 @@ int main(int argc, char* argv[]) {
 #ifdef P_BENCHMARK
   auto k_start = hrc::now();
 #endif
-  auto poly_kernel = PolynomialKernel(1.0f, 1.0f, 1.0f);
-  auto K = compute_kernel_matrix(PT, poly_kernel);
-  slate::print("K ", *K);
+  // auto poly_kernel = PolynomialKernel(1.0f, 1.0f, 1.0f);
+  auto K = compute_kernel_matrix(PT);
+  slate::print("K", *K);
 #ifdef P_BENCHMARK
   k_elapsed += std::chrono::duration_cast<ms>(hrc::now() - k_start).count();
 #endif
 
-  if (rank == 0) std::cout << k_elapsed << std::endl;
+  if (rank == 0)
+    std::cout << k_elapsed << std::endl;
 
-//   // Initialize the V matrix
-// #ifdef P_BENCHMARK
-//   auto v_start = hrc::now();
-// #endif
-//   auto V = initialize_v(m, k, MPI_COMM_WORLD);
-// #ifdef P_BENCHMARK
-//   v_elapsed += std::chrono::duration_cast<ms>(hrc::now() - v_start).count();
-// #endif
-// #ifdef P_DEBUG
-//   V.print("V");
-// #endif
+  //   // Initialize the V matrix
+  // #ifdef P_BENCHMARK
+  //   auto v_start = hrc::now();
+  // #endif
+  //   auto V = initialize_v(m, k, MPI_COMM_WORLD);
+  // #ifdef P_BENCHMARK
+  //   v_elapsed += std::chrono::duration_cast<ms>(hrc::now() - v_start).count();
+  // #endif
+  // #ifdef P_DEBUG
+  //   V.print("V");
+  // #endif
 
-//   // Convert K to CombBLAS
-//   auto cK = to_combblas(K);
+  //   // Convert K to CombBLAS
+  //   auto cK = to_combblas(K);
 
-//   // Begin the main K means clustering loop
-//   for (int i = 0; i < 100; ++i) {
+  //   // Begin the main K means clustering loop
+  //   for (int i = 0; i < 100; ++i) {
 
-//     // Perform SpMM(VK)
-// #ifdef P_BENCHMARK
-//     auto vk_start = hrc::now();
-// #endif
-//     auto ET = spmm(V, cK);
-// #ifdef P_BENCHMARK
-//     vk_elapsed += std::chrono::duration_cast<ms>(hrc::now() - vk_start).count();
-// #endif
-// #ifdef P_DEBUG
-//     if (i == 0)
-//       ET.print("ET");
-// #endif
+  //     // Perform SpMM(VK)
+  // #ifdef P_BENCHMARK
+  //     auto vk_start = hrc::now();
+  // #endif
+  //     auto ET = spmm(V, cK);
+  // #ifdef P_BENCHMARK
+  //     vk_elapsed += std::chrono::duration_cast<ms>(hrc::now() - vk_start).count();
+  // #endif
+  // #ifdef P_DEBUG
+  //     if (i == 0)
+  //       ET.print("ET");
+  // #endif
 
-//       // Compute the centroid norms
-// #ifdef P_BENCHMARK
-//     auto c_start = hrc::now();
-// #endif
-//     auto C = initialize_cnorm(V, ET);
-// #ifdef P_BENCHMARK
-//     c_elapsed += std::chrono::duration_cast<ms>(hrc::now() - c_start).count();
-// #endif
+  //       // Compute the centroid norms
+  // #ifdef P_BENCHMARK
+  //     auto c_start = hrc::now();
+  // #endif
+  //     auto C = initialize_cnorm(V, ET);
+  // #ifdef P_BENCHMARK
+  //     c_elapsed += std::chrono::duration_cast<ms>(hrc::now() - c_start).count();
+  // #endif
 
-//     // Compute the D matrix
-// #ifdef P_BENCHMARK
-//     auto d_start = hrc::now();
-// #endif
-//     compute_d(ET, C);
-// #ifdef P_BENCHMARK
-//     d_elapsed += std::chrono::duration_cast<ms>(hrc::now() - d_start).count();
-// #endif
+  //     // Compute the D matrix
+  // #ifdef P_BENCHMARK
+  //     auto d_start = hrc::now();
+  // #endif
+  //     compute_d(ET, C);
+  // #ifdef P_BENCHMARK
+  //     d_elapsed += std::chrono::duration_cast<ms>(hrc::now() - d_start).count();
+  // #endif
 
-//     // Reinitialize V matrix
-// #ifdef P_BENCHMARK
-//     auto vr_start = hrc::now();
-// #endif
-//     V = reinitialize_v(V, ET);
-// #ifdef P_BENCHMARK
-//     vr_elapsed += std::chrono::duration_cast<ms>(hrc::now() - vr_start).count();
-// #endif
-//   }
+  //     // Reinitialize V matrix
+  // #ifdef P_BENCHMARK
+  //     auto vr_start = hrc::now();
+  // #endif
+  //     V = reinitialize_v(V, ET);
+  // #ifdef P_BENCHMARK
+  //     vr_elapsed += std::chrono::duration_cast<ms>(hrc::now() - vr_start).count();
+  // #endif
+  //   }
 
-// #ifdef P_BENCHMARK
-//   // Stop the timer (before IO)
-//   auto end = hrc::now();
+  //   // Output cluster assignments
+  //   std::string prefix = std::string(fpath);
+  //   std::string suffix = "_out";
+  //   save_assignments(V, (prefix + suffix).c_str());
 
-//   // Output runtime
-//   double elapsed = std::chrono::duration_cast<ms>(end - start).count();
-//   if (rank == 0) {
-//     std::cout << "Runtime: " << elapsed << " ms" << std::endl;
-//     std::cout << "K: " << k_elapsed << " ms" << std::endl;
-//     std::cout << "V: " << v_elapsed << " ms" << std::endl;
-//     std::cout << "VK: " << vk_elapsed << " ms" << std::endl;
-//     std::cout << "C: " << c_elapsed << " ms" << std::endl;
-//     std::cout << "D: " << d_elapsed << " ms" << std::endl;
-//     std::cout << "V (re): " << vr_elapsed << " ms" << std::endl;
-//   }
-// #endif
-
-//   // Output cluster assignments
-//   std::string prefix = std::string(fpath);
-//   std::string suffix = "_out";
-//   save_assignments(V, (prefix + suffix).c_str());
-
-
-
-  // MPI_Barrier(MPI_COMM_WORLD);
-  // std::cout << rank << std::endl;
   MPI_Finalize();
   return 0;
 }

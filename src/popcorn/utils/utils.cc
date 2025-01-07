@@ -13,7 +13,7 @@ void popcorn::wake_gpus(int myrank) {
   int ndevices;
   cudaGetDeviceCount(&ndevices);
   if (myrank == 0) {
-    std::cout << "Number of GPUs per node " << ndevices << "\n" << std::flush;
+    std::cout << "Number of GPUs per node: " << ndevices << "\n" << std::flush;
     std::cout << "Waking the GPUs..." << std::flush;
   }
   int ts = 0;

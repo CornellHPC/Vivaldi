@@ -1,5 +1,5 @@
-#include "../../common.hh"
-#include "../kernel/kernel.cuh"
+#include "../common.hh"
+#include "kernel/kernel.cuh"
 
 namespace popcorn {
 
@@ -18,17 +18,8 @@ slate_matrix load_data(const char* fname, int64_t rows, int64_t cols);
  * Generates kernel matrix K
  *
  * @param PT transposed points matrix
- * @param kernel_func kernel function to use (e.g. PolynomialKernel)
- * @return The transposed dense matrix.
+ * @return the transposed dense matrix.
  */
-slate_matrix compute_kernel_matrix(slate_matrix& PT, Kernel& kernel_func);
-
-/**
- * @brief Converts a SLATE matrix to a CombBLAS matrix.
- * 
- * @param K SLATE matrix, will be freed by this method
- * @return c_dn_ptr CombBLAS matrix
- */
-c_dn_ptr to_combblas(sm_ptr& K);
+slate_matrix compute_kernel_matrix(slate_matrix& PT);
 
 }
