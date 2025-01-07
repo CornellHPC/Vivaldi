@@ -64,10 +64,10 @@ cusparseDnMatDescr_t spmm(cusparseHandle_t& cusparse_handle,
                           cusparseSpMatDescr_t sparse,
                           cusparseDnMatDescr_t dense) {
   // Get input information
-  int64_t sp_rows, sp_cols, dn_rows, dn_cols, ld;
+  int64_t sp_rows, sp_cols, nnz, dn_rows, dn_cols, ld;
   cudaDataType type;
   cusparseOrder_t order;
-  cusparseSpMatGetSize(sparse, &sp_rows, &sp_cols, nullptr);
+  cusparseSpMatGetSize(sparse, &sp_rows, &sp_cols, &nnz);
   cusparseDnMatGet(dense, &dn_rows, &dn_cols, &ld, nullptr, &type, &order);
 
   // Protect against bad input
@@ -188,7 +188,7 @@ int main(int argc, char* argv[]) {
 #ifdef P_BENCHMARK
     auto vk_start = hrc::now();
 #endif
-    auto ET = spmm(cusparse_handle, V, Kc);
+    // auto ET = spmm(cusparse_handle, V, Kc);
 #ifdef P_BENCHMARK
     vk_elapsed += std::chrono::duration_cast<ms>(hrc::now() - vk_start).count();
 #endif
@@ -199,7 +199,7 @@ int main(int argc, char* argv[]) {
 
     // TODO: Clean up device data (inside mats)
     cusparseDestroySpMat(V);
-    cusparseDestroyDnMat(ET);
+    // cusparseDestroyDnMat(ET);
     break;
 
     //       // Compute the centroid norms
@@ -235,7 +235,7 @@ int main(int argc, char* argv[]) {
   //   std::string suffix = "_out";
   //   save_assignments(V, (prefix + suffix).c_str());
 
-  cusparseDestroyDnMat(Kc);
+  // cusparseDestroyDnMat(Kc);
   cusparseDestroy(cusparse_handle);
 
   MPI_Finalize();
