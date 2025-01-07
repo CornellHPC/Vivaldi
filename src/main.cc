@@ -60,6 +60,50 @@ cusparseSpMatDescr_t initialize_v(cusparseHandle_t& cusparse_handle, int m,
   return V;
 }
 
+cusparseDnMatDescr_t spmm(cusparseHandle_t& cusparse_handle,
+                          cusparseSpMatDescr_t sparse,
+                          cusparseDnMatDescr_t dense) {
+  // Get input information
+  int64_t sp_rows, sp_cols, dn_rows, dn_cols, ld;
+  cudaDataType type;
+  cusparseOrder_t order;
+  cusparseSpMatGetSize(sparse, &sp_rows, &sp_cols, nullptr);
+  cusparseDnMatGet(dense, &dn_rows, &dn_cols, &ld, nullptr, &type, &order);
+
+  // Protect against bad input
+  assert(sp_cols == dn_rows && "Inner dimension must be equal in size.");
+  assert(type == CUDA_R_32F && "Matrix data must be FP32.");
+
+  // Define constants
+  const float alpha = 1.0f;
+  const float beta = 0.0f;
+
+  // Allocate memory for output
+  float* out_data;
+  cudaMalloc(&out_data, sp_rows * dn_cols * sizeof(float));
+  cusparseDnMatDescr_t out;
+  cusparseCreateDnMat(&out, sp_rows, dn_cols, ld, out_data, type, order);
+
+  // Allocate workspace
+  size_t buffer_size;
+  void* buffer;
+  cusparseSpMM_bufferSize(cusparse_handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
+                          CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, sparse,
+                          dense, &beta, out, CUDA_R_32F,
+                          CUSPARSE_SPMM_ALG_DEFAULT, &buffer_size);
+  cudaMalloc(&buffer, buffer_size);
+
+  // Perform SpMM
+  cusparseSpMM(cusparse_handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
+               CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, sparse, dense, &beta,
+               out, CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, buffer);
+
+  // Release workspace
+  cudaFree(buffer);
+
+  return out;
+}
+
 /**
  * Runs the distributed popcorn kernel k-means clustering algorithm.
  * Usage: srun popcorn [path] [m] [n] [k]
@@ -116,6 +160,8 @@ int main(int argc, char* argv[]) {
   // auto poly_kernel = PolynomialKernel(1.0f, 1.0f, 1.0f);
   auto K = compute_kernel_matrix(PT);
   slate::print("K", *K);
+  // TODO: Wrap local column grid of K data with cusparse descriptor
+  cusparseDnMatDescr_t Kc;
 #ifdef P_BENCHMARK
   k_elapsed += std::chrono::duration_cast<ms>(hrc::now() - k_start).count();
 #endif
@@ -135,59 +181,63 @@ int main(int argc, char* argv[]) {
   V.print("V");
 #endif
 
-  // TODO: Move into proper loop location
-  cusparseDestroySpMat(V);
+  // Begin the main K means clustering loop
+  for (int i = 0; i < 100; ++i) {
 
-  //   // Begin the main K means clustering loop
-  //   for (int i = 0; i < 100; ++i) {
+// Perform SpMM(VK)
+#ifdef P_BENCHMARK
+    auto vk_start = hrc::now();
+#endif
+    auto ET = spmm(cusparse_handle, V, Kc);
+#ifdef P_BENCHMARK
+    vk_elapsed += std::chrono::duration_cast<ms>(hrc::now() - vk_start).count();
+#endif
+#ifdef P_DEBUG
+    if (i == 0)
+      ET.print("ET");
+#endif
 
-  //     // Perform SpMM(VK)
-  // #ifdef P_BENCHMARK
-  //     auto vk_start = hrc::now();
-  // #endif
-  //     auto ET = spmm(V, cK);
-  // #ifdef P_BENCHMARK
-  //     vk_elapsed += std::chrono::duration_cast<ms>(hrc::now() - vk_start).count();
-  // #endif
-  // #ifdef P_DEBUG
-  //     if (i == 0)
-  //       ET.print("ET");
-  // #endif
+    // TODO: Clean up device data (inside mats)
+    cusparseDestroySpMat(V);
+    cusparseDestroyDnMat(ET);
+    break;
 
-  //       // Compute the centroid norms
-  // #ifdef P_BENCHMARK
-  //     auto c_start = hrc::now();
-  // #endif
-  //     auto C = initialize_cnorm(V, ET);
-  // #ifdef P_BENCHMARK
-  //     c_elapsed += std::chrono::duration_cast<ms>(hrc::now() - c_start).count();
-  // #endif
+    //       // Compute the centroid norms
+    // #ifdef P_BENCHMARK
+    //     auto c_start = hrc::now();
+    // #endif
+    //     auto C = initialize_cnorm(V, ET);
+    // #ifdef P_BENCHMARK
+    //     c_elapsed += std::chrono::duration_cast<ms>(hrc::now() - c_start).count();
+    // #endif
 
-  //     // Compute the D matrix
-  // #ifdef P_BENCHMARK
-  //     auto d_start = hrc::now();
-  // #endif
-  //     compute_d(ET, C);
-  // #ifdef P_BENCHMARK
-  //     d_elapsed += std::chrono::duration_cast<ms>(hrc::now() - d_start).count();
-  // #endif
+    //     // Compute the D matrix
+    // #ifdef P_BENCHMARK
+    //     auto d_start = hrc::now();
+    // #endif
+    //     compute_d(ET, C);
+    // #ifdef P_BENCHMARK
+    //     d_elapsed += std::chrono::duration_cast<ms>(hrc::now() - d_start).count();
+    // #endif
 
-  //     // Reinitialize V matrix
-  // #ifdef P_BENCHMARK
-  //     auto vr_start = hrc::now();
-  // #endif
-  //     V = reinitialize_v(V, ET);
-  // #ifdef P_BENCHMARK
-  //     vr_elapsed += std::chrono::duration_cast<ms>(hrc::now() - vr_start).count();
-  // #endif
-  //   }
+    //     // Reinitialize V matrix
+    // #ifdef P_BENCHMARK
+    //     auto vr_start = hrc::now();
+    // #endif
+    //     V = reinitialize_v(V, ET);
+    // #ifdef P_BENCHMARK
+    //     vr_elapsed += std::chrono::duration_cast<ms>(hrc::now() - vr_start).count();
+    // #endif
+  }
 
   //   // Output cluster assignments
   //   std::string prefix = std::string(fpath);
   //   std::string suffix = "_out";
   //   save_assignments(V, (prefix + suffix).c_str());
 
+  cusparseDestroyDnMat(Kc);
   cusparseDestroy(cusparse_handle);
+
   MPI_Finalize();
   return 0;
 }
