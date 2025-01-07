@@ -6,6 +6,7 @@
 #include <fstream>
 #include <iostream>
 
+#include "cusparse_v2.h"
 #include "mpi.h"
 #include "mpio.h"
 
@@ -16,6 +17,48 @@
 #include "popcorn/kernel_matrix.hh"
 
 using namespace popcorn;
+
+cusparseSpMatDescr_t initialize_v(cusparseHandle_t& cusparse_handle, int m,
+                                  int k) {
+  std::vector<int> row;
+  std::vector<int> col;
+  std::vector<float> val;
+
+  // TODO: Speed up initialization
+  for (int c = 0; c < m; ++c) {
+    int r = c % k;
+    int l = (m / k) + ((r < m % k) ? 1 : 0);
+    row.push_back(r);
+    col.push_back(c);
+    val.push_back(1.0f / l);
+  }
+
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if (rank == 0) {
+    for (int i = 0; i < m; ++i) {
+      std::cout << "(" << row.at(i) << "," << col.at(i) << "," << val.at(i)
+                << ")" << std::endl;
+    }
+  }
+
+  void *cooRowInd, *cooColInd, *cooValues;
+
+  cudaMalloc(&cooRowInd, m * sizeof(int));
+  cudaMalloc(&cooColInd, m * sizeof(int));
+  cudaMalloc(&cooValues, m * sizeof(float));
+
+  cusparseSpMatDescr_t V;
+  cusparseCreateCoo(&V, k, m, m, cooRowInd, cooColInd, cooValues,
+                    CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F);
+
+  // TODO: Move these somewhere else (can't free until after use)
+  // cudaFree(cooRowInd);
+  // cudaFree(cooColInd);
+  // cudaFree(cooValues);
+
+  return V;
+}
 
 /**
  * Runs the distributed popcorn kernel k-means clustering algorithm.
@@ -31,7 +74,7 @@ int main(int argc, char* argv[]) {
 
 #ifndef CUDA
   std::cout << "CUDA is unavailable. Exiting..." << std::endl;
-  return;
+  return 0;
 #endif
 
   MPI_Init(&argc, &argv);
@@ -46,6 +89,9 @@ int main(int argc, char* argv[]) {
   int k = std::atoi(argv[4]);
 
   wake_gpus(rank);
+
+  cusparseHandle_t cusparse_handle;
+  cusparseCreate(&cusparse_handle);
 
   // Load the original data with SLATE, this will be transposed
   auto PT = load_data(fpath, m, n);
@@ -77,20 +123,20 @@ int main(int argc, char* argv[]) {
   if (rank == 0)
     std::cout << k_elapsed << std::endl;
 
-  //   // Initialize the V matrix
-  // #ifdef P_BENCHMARK
-  //   auto v_start = hrc::now();
-  // #endif
-  //   auto V = initialize_v(m, k, MPI_COMM_WORLD);
-  // #ifdef P_BENCHMARK
-  //   v_elapsed += std::chrono::duration_cast<ms>(hrc::now() - v_start).count();
-  // #endif
-  // #ifdef P_DEBUG
-  //   V.print("V");
-  // #endif
+// Initialize the V matrix
+#ifdef P_BENCHMARK
+  auto v_start = hrc::now();
+#endif
+  auto V = initialize_v(cusparse_handle, m, k);
+#ifdef P_BENCHMARK
+  v_elapsed += std::chrono::duration_cast<ms>(hrc::now() - v_start).count();
+#endif
+#ifdef P_DEBUG
+  V.print("V");
+#endif
 
-  //   // Convert K to CombBLAS
-  //   auto cK = to_combblas(K);
+  // TODO: Move into proper loop location
+  cusparseDestroySpMat(V);
 
   //   // Begin the main K means clustering loop
   //   for (int i = 0; i < 100; ++i) {
@@ -141,6 +187,7 @@ int main(int argc, char* argv[]) {
   //   std::string suffix = "_out";
   //   save_assignments(V, (prefix + suffix).c_str());
 
+  cusparseDestroy(cusparse_handle);
   MPI_Finalize();
   return 0;
 }
