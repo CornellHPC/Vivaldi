@@ -112,10 +112,10 @@ cusparseDnMatDescr_t spmm(cusparseHandle_t& cusparse_handle,
  * Runs the distributed popcorn kernel k-means clustering algorithm.
  * Usage: srun popcorn [path] [m] [n] [k]
  *
- * [path] is the path to the dataset
- * [m] is the number of samples
- * [n] is the number of features
- * [k] is the number of clusters
+ * @param path path to the dataset
+ * @param m number of samples in the dataset
+ * @param n number of features
+ * @param k number of clusters to form
  */
 int main(int argc, char* argv[]) {
   assert(argc == 5 && "Invalid args. Must provide params [path] [m] [n] [k]");
@@ -143,18 +143,11 @@ int main(int argc, char* argv[]) {
 
   // Load the original data with SLATE, this will be transposed
   auto PT = load_matrix(fpath, m, n);
-  slate::print("PT", *PT);
+  // slate::print("PT", *PT);
 
-#ifdef P_BENCHMARK
-  // Start the timer (after IO)
+  // Start the timer (after dataset IO)
   auto start = hrc::now();
-  double k_elapsed = 0;
-  double v_elapsed = 0;
-  double vk_elapsed = 0;
-  double c_elapsed = 0;
-  double d_elapsed = 0;
-  double vr_elapsed = 0;
-#endif
+  double k_elapsed, v_elapsed, vk_elapsed;
 
   // Compute the K matrix
   auto k_start = hrc::now();
@@ -165,77 +158,33 @@ int main(int argc, char* argv[]) {
   cusparseDnMatDescr_t Kc;
   k_elapsed += std::chrono::duration_cast<ms>(hrc::now() - k_start).count();
 
-  if (rank == 0) std::cout << "K took " << k_elapsed << "ms" << std::endl;
+  
 
-// Initialize the V matrix
-#ifdef P_BENCHMARK
+  
   auto v_start = hrc::now();
-#endif
+
+  // Initialize the V matrix
   auto V = initialize_v(cusparse_handle, m, k);
-#ifdef P_BENCHMARK
+
   v_elapsed += std::chrono::duration_cast<ms>(hrc::now() - v_start).count();
-#endif
-#ifdef P_DEBUG
-  V.print("V");
-#endif
 
   // Begin the main K means clustering loop
   for (int i = 0; i < 100; ++i) {
-
-// Perform SpMM(VK)
-#ifdef P_BENCHMARK
+    // Perform SpMM(VK)
     auto vk_start = hrc::now();
-#endif
     // auto ET = spmm(cusparse_handle, V, Kc);
-#ifdef P_BENCHMARK
     vk_elapsed += std::chrono::duration_cast<ms>(hrc::now() - vk_start).count();
-#endif
-#ifdef P_DEBUG
-    if (i == 0)
-      ET.print("ET");
-#endif
 
     // TODO: Clean up device data (inside mats)
     cusparseDestroySpMat(V);
     // cusparseDestroyDnMat(ET);
     break;
-
-    //       // Compute the centroid norms
-    // #ifdef P_BENCHMARK
-    //     auto c_start = hrc::now();
-    // #endif
-    //     auto C = initialize_cnorm(V, ET);
-    // #ifdef P_BENCHMARK
-    //     c_elapsed += std::chrono::duration_cast<ms>(hrc::now() - c_start).count();
-    // #endif
-
-    //     // Compute the D matrix
-    // #ifdef P_BENCHMARK
-    //     auto d_start = hrc::now();
-    // #endif
-    //     compute_d(ET, C);
-    // #ifdef P_BENCHMARK
-    //     d_elapsed += std::chrono::duration_cast<ms>(hrc::now() - d_start).count();
-    // #endif
-
-    //     // Reinitialize V matrix
-    // #ifdef P_BENCHMARK
-    //     auto vr_start = hrc::now();
-    // #endif
-    //     V = reinitialize_v(V, ET);
-    // #ifdef P_BENCHMARK
-    //     vr_elapsed += std::chrono::duration_cast<ms>(hrc::now() - vr_start).count();
-    // #endif
   }
-
-  //   // Output cluster assignments
-  //   std::string prefix = std::string(fpath);
-  //   std::string suffix = "_out";
-  //   save_assignments(V, (prefix + suffix).c_str());
 
   // cusparseDestroyDnMat(Kc);
   cusparseDestroy(cusparse_handle);
-  
+
+  if (rank == 0) std::cout << "K took " << k_elapsed << "ms" << std::endl;
 
   MPI_Finalize();
   return 0;

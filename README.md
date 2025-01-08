@@ -1,6 +1,28 @@
-# Distributed Popcorn
+# Distributed Popcorn: Multi-GPU Kernel K-Means with Sparse Linear Algebra
 
-Install [SLATE](https://github.com/icl-utk-edu/slate)
+## File Tree
+```
+├── CMakeLists.txt - build configs
+├── data - contains test data
+├── job.sh - launching Perlmutter jobs
+├── Makefile
+├── README.md
+├── run.sh
+├── src
+│   ├── main.cc - main algorithm implementation
+│   └── popcorn
+│       ├── compute_kernel.cc - helpers for computing the kernel matrix
+│       ├── compute_sparse.cc - helpers for all things related to sparse math
+│       ├── gpu_kernels.cu - cuda kernels
+│       ├── utils.cc - other useful helpers
+└── tests
+```
+
+## Installation
+
+Install [SLATE](https://github.com/icl-utk-edu/slate),
+preferably in this project's root directory (`distributed-popcorn/slate`)
+
 ```bash
 export mpi=cray
 export blas=libsci
@@ -18,7 +40,7 @@ cd _install
 export SLATE_INSTALL=$(pwd)
 ```
 
-Test SLATE (Optional)
+Testing SLATE (Optional)
 ```
 cd slate
 make check
@@ -26,14 +48,13 @@ echo "srun --nodes=4 --ntasks=16 --cpus-per-task=8 ./test/tester gemm" > job.sh
 sbatch job.sh
 ```
 
-Build source
-```bash
-mkdir build && cd build
-cmake -DCOMBBLAS_INSTALL=$COMBBLAS_INSTALL -DSLATE_INSTALL=$SLATE_INSTALL ..
-cmake --build .
-```
+## Makefile
+- `make alloc`: allocating interactive session on Perlmutter
+- `make build`: building source (run `mkdir build` before if no build directory)
 
-Run source
+## Other
+
+Launching job
 ```
 sbatch job.sh
 ```
@@ -45,18 +66,4 @@ export MPICH_GPU_SUPPORT_ENABLED=1
 ```
 
 ## Notes
-
-Make sure to undefine the macro `Error` after including CombBLAS and before including SLATE
-to prevent the macro name collision (will emit preprocessing error otherwise).
-
-Make sure to use the standard namespace before including CombBLAS.
-
-Make sure to run on GPUs since CombBLAS SpMM requires cuSparse.
-
-Make sure to clean everything up before calling `MPI_Finalize`.
-
-Define `COMBBLAS_DEBUG` to get extra debugging information printed by CombBLAS.
-
-CombBLAS seems to only support sparse matrix left multiply dense matrix, not right multiply.
-This is problematic since there is no transposition operation defined for distributed dense matrices.
-
+- Make sure to clean everything up before calling `MPI_Finalize`.

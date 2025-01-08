@@ -9,4 +9,7 @@ namespace popcorn {
  */
 void wake_gpus(int rank);
 
+template <typename F>
+auto time_function(F f, double* elapsed);
+
 }
