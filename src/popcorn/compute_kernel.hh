@@ -1,5 +1,6 @@
-#include "../common.hh"
-#include "kernel/kernel.cuh"
+#include "slate/slate.hh"
+
+using slate_matrix = std::unique_ptr<slate::Matrix<float>>;
 
 namespace popcorn {
 
@@ -12,7 +13,7 @@ namespace popcorn {
  * @param cols is the number of columns in the dataset
  * @return the loaded dense matrix.
  */
-slate_matrix load_data(const char* fname, int64_t rows, int64_t cols);
+slate_matrix load_matrix(const char* fname, int64_t rows, int64_t cols);
 
 /**
  * Generates kernel matrix K

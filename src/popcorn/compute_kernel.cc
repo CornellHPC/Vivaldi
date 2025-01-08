@@ -1,19 +1,14 @@
-#include "kernel_matrix.hh"
-
-#include <math.h>
-#include <thrust/device_ptr.h>
-#include <thrust/transform.h>
-
-#include "slate/slate.hh"
+#include "compute_kernel.hh"
 
 #include "gpu_kernels.cuh"
-#include "utils/utils.hh"
+#include "utils.hh"
 
-slate_matrix popcorn::load_data(const char* fname, int64_t rows, int64_t cols) {
+slate_matrix popcorn::load_matrix(const char* fname, int64_t rows,
+                                  int64_t cols) {
   MPI_File fh;
   MPI_File_open(MPI_COMM_WORLD, fname, MPI_MODE_RDONLY, MPI_INFO_NULL, &fh);
 
-  // Should be fine for reading even very large files
+  // Should be fine for reading even very large files, in order of millions for both rows and cols
   float* buf = (float*)malloc(cols * rows * sizeof(float));
   MPI_File_read_all(fh, buf, cols * rows, MPI_FLOAT, MPI_STATUS_IGNORE);
 
@@ -22,17 +17,16 @@ slate_matrix popcorn::load_data(const char* fname, int64_t rows, int64_t cols) {
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // Create empty SLATE matrix object of size equal to data
-  // Process grid: [ p1 | p2 | p3 | ... ] to partition K the same way later
-  auto PT = std::make_unique<slate::Matrix<float>>(
-      cols, rows, cols, rows / size, 1, size, MPI_COMM_WORLD);
-  PT->insertLocalTiles(slate::Target::Devices);
+  auto M = std::make_unique<slate::Matrix<float>>(cols, rows, cols, rows / size,
+                                                  size, 1, MPI_COMM_WORLD);
+  M->insertLocalTiles(slate::Target::Devices);
 
   // Fill data
-  int64_t m = PT->m(), n = PT->n(), mb = PT->tileMb(0), nb = PT->tileNb(0);
-  for (int64_t j = 0; j < PT->nt(); ++j) {
-    for (int64_t i = 0; i < PT->mt(); ++i) {
-      if (PT->tileIsLocal(i, j)) {
-        slate::Tile<float> tile = PT->at(i, j, PT->tileDevice(i, j));
+  int64_t m = M->m(), n = M->n(), mb = M->tileMb(0), nb = M->tileNb(0);
+  for (int64_t j = 0; j < M->nt(); ++j) {
+    for (int64_t i = 0; i < M->mt(); ++i) {
+      if (M->tileIsLocal(i, j)) {
+        slate::Tile<float> tile = M->at(i, j, M->tileDevice(i, j));
         int64_t stride = tile.stride();
         float* data = tile.data();
 
@@ -49,7 +43,7 @@ slate_matrix popcorn::load_data(const char* fname, int64_t rows, int64_t cols) {
   free(buf);
   MPI_File_close(&fh);
 
-  return PT;
+  return M;
 }
 
 slate_matrix popcorn::compute_kernel_matrix(slate_matrix& PT) {
@@ -62,10 +56,10 @@ slate_matrix popcorn::compute_kernel_matrix(slate_matrix& PT) {
 
   // Perform GEMM
   auto K = std::make_unique<slate::Matrix<float>>(
-      P->m(), P->m(), P->tileMb(0), P->tileMb(0), 1, size, MPI_COMM_WORLD);
+      P->m(), P->m(), P->tileMb(0), P->tileMb(0), size, 1, MPI_COMM_WORLD);
   K->insertLocalTiles(slate::Target::Devices);
   slate::gemm<float>(1.0f, *P, *PT, 0.0f, *K,
-                         {{slate::Option::Target, slate::Target::Devices}});
+                     {{slate::Option::Target, slate::Target::Devices}});
 
   for (int64_t j = 0; j < K->nt(); ++j) {
     for (int64_t i = 0; i < K->mt(); ++i) {

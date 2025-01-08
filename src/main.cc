@@ -10,13 +10,17 @@
 #include "mpi.h"
 #include "mpio.h"
 
-#include "common.hh"
+#include "popcorn/utils.hh"
+#include "popcorn/compute_kernel.hh"
+#include "popcorn/compute_sparse.hh"
 
-#include "popcorn/utils/utils.hh"
-// #include "popcorn/kernel/polynomial_kernel.cuh"
-#include "popcorn/kernel_matrix.hh"
+#define P_BENCHMARK
 
 using namespace popcorn;
+
+using hrc = std::chrono::high_resolution_clock;
+using s = std::chrono::seconds;
+using ms = std::chrono::milliseconds;
 
 cusparseSpMatDescr_t initialize_v(cusparseHandle_t& cusparse_handle, int m,
                                   int k) {
@@ -138,8 +142,8 @@ int main(int argc, char* argv[]) {
   cusparseCreate(&cusparse_handle);
 
   // Load the original data with SLATE, this will be transposed
-  auto PT = load_data(fpath, m, n);
-  // slate::print("PT", *PT);
+  auto PT = load_matrix(fpath, m, n);
+  slate::print("PT", *PT);
 
 #ifdef P_BENCHMARK
   // Start the timer (after IO)
@@ -152,22 +156,16 @@ int main(int argc, char* argv[]) {
   double vr_elapsed = 0;
 #endif
 
-  // Compute the K matrix (internally, this will tranpose P and apply the kernel function)
-  // TODO: make gamma, c, r as IO input
-#ifdef P_BENCHMARK
+  // Compute the K matrix
   auto k_start = hrc::now();
-#endif
-  // auto poly_kernel = PolynomialKernel(1.0f, 1.0f, 1.0f);
+
   auto K = compute_kernel_matrix(PT);
   slate::print("K", *K);
   // TODO: Wrap local column grid of K data with cusparse descriptor
   cusparseDnMatDescr_t Kc;
-#ifdef P_BENCHMARK
   k_elapsed += std::chrono::duration_cast<ms>(hrc::now() - k_start).count();
-#endif
 
-  if (rank == 0)
-    std::cout << k_elapsed << std::endl;
+  if (rank == 0) std::cout << "K took " << k_elapsed << "ms" << std::endl;
 
 // Initialize the V matrix
 #ifdef P_BENCHMARK
@@ -237,6 +235,7 @@ int main(int argc, char* argv[]) {
 
   // cusparseDestroyDnMat(Kc);
   cusparseDestroy(cusparse_handle);
+  
 
   MPI_Finalize();
   return 0;

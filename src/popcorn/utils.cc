@@ -1,22 +1,20 @@
-// C++ standard imports
 #include <cmath>
 #include <fstream>
 #include <iostream>
 
-// Library imports
 #include <cuda_runtime.h>
 
-// Local imports
 #include "utils.hh"
 
-void popcorn::wake_gpus(int myrank) {
+void popcorn::wake_gpus(int rank) {
   int ndevices;
   cudaGetDeviceCount(&ndevices);
-  if (myrank == 0) {
+
+  if (rank == 0) {
     std::cout << "Number of GPUs per node: " << ndevices << "\n" << std::flush;
     std::cout << "Waking the GPUs..." << std::flush;
   }
-  int ts = 0;
+
   for (int i = 0; i < ndevices; ++i) {
     cudaSetDevice(i);
     int* array;
@@ -31,24 +29,6 @@ void popcorn::wake_gpus(int myrank) {
     cudaFree(dArray);
     delete[] array;
   }
-  if (myrank == 0)
-    std::cout << " DONE!\n" << std::flush;
-}
 
-int popcorn::square_grid_dim(MPI_Comm comm) {
-  int size;
-  MPI_Comm_size(comm, &size);
-  return std::floor(std::sqrt(size));
-}
-
-bool popcorn::is_square_grid(MPI_Comm comm) {
-  int size, sr;
-  MPI_Comm_size(comm, &size);
-  sr = square_grid_dim(comm);
-  return sr * sr == size;
-}
-
-int popcorn::tile_dim(MPI_Comm comm, int x) {
-  int p = square_grid_dim(comm);
-  return (x / p) + ((x % p == 0) ? 0 : 1);
+  if (rank == 0) std::cout << " DONE!\n" << std::flush;
 }
