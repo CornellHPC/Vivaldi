@@ -39,12 +39,12 @@ cusparseSpMatDescr_t initialize_v(cusparseHandle_t& cusparse_handle, int m,
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  if (rank == 0) {
-    for (int i = 0; i < m; ++i) {
-      std::cout << "(" << row.at(i) << "," << col.at(i) << "," << val.at(i)
-                << ")" << std::endl;
-    }
-  }
+  // if (rank == 0) {
+  //   for (int i = 0; i < m; ++i) {
+  //     std::cout << "(" << row.at(i) << "," << col.at(i) << "," << val.at(i)
+  //               << ")" << std::endl;
+  //   }
+  // }
 
   void *cooRowInd, *cooColInd, *cooValues;
 
@@ -120,11 +120,6 @@ cusparseDnMatDescr_t spmm(cusparseHandle_t& cusparse_handle,
 int main(int argc, char* argv[]) {
   assert(argc == 5 && "Invalid args. Must provide params [path] [m] [n] [k]");
 
-#ifndef CUDA
-  std::cout << "CUDA is unavailable. Exiting..." << std::endl;
-  return 0;
-#endif
-
   MPI_Init(&argc, &argv);
 
   int rank, size;
@@ -138,8 +133,8 @@ int main(int argc, char* argv[]) {
 
   wake_gpus(rank);
 
-  cusparseHandle_t cusparse_handle;
-  cusparseCreate(&cusparse_handle);
+  cusparseHandle_t handle;
+  cusparseCreate(&handle);
 
   // Load the original data with SLATE, this will be transposed
   auto PT = load_matrix(fpath, m, n);
@@ -149,14 +144,17 @@ int main(int argc, char* argv[]) {
   auto start = hrc::now();
   double k_elapsed, v_elapsed, vk_elapsed;
 
-  // Compute the K matrix
+  /** COMPUTING K */
   auto k_start = hrc::now();
-
   auto K = compute_kernel_matrix(PT);
-  slate::print("K", *K);
-  // TODO: Wrap local column grid of K data with cusparse descriptor
-  cusparseDnMatDescr_t Kc;
+  // slate::print("K", *K);
   k_elapsed += std::chrono::duration_cast<ms>(hrc::now() - k_start).count();
+  
+  /** CREATE CUSPARSE DENSE MATRIX FROM K */
+  // bool multiple = false;
+  // float *K1, *K2;
+  // cusparseDnMatDescr_t K1_desc, K2_desc;
+  // popcorn::create_kernel_descriptors(K1_desc, K2_desc, K1, K2, K, &multiple);
 
   
 
@@ -164,7 +162,7 @@ int main(int argc, char* argv[]) {
   auto v_start = hrc::now();
 
   // Initialize the V matrix
-  auto V = initialize_v(cusparse_handle, m, k);
+  auto V = initialize_v(handle, m, k);
 
   v_elapsed += std::chrono::duration_cast<ms>(hrc::now() - v_start).count();
 
@@ -181,8 +179,13 @@ int main(int argc, char* argv[]) {
     break;
   }
 
+  // cusparseDestroyDnMat(K1_desc);
+  // if (multiple) cusparseDestroyDnMat(K2_desc);
+  // cudaFree(K1);
+  // if (multiple) cudaFree(K2);
+
   // cusparseDestroyDnMat(Kc);
-  cusparseDestroy(cusparse_handle);
+  cusparseDestroy(handle);
 
   if (rank == 0) std::cout << "K took " << k_elapsed << "ms" << std::endl;
 

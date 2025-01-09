@@ -30,5 +30,24 @@ void popcorn::wake_gpus(int rank) {
     delete[] array;
   }
 
-  if (rank == 0) std::cout << " DONE!\n" << std::flush;
+  if (rank == 0)
+    std::cout << " DONE!\n" << std::flush;
+}
+
+void popcorn::print_device_buffer(float* buf, size_t count) {
+  int rank, size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+  float* temp = (float*)malloc(count * sizeof(float));
+  cudaMemcpy(temp, buf, count * sizeof(float), cudaMemcpyDeviceToHost);
+
+  if (rank == 0) {
+    for (int i = 0; i < count; i++)
+      std::cout << temp[i] << " ";
+
+    std::cout << std::endl;
+  }
+
+  free(temp);
 }

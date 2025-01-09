@@ -20,8 +20,8 @@
 
 ## Installation
 
-Install [SLATE](https://github.com/icl-utk-edu/slate),
-preferably in this project's root directory (`distributed-popcorn/slate`)
+Install [SLATE](https://github.com/icl-utk-edu/slate).
+This will take a while (~30 mins).
 
 ```bash
 export mpi=cray

@@ -1,5 +1,7 @@
 #include "slate/slate.hh"
 
+#include "utils.hh"
+
 using slate_matrix = std::unique_ptr<slate::Matrix<float>>;
 
 namespace popcorn {

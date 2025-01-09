@@ -1,4 +1,7 @@
+#include <iostream>
 #include <mpi.h>
+
+#include "gpu_kernels.cuh"
 
 namespace popcorn {
 
@@ -9,7 +12,12 @@ namespace popcorn {
  */
 void wake_gpus(int rank);
 
-template <typename F>
-auto time_function(F f, double* elapsed);
+/**
+ * @brief Print buffer on device
+ * 
+ * @param buf
+ * @param count Number of elements in buf
+ */
+void print_device_buffer(float* buf, size_t count);
 
 }

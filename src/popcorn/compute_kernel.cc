@@ -1,8 +1,5 @@
 #include "compute_kernel.hh"
 
-#include "gpu_kernels.cuh"
-#include "utils.hh"
-
 slate_matrix popcorn::load_matrix(const char* fname, int64_t rows,
                                   int64_t cols) {
   MPI_File fh;
