@@ -7,8 +7,13 @@ using slate_matrix = std::unique_ptr<slate::Matrix<float>>;
 
 namespace popcorn {
 
-void create_kernel_descriptors(cusparseDnMatDescr_t K1_desc,
-                         cusparseDnMatDescr_t K2_desc, float* K1, float* K2,
-                         slate_matrix& K, bool* multiple);
+void extract_kernel_tiles(float* tiles, slate_matrix& K, int col);
 
-}
+cusparseSpMatDescr_t initialize_v(cusparseHandle_t& cusparse_handle, int m,
+                                  int k);
+
+cusparseDnMatDescr_t spmm(cusparseHandle_t& cusparse_handle,
+                          cusparseSpMatDescr_t sparse,
+                          cusparseDnMatDescr_t dense);
+
+}  // namespace popcorn

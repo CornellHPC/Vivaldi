@@ -53,7 +53,7 @@ slate_matrix popcorn::compute_kernel_matrix(slate_matrix& PT) {
 
   // Perform GEMM
   auto K = std::make_unique<slate::Matrix<float>>(
-      P->m(), P->m(), P->tileMb(0), P->tileMb(0), size, 1, MPI_COMM_WORLD);
+      P->m(), P->m(), P->tileMb(0), P->tileMb(0), 1, size, MPI_COMM_WORLD);
   K->insertLocalTiles(slate::Target::Devices);
   slate::gemm<float>(1.0f, *P, *PT, 0.0f, *K,
                      {{slate::Option::Target, slate::Target::Devices}});
@@ -67,5 +67,6 @@ slate_matrix popcorn::compute_kernel_matrix(slate_matrix& PT) {
       }
     }
   }
+  
   return K;
 }

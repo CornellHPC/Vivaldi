@@ -1,43 +1,99 @@
 #include "compute_sparse.hh"
 
-void popcorn::create_kernel_descriptors(cusparseDnMatDescr_t K1_desc,
-                                  cusparseDnMatDescr_t K2_desc, float* K1,
-                                  float* K2, slate_matrix& K, bool* multiple) {
-  int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-
-  cudaMalloc(&K1, K->n() * K->tileMb(rank) * sizeof(float));
-  if (rank + size < K->mt())
-    cudaMalloc(&K2, K->n() * K->tileMb(rank + size) * sizeof(float));
+void popcorn::extract_kernel_tiles(float* tiles, slate_matrix& K, int col) {
+  cudaMalloc(&tiles, K->m() * K->tileNb(col) * sizeof(float));
 
   int64_t offset = 0;
-  for (int64_t j = 0; j < K->nt(); ++j) {
+  for (int64_t j = 0; j < K->mt(); ++j) {
     // Tiles guaranteed to be local
-    slate::Tile<float> tile = K->at(rank, j, K->tileDevice(rank, j));
-    cudaMemcpy(K1 + offset, tile.data(), tile.mb() * tile.nb() * sizeof(float),
-               cudaMemcpyDeviceToDevice);
+    slate::Tile<float> tile = K->at(j, col, K->tileDevice(j, col));
+    cudaMemcpy(tiles + offset, tile.data(),
+               tile.mb() * tile.nb() * sizeof(float), cudaMemcpyDeviceToDevice);
     offset += tile.mb() * tile.nb();
   }
+}
 
-  cusparseCreateDnMat(&K1_desc, K->tileMb(rank), K->n(), K->tileMb(rank), K1,
-                      CUDA_R_32F, CUSPARSE_ORDER_COL);
+cusparseSpMatDescr_t popcorn::initialize_v(cusparseHandle_t& cusparse_handle,
+                                           int m, int k) {
+  std::vector<int> rows, cols;
+  std::vector<float> val;
 
-  if (rank + size < K->mt()) {
-    *multiple = true;
-    offset = 0;
-    for (int64_t j = 0; j < K->nt(); ++j) {
-      // Tiles guaranteed to be local
-      slate::Tile<float> tile =
-          K->at(rank + size, j, K->tileDevice(rank + size, j));
-      cudaMemcpy(K2 + offset, tile.data(),
-                 tile.mb() * tile.nb() * sizeof(float),
-                 cudaMemcpyDeviceToDevice);
-      offset += tile.mb() * tile.nb();
-    }
-
-    cusparseCreateDnMat(&K2_desc, K->tileMb(rank + size), K->n(),
-                      K->tileMb(rank + size), K2, CUDA_R_32F,
-                      CUSPARSE_ORDER_COL);
+  // TODO: Speed up initialization
+  for (int c = 0; c < m; ++c) {
+    int r = c % k;
+    int l = (m / k) + ((r < m % k) ? 1 : 0);
+    rows.push_back(r);
+    cols.push_back(c);
+    val.push_back(1.0f / l);
   }
+
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  // if (rank == 0) {
+  //   for (int i = 0; i < m; ++i) {
+  //     std::cout << "(" << row.at(i) << "," << col.at(i) << "," << val.at(i)
+  //               << ")" << std::endl;
+  //   }
+  // }
+
+  void *cooRowInd, *cooColInd, *cooValues;
+
+  cudaMalloc(&cooRowInd, m * sizeof(int));
+  cudaMalloc(&cooColInd, m * sizeof(int));
+  cudaMalloc(&cooValues, m * sizeof(float));
+
+  cusparseSpMatDescr_t V;
+  cusparseCreateCoo(&V, k, m, m, cooRowInd, cooColInd, cooValues,
+                    CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F);
+
+  // TODO: Move these somewhere else (can't free until after use)
+  // cudaFree(cooRowInd);
+  // cudaFree(cooColInd);
+  // cudaFree(cooValues);
+
+  return V;
+}
+
+cusparseDnMatDescr_t popcorn::spmm(cusparseHandle_t& cusparse_handle,
+                                   cusparseSpMatDescr_t sparse,
+                                   cusparseDnMatDescr_t dense) {
+  // Get input information
+  int64_t sp_rows, sp_cols, nnz, dn_rows, dn_cols, ld;
+  cudaDataType type;
+  cusparseOrder_t order;
+  cusparseSpMatGetSize(sparse, &sp_rows, &sp_cols, &nnz);
+  cusparseDnMatGet(dense, &dn_rows, &dn_cols, &ld, nullptr, &type, &order);
+
+  // Protect against bad input
+  assert(sp_cols == dn_rows && "Inner dimension must be equal in size.");
+  assert(type == CUDA_R_32F && "Matrix data must be FP32.");
+
+  // Define constants
+  const float alpha = 1.0f;
+  const float beta = 0.0f;
+
+  // Allocate memory for output
+  float* out_data;
+  cudaMalloc(&out_data, sp_rows * dn_cols * sizeof(float));
+  cusparseDnMatDescr_t out;
+  cusparseCreateDnMat(&out, sp_rows, dn_cols, ld, out_data, type, order);
+
+  // Allocate workspace
+  size_t buffer_size;
+  void* buffer;
+  cusparseSpMM_bufferSize(cusparse_handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
+                          CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, sparse,
+                          dense, &beta, out, CUDA_R_32F,
+                          CUSPARSE_SPMM_ALG_DEFAULT, &buffer_size);
+  cudaMalloc(&buffer, buffer_size);
+
+  // Perform SpMM
+  cusparseSpMM(cusparse_handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
+               CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, sparse, dense, &beta,
+               out, CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, buffer);
+
+  // Release workspace
+  cudaFree(buffer);
+
+  return out;
 }
