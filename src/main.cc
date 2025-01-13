@@ -86,14 +86,6 @@ int main(int argc, char* argv[]) {
     cusparseCreateDnMat(&K2_desc, K.m(), K.tileNb(rank + size), K.m(), K2,
                         CUDA_R_32F, CUSPARSE_ORDER_ROW);
 
-  // if (rank == 0) {
-  //   float* vals;
-  //   cudaMalloc(&vals, K.m() * K.tileNb(rank) * sizeof(float));
-  //   auto t = cusparseDnMatGetValues(K1_desc, (void**)&vals);
-  //   print_device_buffer(vals, K.m() * K.tileNb(rank), 0);
-  //   cudaFree(vals);
-  // }
-
   auto slate_to_cusparse_elapsed =
       get_time_elapsed(slate_to_cusparse_start);
 
@@ -104,20 +96,21 @@ int main(int argc, char* argv[]) {
 
   auto init_v_elapsed = get_time_elapsed(init_v_start);
 
-  // auto VK = popcorn::spmm(handle, V, K1_desc);
+  /** K MEANS CLUSTERING LOOP */
+  int niter = 1;
+  for (int i = 0; i < niter; ++i) {
+    /** SPMM ET = VK */
+    auto ET_desc = popcorn::spmm(handle, V, K1_desc);
 
-  // Begin the main K means clustering loop
-  // for (int i = 0; i < 100; ++i) {
-  //   // Perform SpMM(VK)
-  //   auto vk_start = hrc::now();
-  //   // auto ET = spmm(cusparse_handle, V, Kc);
-  //   vk_elapsed += std::chrono::duration_cast<ms>(hrc::now() - vk_start).count();
+    // auto vk_start = hrc::now();
+    // auto ET = spmm(cusparse_handle, V, Kc);
+    // vk_elapsed += std::chrono::duration_cast<ms>(hrc::now() - vk_start).count();
 
-  //   // TODO: Clean up device data (inside mats)
-  //   cusparseDestroySpMat(V);
-  //   // cusparseDestroyDnMat(ET);
-  //   break;
-  // }
+    // TODO: Clean up device data (inside mats)
+    cusparseDestroySpMat(V);
+    cusparseDestroyDnMat(ET_desc);
+    // break;
+  }
 
   /** PRINT TIMES */
   if (rank == 0) {
@@ -131,8 +124,7 @@ int main(int argc, char* argv[]) {
   if (multiple) cusparseDestroyDnMat(K2_desc);
   cudaFree(K1);
   if (multiple) cudaFree(K2);
-
-  // cusparseDestroyDnMat(Kc);
+  
   cusparseDestroy(handle);
 
   MPI_Finalize();

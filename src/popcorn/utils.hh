@@ -26,6 +26,12 @@ void wake_gpus(int rank);
  */
 void print_device_buffer(float* buf, size_t count, int rank_to_print);
 
+/**
+ * @brief Calculates time delta
+ * 
+ * @param start Time right now from high resolution clock
+ * @return Time elapsed in ms
+ */
 int64_t get_time_elapsed(std::chrono::_V2::system_clock::time_point start);
 
 }
