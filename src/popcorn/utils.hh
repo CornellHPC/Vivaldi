@@ -1,5 +1,10 @@
 #include <iostream>
+#include <cmath>
+#include <fstream>
+#include <chrono>
+
 #include <mpi.h>
+#include <cuda_runtime.h>
 
 #include "gpu_kernels.cuh"
 
@@ -17,7 +22,10 @@ void wake_gpus(int rank);
  * 
  * @param buf
  * @param count Number of elements in buf
+ * @param rank_to_print Rank to print
  */
-void print_device_buffer(float* buf, size_t count);
+void print_device_buffer(float* buf, size_t count, int rank_to_print);
+
+int64_t get_time_elapsed(std::chrono::_V2::system_clock::time_point start);
 
 }

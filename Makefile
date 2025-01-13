@@ -6,6 +6,7 @@ export SLATE_INSTALL := $(shell cd slate/_install && pwd) # Change slate directo
 export mpi := cray
 export blas := libsci
 export CXX := CC
+export DVS_MAXNODES := 1__
 export SLATE_GPU_AWARE_MPI := 0
 export MPICH_GPU_SUPPORT_ENABLED := 1
 export OMP_NUM_THREADS := 1

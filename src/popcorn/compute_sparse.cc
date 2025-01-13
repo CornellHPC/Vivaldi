@@ -1,49 +1,48 @@
 #include "compute_sparse.hh"
 
-void popcorn::extract_kernel_tiles(float* tiles, slate_matrix& K, int col) {
-  cudaMalloc(&tiles, K->m() * K->tileNb(col) * sizeof(float));
+void popcorn::extract_kernel_tiles(float** tiles, slate::Matrix<float>& K,
+                                   int col) {
+  cudaMalloc(tiles, K.m() * K.tileNb(col) * sizeof(float));
 
   int64_t offset = 0;
-  for (int64_t j = 0; j < K->mt(); ++j) {
+  for (int64_t j = 0; j < K.mt(); ++j) {
     // Tiles guaranteed to be local
-    slate::Tile<float> tile = K->at(j, col, K->tileDevice(j, col));
-    cudaMemcpy(tiles + offset, tile.data(),
+    slate::Tile<float> tile = K.at(j, col, K.tileDevice(j, col));
+    cudaMemcpy(*tiles + offset, tile.data(),
                tile.mb() * tile.nb() * sizeof(float), cudaMemcpyDeviceToDevice);
     offset += tile.mb() * tile.nb();
   }
 }
 
 cusparseSpMatDescr_t popcorn::initialize_v(cusparseHandle_t& cusparse_handle,
-                                           int m, int k) {
+                                           int n, int k) {
   std::vector<int> rows, cols;
-  std::vector<float> val;
+  std::vector<float> vals;
 
   // TODO: Speed up initialization
-  for (int c = 0; c < m; ++c) {
+  for (int c = 0; c < n; ++c) {
     int r = c % k;
-    int l = (m / k) + ((r < m % k) ? 1 : 0);
+    int l = (n / k) + ((r < n % k) ? 1 : 0);
     rows.push_back(r);
     cols.push_back(c);
-    val.push_back(1.0f / l);
+    vals.push_back(1.0f / l);
   }
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  // if (rank == 0) {
-  //   for (int i = 0; i < m; ++i) {
-  //     std::cout << "(" << row.at(i) << "," << col.at(i) << "," << val.at(i)
-  //               << ")" << std::endl;
-  //   }
-  // }
 
-  void *cooRowInd, *cooColInd, *cooValues;
+  void *cooRowInds, *cooColInds, *cooValues;
 
-  cudaMalloc(&cooRowInd, m * sizeof(int));
-  cudaMalloc(&cooColInd, m * sizeof(int));
-  cudaMalloc(&cooValues, m * sizeof(float));
+  cudaMalloc(&cooRowInds, n * sizeof(int));
+  cudaMalloc(&cooColInds, n * sizeof(int));
+  cudaMalloc(&cooValues, n * sizeof(float));
+
+  cudaMemcpy(&cooRowInds, rows.data(), n * sizeof(int), cudaMemcpyHostToDevice);
+  cudaMemcpy(&cooColInds, cols.data(), n * sizeof(int), cudaMemcpyHostToDevice);
+  cudaMemcpy(&cooValues, vals.data(), n * sizeof(int), cudaMemcpyHostToDevice);
 
   cusparseSpMatDescr_t V;
-  cusparseCreateCoo(&V, k, m, m, cooRowInd, cooColInd, cooValues,
+  cusparseCreateCoo(&V, k, n, n, cooRowInds, cooColInds, cooValues,
                     CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F);
 
   // TODO: Move these somewhere else (can't free until after use)

@@ -46,47 +46,65 @@ int main(int argc, char* argv[]) {
   int k = std::atoi(argv[4]);
 
   wake_gpus(rank);
+  slate::gpu_aware_mpi(false);
 
   cusparseHandle_t handle;
   cusparseCreate(&handle);
 
   /** LOAD DATA */
-  auto PT = load_matrix(fpath, m, n);
-  // slate::print("PT", *PT);
+  auto PT = load_matrix(fpath, m, n, rank, size);
+  // slate::print("PT", PT);
 
-  // Start the timer (after dataset IO)
+  /** START THE TIMER (after dataset IO) */
   auto start = hrc::now();
-  double k_elapsed, init_v_elapsed, vk_elapsed;
 
   /** COMPUTING K */
   auto k_start = hrc::now();
-  auto K = compute_kernel_matrix(PT);
-  K->tileLayoutConvertOnDevices(blas::Layout::RowMajor);
-  // slate::print("K", *K);
-  k_elapsed = std::chrono::duration_cast<ms>(hrc::now() - k_start).count();
+
+  auto K = compute_kernel_matrix(PT, rank, size);
+  // slate::print("K", K);
+
+  auto k_elapsed = get_time_elapsed(k_start);
 
   /** CREATE CUSPARSE DENSE MATRIX FROM K */
+  auto slate_to_cusparse_start = hrc::now();
+
   // Each rank can have at most 2 pieces of K
-  bool multiple = rank + size < K->nt();
+  bool multiple = rank + size < K.nt();
   float *K1, *K2;
   cusparseDnMatDescr_t K1_desc, K2_desc;
 
-  popcorn::extract_kernel_tiles(K1, K, rank);
-  if (multiple)
-    popcorn::extract_kernel_tiles(K2, K, rank + size);
+  // Get pointer to actual matrix data
+  K.tileLayoutConvertOnDevices(blas::Layout::RowMajor);
+  popcorn::extract_kernel_tiles(&K1, K, rank);
+  if (multiple) popcorn::extract_kernel_tiles(&K2, K, rank + size);
 
-  cusparseCreateDnMat(&K1_desc, K->m(), K->tileNb(rank), K->m(), K1, CUDA_R_32F,
+  // Create cuSPARSE dense matrix descriptors
+  cusparseCreateDnMat(&K1_desc, K.m(), K.tileNb(rank), K.m(), K1, CUDA_R_32F,
                       CUSPARSE_ORDER_ROW);
   if (multiple)
-    cusparseCreateDnMat(&K2_desc, K->m(), K->tileNb(rank + size), K->m(), K2,
+    cusparseCreateDnMat(&K2_desc, K.m(), K.tileNb(rank + size), K.m(), K2,
                         CUDA_R_32F, CUSPARSE_ORDER_ROW);
 
-  auto v_start = hrc::now();
+  // if (rank == 0) {
+  //   float* vals;
+  //   cudaMalloc(&vals, K.m() * K.tileNb(rank) * sizeof(float));
+  //   auto t = cusparseDnMatGetValues(K1_desc, (void**)&vals);
+  //   print_device_buffer(vals, K.m() * K.tileNb(rank), 0);
+  //   cudaFree(vals);
+  // }
 
-  // Initialize the V matrix
+  auto slate_to_cusparse_elapsed =
+      get_time_elapsed(slate_to_cusparse_start);
+
+  /** INITIALIZE V */
+  auto init_v_start = hrc::now();
+
   auto V = initialize_v(handle, m, k);
 
-  init_v_elapsed = std::chrono::duration_cast<ms>(hrc::now() - v_start).count();
+  auto init_v_elapsed = get_time_elapsed(init_v_start);
+
+  // auto VK = popcorn::spmm(handle, V, K1_desc);
 
   // Begin the main K means clustering loop
   // for (int i = 0; i < 100; ++i) {
@@ -104,6 +122,8 @@ int main(int argc, char* argv[]) {
   /** PRINT TIMES */
   if (rank == 0) {
     std::cout << "Time K: " << k_elapsed << "ms" << std::endl;
+    std::cout << "Time SLATE to CUSPARSE: " << slate_to_cusparse_elapsed << "ms" << std::endl;
+    std::cout << "Time Init V: " << init_v_elapsed << "ms" << std::endl;
   }
 
   /** DESTROY */
