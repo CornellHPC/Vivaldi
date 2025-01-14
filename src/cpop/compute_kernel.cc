@@ -54,6 +54,7 @@ cusparseDnMatDescr_t compute_kernel_matrix(slate::Matrix<float>& PT) {
   MPI_Comm_size(PT.mpiComm(), &size);
 
   // Perform GEMM
+  auto P = slate::transpose(PT);
   auto K = slate::Matrix<float>(P.m(), P.m(), P.tileMb(0), P.tileMb(0), 1, size,
                                 PT.mpiComm());
   K.insertLocalTiles(slate::Target::Devices);
