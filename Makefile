@@ -2,7 +2,7 @@
 
 .PHONY: alloc build env small australian letter
 
-export SLATE_INSTALL := $(shell cd slate/_install && pwd) # Change slate directory as necessary
+export SLATE_INSTALL := $(shell cd ../slate/_install && pwd) # Change slate directory as necessary
 export mpi := cray
 export blas := libsci
 export CXX := CC
@@ -17,6 +17,8 @@ alloc:
 	salloc --nodes 4 --qos interactive --time 03:00:00 --constraint gpu --gpus 16 --account m4341
 
 build:
+	rm -rf build && \
+	mkdir build && \
 	cd build && \
 	cmake -DSLATE_INSTALL=$$SLATE_INSTALL .. && \
 	cmake --build . && \
