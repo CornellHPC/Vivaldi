@@ -80,10 +80,10 @@ int main(int argc, char* argv[]) {
   if (multiple) popcorn::extract_kernel_tiles(&K2, K, rank + size);
 
   // Create cuSPARSE dense matrix descriptors
-  cusparseCreateDnMat(&K1_desc, K.m(), K.tileNb(rank), K.m(), K1, CUDA_R_32F,
+  cusparseCreateDnMat(&K1_desc, K.m(), K.tileNb(rank), K.tileNb(rank), K1, CUDA_R_32F,
                       CUSPARSE_ORDER_ROW);
   if (multiple)
-    cusparseCreateDnMat(&K2_desc, K.m(), K.tileNb(rank + size), K.m(), K2,
+    cusparseCreateDnMat(&K2_desc, K.m(), K.tileNb(rank + size), K.tileNb(rank + size), K2,
                         CUDA_R_32F, CUSPARSE_ORDER_ROW);
 
   auto slate_to_cusparse_elapsed =
@@ -101,6 +101,10 @@ int main(int argc, char* argv[]) {
   for (int i = 0; i < niter; ++i) {
     /** SPMM ET = VK */
     auto ET_desc = popcorn::spmm(handle, V, K1_desc);
+
+    float* vals;
+    cusparseDnMatGetValues(ET_desc, (void**)&vals);
+    print_device_buffer_float(vals, k * K.tileMb(0), 0);
 
     // auto vk_start = hrc::now();
     // auto ET = spmm(cusparse_handle, V, Kc);

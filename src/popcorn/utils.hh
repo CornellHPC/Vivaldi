@@ -1,30 +1,39 @@
-#include <iostream>
+#include <chrono>
 #include <cmath>
 #include <fstream>
-#include <chrono>
+#include <iostream>
 
-#include <mpi.h>
 #include <cuda_runtime.h>
+#include <mpi.h>
 
 #include "gpu_kernels.cuh"
 
 namespace popcorn {
 
 /**
- * @brief Simple test to make sure GPUs are functioning
+ * @brief Setup GPUs
  * 
  * @param rank 
  */
 void wake_gpus(int rank);
 
 /**
- * @brief Print buffer on device
+ * @brief Print float buffer on device
  * 
  * @param buf
  * @param count Number of elements in buf
  * @param rank_to_print Rank to print
  */
-void print_device_buffer(float* buf, size_t count, int rank_to_print);
+void print_device_buffer_float(float* buf, size_t count, int rank_to_print);
+
+/**
+ * @brief Print int buffer on device
+ * 
+ * @param buf
+ * @param count Number of elements in buf
+ * @param rank_to_print Rank to print
+ */
+void print_device_buffer_int(int* buf, size_t count, int rank_to_print);
 
 /**
  * @brief Calculates time delta

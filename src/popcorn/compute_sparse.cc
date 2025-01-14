@@ -1,5 +1,15 @@
 #include "compute_sparse.hh"
 
+#define CHECK_CUSPARSE(func)                                                   \
+{                                                                              \
+    cusparseStatus_t status = (func);                                          \
+    if (status != CUSPARSE_STATUS_SUCCESS) {                                   \
+        printf("CUSPARSE API failed at line %d with error: %s (%d)\n",         \
+               __LINE__, cusparseGetErrorString(status), status);              \
+        return EXIT_FAILURE;                                                   \
+    }                                                                          \
+}
+
 void popcorn::extract_kernel_tiles(float** tiles, slate::Matrix<float>& K,
                                    int col) {
   cudaMalloc(tiles, K.m() * K.tileNb(col) * sizeof(float));
@@ -14,21 +24,22 @@ void popcorn::extract_kernel_tiles(float** tiles, slate::Matrix<float>& K,
   }
 }
 
-cusparseSpMatDescr_t popcorn::initialize_v(cusparseHandle_t& handle,
-                                           int n, int k) {
-  std::vector<int> rows, cols;
-  std::vector<float> vals;
+cusparseSpMatDescr_t popcorn::initialize_v(cusparseHandle_t& handle, int n,
+                                           int k) {
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  int* rows = (int*)malloc(n * sizeof(int));
+  int* cols = (int*)malloc(n * sizeof(int));
+  float* vals = (float*)malloc(n * sizeof(int));
 
   for (int c = 0; c < n; ++c) {
     int r = c % k;
     int l = (n / k) + ((r < n % k) ? 1 : 0);
-    rows.push_back(r);
-    cols.push_back(c);
-    vals.push_back(1.0f / l);
+    rows[c] = r;
+    cols[c] = c;
+    vals[c] = 1.0f / l;
   }
-
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   void *cooRowInds, *cooColInds, *cooValues;
 
@@ -36,9 +47,14 @@ cusparseSpMatDescr_t popcorn::initialize_v(cusparseHandle_t& handle,
   cudaMalloc(&cooColInds, n * sizeof(int));
   cudaMalloc(&cooValues, n * sizeof(float));
 
-  cudaMemcpy(&cooRowInds, rows.data(), n * sizeof(int), cudaMemcpyHostToDevice);
-  cudaMemcpy(&cooColInds, cols.data(), n * sizeof(int), cudaMemcpyHostToDevice);
-  cudaMemcpy(&cooValues, vals.data(), n * sizeof(float), cudaMemcpyHostToDevice);
+  cudaMemcpy(cooRowInds, rows, n * sizeof(int), cudaMemcpyHostToDevice);
+  cudaMemcpy(cooColInds, cols, n * sizeof(int), cudaMemcpyHostToDevice);
+  cudaMemcpy(cooValues, vals, n * sizeof(float), cudaMemcpyHostToDevice);
+
+
+  // print_device_buffer_int((int*) cooRowInds, n, 0);
+  // print_device_buffer_int((int*) cooColInds, n, 0);
+  // print_device_buffer_float((float*) cooValues, n, 0);
 
   cusparseSpMatDescr_t V;
   cusparseCreateCoo(&V, k, n, n, cooRowInds, cooColInds, cooValues,
@@ -48,6 +64,10 @@ cusparseSpMatDescr_t popcorn::initialize_v(cusparseHandle_t& handle,
   // cudaFree(cooRowInd);
   // cudaFree(cooColInd);
   // cudaFree(cooValues);
+
+  free(rows);
+  free(cols);
+  free(vals);
 
   return V;
 }
@@ -61,7 +81,7 @@ cusparseDnMatDescr_t popcorn::spmm(cusparseHandle_t& handle,
   cusparseOrder_t order;
   float* values;
   cusparseSpMatGetSize(V, &sp_rows, &sp_cols, &nnz);
-  cusparseDnMatGet(K, &dn_rows, &dn_cols, &ld, (void**) &values, &type, &order);
+  cusparseDnMatGet(K, &dn_rows, &dn_cols, &ld, (void**)&values, &type, &order);
 
   assert(sp_cols == dn_rows && "Inner dimension must be equal in size.");
   assert(type == CUDA_R_32F && "Matrix data must be FP32.");
@@ -74,23 +94,23 @@ cusparseDnMatDescr_t popcorn::spmm(cusparseHandle_t& handle,
   float* ET;
   cudaMalloc(&ET, sp_rows * dn_cols * sizeof(float));
   cusparseDnMatDescr_t ET_desc;
-  cusparseCreateDnMat(&ET_desc, sp_rows, dn_cols, ld, ET, type, order);
+  cusparseCreateDnMat(&ET_desc, sp_rows, dn_cols, dn_cols, (void*)ET, type, order);
 
   // Allocate workspace buffer
   size_t buffer_size;
   void* buffer;
   cusparseSpMM_bufferSize(handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
-                          CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, V,
-                          K, &beta, ET_desc, CUDA_R_32F,
-                          CUSPARSE_SPMM_ALG_DEFAULT, &buffer_size);
+                          CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, V, K, &beta,
+                          ET_desc, CUDA_R_32F, CUSPARSE_SPMM_COO_ALG4,
+                          &buffer_size);
   cudaMalloc(&buffer, buffer_size);
 
   // Perform SpMM
   cusparseSpMM(handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
-               CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, V, K, &beta,
-               ET_desc, CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, buffer);
+               CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, V, K, &beta, ET_desc,
+               CUDA_R_32F, CUSPARSE_SPMM_COO_ALG4, buffer);
 
-  print_device_buffer(ET, sp_rows * dn_cols, 0);
+  print_device_buffer_float(ET, sp_rows * dn_cols, 0);
 
   cudaFree(buffer);
 

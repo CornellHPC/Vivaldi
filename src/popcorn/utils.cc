@@ -16,7 +16,8 @@ void popcorn::wake_gpus(int rank) {
     std::cout << " DONE!\n" << std::flush;
 }
 
-void popcorn::print_device_buffer(float* buf, size_t count, int rank_to_print) {
+void popcorn::print_device_buffer_float(float* buf, size_t count,
+                                        int rank_to_print) {
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -24,6 +25,24 @@ void popcorn::print_device_buffer(float* buf, size_t count, int rank_to_print) {
   if (rank == rank_to_print) {
     float* temp = (float*)malloc(count * sizeof(float));
     cudaMemcpy(temp, buf, count * sizeof(float), cudaMemcpyDeviceToHost);
+
+    for (int i = 0; i < count; i++)
+      std::cout << temp[i] << " ";
+    std::cout << std::endl;
+
+    free(temp);
+  }
+}
+
+void popcorn::print_device_buffer_int(int* buf, size_t count,
+                                      int rank_to_print) {
+  int rank, size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+  if (rank == rank_to_print) {
+    int* temp = (int*)malloc(count * sizeof(int));
+    cudaMemcpy(temp, buf, count * sizeof(int), cudaMemcpyDeviceToHost);
 
     for (int i = 0; i < count; i++)
       std::cout << temp[i] << " ";
