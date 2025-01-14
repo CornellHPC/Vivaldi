@@ -10,16 +10,52 @@
 #include "mpi.h"
 #include "mpio.h"
 
+#include "popcorn/compute_c.hh"
 #include "popcorn/compute_kernel.hh"
 #include "popcorn/compute_sparse.hh"
 #include "popcorn/utils.hh"
-
-#define P_BENCHMARK
 
 using namespace popcorn;
 
 using hrc = std::chrono::high_resolution_clock;
 using ms = std::chrono::milliseconds;
+
+void destroy(cusparseSpMatDescr_t& M) {
+  // Get input information
+  int64_t rows, cols, nnz;
+  void *cooRowInd, *cooColInd, *cooValues;
+  cusparseIndexType_t idxType;
+  cusparseIndexBase_t idxBase;
+  cudaDataType valueType;
+  cusparseCooGet(M, &rows, &cols, &nnz, &cooRowInd, &cooColInd, &cooValues,
+                 &idxType, &idxBase, &valueType);
+
+  // Free resources
+  cudaFree(cooRowInd);
+  cudaFree(cooColInd);
+  cudaFree(cooValues);
+  cusparseDestroySpMat(M);
+}
+
+void destroy(cusparseDnMatDescr_t& M) {
+  // Get input information
+  void* values;
+  cusparseDnMatGetValues(M, &values);
+
+  // Free resources
+  cudaFree(values);
+  cusparseDestroyDnMat(M);
+}
+
+void destroy(cusparseDnVecDescr_t& V) {
+  // Get input information
+  void* values;
+  cusparseDnVecGetValues(V, &values);
+
+  // Free resources
+  cudaFree(values);
+  cusparseDestroyDnVec(V);
+}
 
 /**
  * Runs the distributed popcorn kernel k-means clustering algorithm.
@@ -31,23 +67,22 @@ using ms = std::chrono::milliseconds;
  * @param k number of clusters to form
  */
 int main(int argc, char* argv[]) {
-  assert(argc == 5 && "Invalid args. Must provide params [path] [m] [n] [k]");
-
-  /** INITS */
+  /** INITIALIZE MPI */
   MPI_Init(&argc, &argv);
-
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
+  /** PARSE ARGUMENTS */
+  assert(argc == 5 && "Invalid args. Must provide params [path] [m] [n] [k]");
   char* fpath = argv[1];
   int m = std::atoi(argv[2]);
   int n = std::atoi(argv[3]);
   int k = std::atoi(argv[4]);
 
+  /** INITIALIZE GPU */
   wake_gpus(rank);
   slate::gpu_aware_mpi(false);
-
   cusparseHandle_t handle;
   cusparseCreate(&handle);
 
@@ -58,93 +93,41 @@ int main(int argc, char* argv[]) {
   /** START THE TIMER (after dataset IO) */
   auto start = hrc::now();
 
-  /** COMPUTING K */
+  /** COMPUTE K */
   auto k_start = hrc::now();
-
-  auto K = compute_kernel_matrix(PT, rank, size);
-  // slate::print("K", K);
-
+  auto K_loc = compute_kernel_matrix(PT, rank, size);
   auto k_elapsed = get_time_elapsed(k_start);
 
-  /** CREATE CUSPARSE DENSE MATRIX FROM K */
-  auto slate_to_cusparse_start = hrc::now();
-
-  // Each rank can have at most 2 pieces of K
-  bool multiple = rank + size < K.nt();
-  float *K1, *K2;
-  cusparseDnMatDescr_t K1_desc, K2_desc;
-
-  // Get pointer to actual matrix data
-  K.tileLayoutConvertOnDevices(blas::Layout::RowMajor);
-  popcorn::extract_kernel_tiles(&K1, K, rank);
-  if (multiple) popcorn::extract_kernel_tiles(&K2, K, rank + size);
-
-  // Create cuSPARSE dense matrix descriptors
-  cusparseCreateDnMat(&K1_desc, K.m(), K.tileNb(rank), K.tileNb(rank), K1, CUDA_R_32F,
-                      CUSPARSE_ORDER_ROW);
-  if (multiple)
-    cusparseCreateDnMat(&K2_desc, K.m(), K.tileNb(rank + size), K.tileNb(rank + size), K2,
-                        CUDA_R_32F, CUSPARSE_ORDER_ROW);
-
-  auto slate_to_cusparse_elapsed =
-      get_time_elapsed(slate_to_cusparse_start);
-
   /** INITIALIZE V */
-  auto init_v_start = hrc::now();
-
+  auto vi_start = hrc::now();
   auto V = initialize_v(handle, m, k);
-
-  auto init_v_elapsed = get_time_elapsed(init_v_start);
+  auto vi_elapsed = get_time_elapsed(vi_start);
 
   /** K MEANS CLUSTERING LOOP */
   int niter = 1;
   for (int i = 0; i < niter; ++i) {
     /** SPMM ET = VK */
-    auto ET_desc = popcorn::spmm(handle, V, K1_desc);
+    auto ET = popcorn::spmm(handle, V, K_loc);
 
-    float* vals;
-    // cusparseDnMatGetValues(ET_desc, (void**)&vals);
+    /** SPMV c = Vz */
+    auto c = popcorn::compute_c(handle, V, ET, MPI_COMM_WORLD);
 
-    int64_t r, c, ld;
-
-    // cusparseDnMatDescr_t dnMatDescr,
-    // int64_t* rows,
-    // int64_t* cols,
-    // int64_t* ld,
-    // void** values,
-    cudaDataType type;
-    cusparseOrder_t order;
-    cusparseDnMatGet(ET_desc, &r, &c, &ld, (void**)&vals, &type, &order);
-    if (rank == 0) std::cout << r << " " << c << " " << ld << " " << type << " " << order << std::endl;
- 
-
-    print_device_buffer_float(vals, r * c, 0);
-
-    // auto vk_start = hrc::now();
-    // auto ET = spmm(cusparse_handle, V, Kc);
-    // vk_elapsed += std::chrono::duration_cast<ms>(hrc::now() - vk_start).count();
-
-    // TODO: Clean up device data (inside mats)
-    cusparseDestroySpMat(V);
-    cusparseDestroyDnMat(ET_desc);
-    // break;
+    destroy(V);
+    destroy(ET);
+    destroy(c);
   }
 
   /** PRINT TIMES */
   if (rank == 0) {
     std::cout << "Time K: " << k_elapsed << "ms" << std::endl;
-    std::cout << "Time SLATE to CUSPARSE: " << slate_to_cusparse_elapsed << "ms" << std::endl;
-    std::cout << "Time Init V: " << init_v_elapsed << "ms" << std::endl;
+    std::cout << "Time Init V: " << vi_elapsed << "ms" << std::endl;
   }
 
   /** DESTROY */
-  cusparseDestroyDnMat(K1_desc);
-  if (multiple) cusparseDestroyDnMat(K2_desc);
-  cudaFree(K1);
-  if (multiple) cudaFree(K2);
-  
+  destroy(K_loc);
   cusparseDestroy(handle);
 
+  /** EXIT */
   MPI_Finalize();
   return 0;
 }

@@ -10,8 +10,9 @@ slate::Matrix<float> popcorn::load_matrix(const char* fname, int64_t rows,
   MPI_File_read_all(fh, buf, cols * rows, MPI_FLOAT, MPI_STATUS_IGNORE);
 
   // Create empty SLATE matrix object of size equal to data
-  auto M = slate::Matrix<float>(cols, rows, cols, rows / size, 1, size,
-                                MPI_COMM_WORLD);
+  auto M =
+      slate::Matrix<float>(cols, rows, cols, rows / size + (rows % size > 0), 1,
+                           size, MPI_COMM_WORLD);
   M.insertLocalTiles(slate::Target::Devices);
 
   // Fill data
@@ -39,7 +40,7 @@ slate::Matrix<float> popcorn::load_matrix(const char* fname, int64_t rows,
   return M;
 }
 
-slate::Matrix<float> popcorn::compute_kernel_matrix(slate::Matrix<float>& PT,
+cusparseDnMatDescr_t popcorn::compute_kernel_matrix(slate::Matrix<float>& PT,
                                                     int rank, int size) {
   auto P = slate::transpose(PT);
 
@@ -60,5 +61,28 @@ slate::Matrix<float> popcorn::compute_kernel_matrix(slate::Matrix<float>& PT,
     }
   }
 
-  return K;
+  // Ensure tiles are row-major
+  K.tileLayoutConvertOnDevices(blas::Layout::RowMajor);
+
+  // Initialize dense matrix buffer
+  float* values;
+  int col = K.mpiRank();
+  cudaMalloc(&values, K.m() * K.tileNb(col) * sizeof(float));
+
+  // Copy all tiles in column to buffer
+  int64_t offset = 0;
+  for (int64_t j = 0; j < K.mt(); ++j) {
+    // Tiles guaranteed to be local
+    slate::Tile<float> tile = K.at(j, col, K.tileDevice(j, col));
+    cudaMemcpy(values + offset, tile.data(),
+               tile.mb() * tile.nb() * sizeof(float), cudaMemcpyDeviceToDevice);
+    offset += tile.mb() * tile.nb();
+  }
+
+  // Create cuSPARSE dense matrix descriptors
+  cusparseDnMatDescr_t K_loc;
+  cusparseCreateDnMat(&K_loc, K.m(), K.tileNb(col), K.tileNb(col), values,
+                      CUDA_R_32F, CUSPARSE_ORDER_ROW);
+
+  return K_loc;
 }

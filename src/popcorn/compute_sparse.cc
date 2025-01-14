@@ -10,34 +10,19 @@
     }                                                                          \
   }
 
-void popcorn::extract_kernel_tiles(float** tiles, slate::Matrix<float>& K,
-                                   int col) {
-  cudaMalloc(tiles, K.m() * K.tileNb(col) * sizeof(float));
-
-  int64_t offset = 0;
-  for (int64_t j = 0; j < K.mt(); ++j) {
-    // Tiles guaranteed to be local
-    slate::Tile<float> tile = K.at(j, col, K.tileDevice(j, col));
-    cudaMemcpy(*tiles + offset, tile.data(),
-               tile.mb() * tile.nb() * sizeof(float), cudaMemcpyDeviceToDevice);
-    offset += tile.mb() * tile.nb();
-  }
-}
-
 cusparseSpMatDescr_t popcorn::initialize_v(cusparseHandle_t& handle, int n,
                                            int k) {
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  int* rows = (int*)malloc(n * sizeof(int));
-  int* cols = (int*)malloc(n * sizeof(int));
-  float* vals = (float*)malloc(n * sizeof(int));
+  int32_t* rows = (int32_t*)malloc(n * sizeof(int32_t));
+  int32_t* cols = (int32_t*)malloc(n * sizeof(int32_t));
+  float* vals = (float*)malloc(n * sizeof(float));
 
   int idx = 0;
-
-  for (int r = 0; r < k; ++r) {
-    int l = (n / k) + ((r < n % k) ? 1 : 0);
-    for (int c = r; c < n; c += k) {
+  for (int32_t r = 0; r < k; ++r) {
+    int32_t l = (n / k) + ((r < n % k) ? 1 : 0);
+    for (int32_t c = r; c < n; c += k) {
       rows[idx] = r;
       cols[idx] = c;
       vals[idx] = 1.0f / l;
@@ -45,15 +30,8 @@ cusparseSpMatDescr_t popcorn::initialize_v(cusparseHandle_t& handle, int n,
     }
   }
 
-  // for (int c = 0; c < n; ++c) {
-  //   int r = c % k;
-  //   int l = (n / k) + ((r < n % k) ? 1 : 0);
-  //   rows[c] = r;
-  //   cols[c] = c;
-  //   vals[c] = 1.0f / l;
-  // }
-
-  void *cooRowInds, *cooColInds, *cooValues;
+  int32_t *cooRowInds, *cooColInds;
+  float* cooValues;
 
   cudaMalloc(&cooRowInds, n * sizeof(int32_t));
   cudaMalloc(&cooColInds, n * sizeof(int32_t));
@@ -63,36 +41,27 @@ cusparseSpMatDescr_t popcorn::initialize_v(cusparseHandle_t& handle, int n,
   cudaMemcpy(cooColInds, cols, n * sizeof(int32_t), cudaMemcpyHostToDevice);
   cudaMemcpy(cooValues, vals, n * sizeof(float), cudaMemcpyHostToDevice);
 
-  print_device_buffer_int((int*)cooRowInds, n, 0);
-  print_device_buffer_int((int*)cooColInds, n, 0);
-  print_device_buffer_float((float*)cooValues, n, 0);
-
-  cusparseSpMatDescr_t V;
-  cusparseCreateCoo(&V, k, n, n, cooRowInds, cooColInds, cooValues,
-                    CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F);
-
-  // TODO: Move these somewhere else (can't free until after use)
-  // cudaFree(cooRowInd);
-  // cudaFree(cooColInd);
-  // cudaFree(cooValues);
-
   free(rows);
   free(cols);
   free(vals);
 
+  cusparseSpMatDescr_t V;
+  cusparseCreateCoo(&V, k, n, n, cooRowInds, cooColInds, cooValues,
+                    CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F);
   return V;
 }
 
 cusparseDnMatDescr_t popcorn::spmm(cusparseHandle_t& handle,
-                                   cusparseSpMatDescr_t V,
-                                   cusparseDnMatDescr_t K) {
+                                   cusparseSpMatDescr_t& V,
+                                   cusparseDnMatDescr_t& K) {
   // Get input information
   int64_t sp_rows, sp_cols, nnz, dn_rows, dn_cols, ld;
   cudaDataType type;
   cusparseOrder_t order;
-  float* values;
+  float* dn_values;
   cusparseSpMatGetSize(V, &sp_rows, &sp_cols, &nnz);
-  cusparseDnMatGet(K, &dn_rows, &dn_cols, &ld, (void**)&values, &type, &order);
+  cusparseDnMatGet(K, &dn_rows, &dn_cols, &ld, (void**)&dn_values, &type,
+                   &order);
 
   assert(sp_cols == dn_rows && "Inner dimension must be equal in size.");
   assert(type == CUDA_R_32F && "Matrix data must be FP32.");
@@ -102,10 +71,10 @@ cusparseDnMatDescr_t popcorn::spmm(cusparseHandle_t& handle,
   float beta = 0.0f;
 
   // Allocate memory for output
-  float* ET;
-  cudaMalloc(&ET, sp_rows * dn_cols * sizeof(float));
-  cusparseDnMatDescr_t ET_desc;
-  cusparseCreateDnMat(&ET_desc, sp_rows, dn_cols, dn_cols, (void*)ET, type,
+  float* values;
+  cudaMalloc(&values, sp_rows * dn_cols * sizeof(float));
+  cusparseDnMatDescr_t ET;
+  cusparseCreateDnMat(&ET, sp_rows, dn_cols, dn_cols, (void*)values, type,
                       order);
 
   // Allocate workspace buffer
@@ -113,18 +82,16 @@ cusparseDnMatDescr_t popcorn::spmm(cusparseHandle_t& handle,
   void* buffer;
   cusparseSpMM_bufferSize(handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
                           CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, V, K, &beta,
-                          ET_desc, CUDA_R_32F, CUSPARSE_SPMM_COO_ALG4,
-                          &buffer_size);
+                          ET, CUDA_R_32F, CUSPARSE_SPMM_COO_ALG4, &buffer_size);
   cudaMalloc(&buffer, buffer_size);
 
   // Perform SpMM
   cusparseSpMM(handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
-               CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, V, K, &beta, ET_desc,
+               CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, V, K, &beta, ET,
                CUDA_R_32F, CUSPARSE_SPMM_COO_ALG4, buffer);
 
-  print_device_buffer_float(ET, sp_rows * dn_cols, 0);
-
+  // Clean up
   cudaFree(buffer);
 
-  return ET_desc;
+  return ET;
 }

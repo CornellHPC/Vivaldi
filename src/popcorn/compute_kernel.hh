@@ -1,3 +1,4 @@
+#include "cusparse_v2.h"
 #include "slate/slate.hh"
 
 #include "utils.hh"
@@ -26,7 +27,7 @@ slate::Matrix<float> load_matrix(const char* fname, int64_t rows, int64_t cols,
  * @param size number of mpi processes
  * @return the transposed dense slate matrix.
  */
-slate::Matrix<float> compute_kernel_matrix(slate::Matrix<float>& PT, int rank,
+cusparseDnMatDescr_t compute_kernel_matrix(slate::Matrix<float>& PT, int rank,
                                            int size);
 
-}
+}  // namespace popcorn
