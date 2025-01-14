@@ -1,3 +1,8 @@
+#include <cassert>
+
+#include "cuda_runtime.h"
+#include "mpi.h"
+
 #include "compute_sparse.hh"
 
 #define CHECK_CUSPARSE(func)                                                   \
@@ -10,8 +15,9 @@
     }                                                                          \
   }
 
-cusparseSpMatDescr_t popcorn::initialize_v(cusparseHandle_t& handle, int n,
-                                           int k) {
+namespace cpop {
+
+cusparseSpMatDescr_t initialize_v(cusparseHandle_t& handle, int n, int k) {
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
@@ -51,9 +57,8 @@ cusparseSpMatDescr_t popcorn::initialize_v(cusparseHandle_t& handle, int n,
   return V;
 }
 
-cusparseDnMatDescr_t popcorn::spmm(cusparseHandle_t& handle,
-                                   cusparseSpMatDescr_t& V,
-                                   cusparseDnMatDescr_t& K) {
+cusparseDnMatDescr_t spmm(cusparseHandle_t& handle, cusparseSpMatDescr_t& V,
+                          cusparseDnMatDescr_t& K) {
   // Get input information
   int64_t sp_rows, sp_cols, nnz, dn_rows, dn_cols, ld;
   cudaDataType type;
@@ -95,3 +100,5 @@ cusparseDnMatDescr_t popcorn::spmm(cusparseHandle_t& handle,
 
   return ET;
 }
+
+}  // namespace cpop

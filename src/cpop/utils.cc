@@ -1,6 +1,10 @@
+#include <iostream>
+
 #include "utils.hh"
 
-void popcorn::wake_gpus(int rank) {
+namespace cpop {
+
+void wake_gpus(int rank) {
   int ndevices;
   cudaGetDeviceCount(&ndevices);
 
@@ -16,8 +20,7 @@ void popcorn::wake_gpus(int rank) {
     std::cout << " DONE!\n" << std::flush;
 }
 
-void popcorn::print_device_buffer_float(float* buf, size_t count,
-                                        int rank_to_print) {
+void print_device_buffer_float(float* buf, size_t count, int rank_to_print) {
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -34,8 +37,7 @@ void popcorn::print_device_buffer_float(float* buf, size_t count,
   }
 }
 
-void popcorn::print_device_buffer_int(int* buf, size_t count,
-                                      int rank_to_print) {
+void print_device_buffer_int(int* buf, size_t count, int rank_to_print) {
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -52,9 +54,10 @@ void popcorn::print_device_buffer_int(int* buf, size_t count,
   }
 }
 
-int64_t popcorn::get_time_elapsed(
-    std::chrono::_V2::system_clock::time_point start) {
+int64_t get_time_elapsed(std::chrono::_V2::system_clock::time_point start) {
   return std::chrono::duration_cast<std::chrono::milliseconds>(
              std::chrono::high_resolution_clock::now() - start)
       .count();
 }
+
+}  // namespace cpop

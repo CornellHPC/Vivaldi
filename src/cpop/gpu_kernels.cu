@@ -9,8 +9,10 @@ __global__ void polynomial_kernel(int64_t m, int64_t n, float* B, float gamma,
   }
 }
 
-void popcorn::launch_polynomial_kernel(int64_t m, int64_t n, float* B,
-                                       float gamma, float c, float r) {
+namespace cpop {
+
+void launch_polynomial_kernel(int64_t m, int64_t n, float* B, float gamma,
+                              float c, float r) {
   if (m == 0 || n == 0)
     return;
 
@@ -20,3 +22,5 @@ void popcorn::launch_polynomial_kernel(int64_t m, int64_t n, float* B,
 
   polynomial_kernel<<<nblocks, nthreads>>>(m, n, B, gamma, c, r);
 }
+
+}  // namespace cpop

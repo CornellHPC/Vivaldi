@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(distributed_popcorn LANGUAGES C CXX CUDA)
+project(cpop LANGUAGES C CXX CUDA)
 set(CMAKE_CXX_STANDARD 17)
 
 # OpenMP
@@ -34,7 +34,7 @@ if (NOT IS_DIRECTORY "${SLATE_INSTALL}")
 endif()
 
 # Executable
-file(GLOB SOURCES "src/main.cc" "src/**/*.cu" "src/**/*.cc" "src/popcorn/**/*.cu" "src/popcorn/**/*.cc")
+file(GLOB SOURCES "src/main.cc" "src/**/*.cu" "src/**/*.cc" "src/cpop/**/*.cu" "src/cpop/**/*.cc")
 add_executable(main ${SOURCES})
 
 # Sanitizers

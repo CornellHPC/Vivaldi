@@ -1,14 +1,15 @@
+#ifndef CPOP_UTILS_HH
+#define CPOP_UTILS_HH
+
 #include <chrono>
 #include <cmath>
-#include <fstream>
-#include <iostream>
 
 #include <cuda_runtime.h>
 #include <mpi.h>
 
 #include "gpu_kernels.cuh"
 
-namespace popcorn {
+namespace cpop {
 
 /**
  * @brief Setup GPUs
@@ -43,4 +44,6 @@ void print_device_buffer_int(int* buf, size_t count, int rank_to_print);
  */
 int64_t get_time_elapsed(std::chrono::_V2::system_clock::time_point start);
 
-}
+}  // namespace cpop
+
+#endif  // CPOP_UTILS_HH

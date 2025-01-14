@@ -1,10 +1,12 @@
-#include "compute_c.hh"
-#include "utils.hh"
+#include "cuda_runtime.h"
+#include "mpi.h"
 
-cusparseDnVecDescr_t popcorn::compute_c(cusparseHandle_t& handle,
-                                        cusparseSpMatDescr_t V,
-                                        cusparseDnMatDescr_t ET,
-                                        MPI_Comm comm) {
+#include "compute_c.hh"
+
+namespace cpop {
+
+cusparseDnVecDescr_t compute_c(cusparseHandle_t& handle, cusparseSpMatDescr_t V,
+                               cusparseDnMatDescr_t ET, MPI_Comm comm) {
   // Get MPI information
   int rank, size;
   MPI_Comm_rank(comm, &rank);
@@ -34,3 +36,5 @@ cusparseDnVecDescr_t popcorn::compute_c(cusparseHandle_t& handle,
 
   return c;
 }
+
+}  // namespace cpop

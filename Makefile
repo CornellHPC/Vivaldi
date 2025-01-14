@@ -13,9 +13,6 @@ export OMP_NUM_THREADS := 1
 export OMP_PLACES := threads
 export OMP_PROC_BIND := spread
 
-alloc:
-	salloc --nodes 4 --qos interactive --time 03:00:00 --constraint gpu --gpus 16 --account m4341
-
 build:
 	rm -rf build && \
 	mkdir build && \
@@ -23,6 +20,9 @@ build:
 	cmake -DSLATE_INSTALL=$$SLATE_INSTALL .. && \
 	cmake --build . && \
 	cd ..
+
+alloc:
+	salloc --nodes 4 --qos interactive --time 03:00:00 --constraint gpu --gpus 16 --account m4341
 
 small:
 	srun --nodes=1 --ntasks-per-node=4 --cpus-per-task=32 --cpu-bind=cores --gpus=4 --gpu-bind=single:1 build/main data/small 11 8 4

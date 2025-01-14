@@ -1,4 +1,4 @@
-# Distributed Popcorn: Multi-GPU Kernel K-Means with Sparse Linear Algebra
+# ClusterPop: Multi-GPU Kernel K-Means with Sparse Linear Algebra
 
 ## File Tree
 ```
@@ -10,7 +10,7 @@
 ├── run.sh
 ├── src
 │   ├── main.cc - main algorithm implementation
-│   └── popcorn
+│   └── cpop
 │       ├── compute_kernel.cc - helpers for computing the kernel matrix
 │       ├── compute_sparse.cc - helpers for all things related to sparse math
 │       ├── gpu_kernels.cu - cuda kernels
@@ -41,7 +41,8 @@ export SLATE_INSTALL=$(pwd)
 ```
 
 Testing SLATE (Optional)
-```
+
+```bash
 cd slate
 make check
 echo "srun --nodes=4 --ntasks=16 --cpus-per-task=8 ./test/tester gemm" > job.sh
@@ -55,15 +56,15 @@ sbatch job.sh
 ## Other
 
 Launching job
-```
+
+```bash
 sbatch job.sh
 ```
 
 Enable CUDA-aware MPI
-```
+
+```bash
 export SLATE_GPU_AWARE_MPI=1
 export MPICH_GPU_SUPPORT_ENABLED=1
 ```
 
-## Notes
-- Make sure to clean everything up before calling `MPI_Finalize`.

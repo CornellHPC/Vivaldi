@@ -1,7 +1,10 @@
 #include "compute_kernel.hh"
+#include "gpu_kernels.cuh"
 
-slate::Matrix<float> popcorn::load_matrix(const char* fname, int64_t rows,
-                                          int64_t cols, int rank, int size) {
+namespace cpop {
+
+slate::Matrix<float> load_matrix(const char* fname, int64_t rows, int64_t cols,
+                                 int rank, int size) {
   MPI_File fh;
   MPI_File_open(MPI_COMM_WORLD, fname, MPI_MODE_RDONLY, MPI_INFO_NULL, &fh);
 
@@ -40,8 +43,8 @@ slate::Matrix<float> popcorn::load_matrix(const char* fname, int64_t rows,
   return M;
 }
 
-cusparseDnMatDescr_t popcorn::compute_kernel_matrix(slate::Matrix<float>& PT,
-                                                    int rank, int size) {
+cusparseDnMatDescr_t compute_kernel_matrix(slate::Matrix<float>& PT, int rank,
+                                           int size) {
   auto P = slate::transpose(PT);
 
   // Perform GEMM
@@ -86,3 +89,5 @@ cusparseDnMatDescr_t popcorn::compute_kernel_matrix(slate::Matrix<float>& PT,
 
   return K_loc;
 }
+
+}  // namespace cpop

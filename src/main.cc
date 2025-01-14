@@ -3,19 +3,17 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
-#include <fstream>
 #include <iostream>
 
-#include "cusparse_v2.h"
+#include "cusparse.h"
 #include "mpi.h"
-#include "mpio.h"
 
-#include "popcorn/compute_c.hh"
-#include "popcorn/compute_kernel.hh"
-#include "popcorn/compute_sparse.hh"
-#include "popcorn/utils.hh"
+#include "cpop/compute_c.hh"
+#include "cpop/compute_kernel.hh"
+#include "cpop/compute_sparse.hh"
+#include "cpop/utils.hh"
 
-using namespace popcorn;
+using namespace cpop;
 
 using hrc = std::chrono::high_resolution_clock;
 using ms = std::chrono::milliseconds;
@@ -59,7 +57,7 @@ void destroy(cusparseDnVecDescr_t& V) {
 
 /**
  * Runs the distributed popcorn kernel k-means clustering algorithm.
- * Usage: srun popcorn [path] [m] [n] [k]
+ * Usage: srun cpop [path] [m] [n] [k]
  *
  * @param path path to the dataset
  * @param m number of samples in the dataset
@@ -107,10 +105,10 @@ int main(int argc, char* argv[]) {
   int niter = 1;
   for (int i = 0; i < niter; ++i) {
     /** SPMM ET = VK */
-    auto ET = popcorn::spmm(handle, V, K_loc);
+    auto ET = spmm(handle, V, K_loc);
 
     /** SPMV c = Vz */
-    auto c = popcorn::compute_c(handle, V, ET, MPI_COMM_WORLD);
+    auto c = compute_c(handle, V, ET, MPI_COMM_WORLD);
 
     destroy(V);
     destroy(ET);

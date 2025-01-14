@@ -1,9 +1,10 @@
-#include "cusparse_v2.h"
+#ifndef CPOP_COMPUTE_KERNEL_HH
+#define CPOP_COMPUTE_KERNEL_HH
+
+#include "cusparse.h"
 #include "slate/slate.hh"
 
-#include "utils.hh"
-
-namespace popcorn {
+namespace cpop {
 
 /**
  * Loads a dense matrix from a file. 
@@ -30,4 +31,6 @@ slate::Matrix<float> load_matrix(const char* fname, int64_t rows, int64_t cols,
 cusparseDnMatDescr_t compute_kernel_matrix(slate::Matrix<float>& PT, int rank,
                                            int size);
 
-}  // namespace popcorn
+}  // namespace cpop
+
+#endif  // CPOP_COMPUTE_KERNEL_HH
