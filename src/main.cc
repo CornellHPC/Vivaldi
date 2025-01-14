@@ -103,8 +103,22 @@ int main(int argc, char* argv[]) {
     auto ET_desc = popcorn::spmm(handle, V, K1_desc);
 
     float* vals;
-    cusparseDnMatGetValues(ET_desc, (void**)&vals);
-    print_device_buffer_float(vals, k * K.tileMb(0), 0);
+    // cusparseDnMatGetValues(ET_desc, (void**)&vals);
+
+    int64_t r, c, ld;
+
+    // cusparseDnMatDescr_t dnMatDescr,
+    // int64_t* rows,
+    // int64_t* cols,
+    // int64_t* ld,
+    // void** values,
+    cudaDataType type;
+    cusparseOrder_t order;
+    cusparseDnMatGet(ET_desc, &r, &c, &ld, (void**)&vals, &type, &order);
+    if (rank == 0) std::cout << r << " " << c << " " << ld << " " << type << " " << order << std::endl;
+ 
+
+    print_device_buffer_float(vals, r * c, 0);
 
     // auto vk_start = hrc::now();
     // auto ET = spmm(cusparse_handle, V, Kc);
