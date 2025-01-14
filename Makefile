@@ -2,7 +2,7 @@
 
 .PHONY: alloc build env small australian letter
 
-export SLATE_INSTALL := $(shell cd ../slate/_install && pwd) # Change slate directory as necessary
+export SLATE_INSTALL := $(shell cd slate/_install && pwd) # Change slate directory as necessary
 export mpi := cray
 export blas := libsci
 export CXX := CC
