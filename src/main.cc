@@ -67,9 +67,11 @@ void destroy(cusparseDnVecDescr_t& V) {
 int main(int argc, char* argv[]) {
   /** INITIALIZE MPI */
   MPI_Init(&argc, &argv);
+  MPI_Comm comm = MPI_COMM_WORLD;
+
   int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  MPI_Comm_rank(comm, &rank);
+  MPI_Comm_size(comm, &size);
 
   /** PARSE ARGUMENTS */
   assert(argc == 5 && "Invalid args. Must provide params [path] [m] [n] [k]");
@@ -85,7 +87,7 @@ int main(int argc, char* argv[]) {
   cusparseCreate(&handle);
 
   /** LOAD DATA */
-  auto PT = load_matrix(fpath, m, n, rank, size);
+  auto PT = load_matrix(fpath, m, n, comm);
   // slate::print("PT", PT);
 
   /** START THE TIMER (after dataset IO) */
@@ -93,12 +95,12 @@ int main(int argc, char* argv[]) {
 
   /** COMPUTE K */
   auto k_start = hrc::now();
-  auto K_loc = compute_kernel_matrix(PT, rank, size);
+  auto K_loc = compute_kernel_matrix(PT);
   auto k_elapsed = get_time_elapsed(k_start);
 
   /** INITIALIZE V */
   auto vi_start = hrc::now();
-  auto V = initialize_v(handle, m, k);
+  auto V = initialize_v(handle, m, k, comm);
   auto vi_elapsed = get_time_elapsed(vi_start);
 
   /** K MEANS CLUSTERING LOOP */
@@ -108,7 +110,7 @@ int main(int argc, char* argv[]) {
     auto ET = spmm(handle, V, K_loc);
 
     /** SPMV c = Vz */
-    auto c = compute_c(handle, V, ET, MPI_COMM_WORLD);
+    auto c = compute_c(handle, V, ET, comm);
 
     destroy(V);
     destroy(ET);

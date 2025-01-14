@@ -1,21 +1,26 @@
+#include "mpi.h"
+
 #include "compute_kernel.hh"
 #include "gpu_kernels.cuh"
 
 namespace cpop {
 
 slate::Matrix<float> load_matrix(const char* fname, int64_t rows, int64_t cols,
-                                 int rank, int size) {
+                                 MPI_Comm comm) {
+  int rank, size;
+  MPI_Comm_rank(comm, &rank);
+  MPI_Comm_size(comm, &size);
+
   MPI_File fh;
-  MPI_File_open(MPI_COMM_WORLD, fname, MPI_MODE_RDONLY, MPI_INFO_NULL, &fh);
+  MPI_File_open(comm, fname, MPI_MODE_RDONLY, MPI_INFO_NULL, &fh);
 
   // Should be fine for reading even very large files, in order of millions for both rows and cols
   float* buf = (float*)malloc(cols * rows * sizeof(float));
   MPI_File_read_all(fh, buf, cols * rows, MPI_FLOAT, MPI_STATUS_IGNORE);
 
   // Create empty SLATE matrix object of size equal to data
-  auto M =
-      slate::Matrix<float>(cols, rows, cols, rows / size + (rows % size > 0), 1,
-                           size, MPI_COMM_WORLD);
+  auto M = slate::Matrix<float>(cols, rows, cols,
+                                rows / size + (rows % size > 0), 1, size, comm);
   M.insertLocalTiles(slate::Target::Devices);
 
   // Fill data
@@ -43,13 +48,14 @@ slate::Matrix<float> load_matrix(const char* fname, int64_t rows, int64_t cols,
   return M;
 }
 
-cusparseDnMatDescr_t compute_kernel_matrix(slate::Matrix<float>& PT, int rank,
-                                           int size) {
-  auto P = slate::transpose(PT);
+cusparseDnMatDescr_t compute_kernel_matrix(slate::Matrix<float>& PT) {
+  int rank, size;
+  MPI_Comm_rank(PT.mpiComm(), &rank);
+  MPI_Comm_size(PT.mpiComm(), &size);
 
   // Perform GEMM
   auto K = slate::Matrix<float>(P.m(), P.m(), P.tileMb(0), P.tileMb(0), 1, size,
-                                MPI_COMM_WORLD);
+                                PT.mpiComm());
   K.insertLocalTiles(slate::Target::Devices);
   slate::gemm<float>(1.0f, P, PT, 0.0f, K,
                      {{slate::Option::Target, slate::Target::Devices}});

@@ -17,9 +17,10 @@
 
 namespace cpop {
 
-cusparseSpMatDescr_t initialize_v(cusparseHandle_t& handle, int n, int k) {
+cusparseSpMatDescr_t initialize_v(cusparseHandle_t& handle, int n, int k,
+                                  MPI_Comm comm) {
   int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_rank(comm, &rank);
 
   int32_t* rows = (int32_t*)malloc(n * sizeof(int32_t));
   int32_t* cols = (int32_t*)malloc(n * sizeof(int32_t));
