@@ -47,6 +47,19 @@ void destroy(cusparseDnMatDescr_t& M) {
   cusparseDestroyDnMat(M);
 }
 
+void print(cusparseDnMatDescr_t& M, int rank) {
+  // Get input information
+  int64_t rows, cols, ld;
+  void* values;
+  cudaDataType type;
+  cusparseOrder_t order;
+  cusparseDnMatGet(M, &rows, &cols, &ld, &values, &type, &order);
+
+  // Print resources
+  std::cout << "Rank " << rank << ": Dense matrix has size " << rows << "x"
+            << cols << std::endl;
+}
+
 void destroy(cusparseDnVecDescr_t& V) {
   // Get input information
   void* values;
@@ -99,6 +112,7 @@ int main(int argc, char* argv[]) {
   auto k_start = hrc::now();
   auto K_loc = compute_kernel_matrix(PT);
   auto k_elapsed = get_time_elapsed(k_start);
+  print(K_loc, rank);
 
   /** INITIALIZE V */
   auto vi_start = hrc::now();
@@ -124,6 +138,7 @@ int main(int argc, char* argv[]) {
   }
 
   /** PRINT TIMES */
+  MPI_Barrier(comm);
   if (rank == 0) {
     std::cout << "Time K: " << k_elapsed << "ms" << std::endl;
     std::cout << "Time Init V: " << vi_elapsed << "ms" << std::endl;

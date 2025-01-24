@@ -19,8 +19,7 @@ slate::Matrix<float> load_matrix(const char* fname, int64_t rows, int64_t cols,
   MPI_File_read_all(fh, buf, cols * rows, MPI_FLOAT, MPI_STATUS_IGNORE);
 
   // Create empty SLATE matrix object of size equal to data
-  auto M = slate::Matrix<float>(cols, rows, cols,
-                                rows / size + (rows % size > 0), 1, size, comm);
+  auto M = slate::Matrix<float>(cols, rows, cols, rows / size, 1, size, comm);
   M.insertLocalTiles(slate::Target::Devices);
 
   // Fill data
@@ -46,6 +45,22 @@ slate::Matrix<float> load_matrix(const char* fname, int64_t rows, int64_t cols,
   MPI_File_close(&fh);
 
   return M;
+}
+
+int extract_kernel_tiles(float** tiles, slate::Matrix<float>& K, int col) {
+  int elems = K.m() * K.tileNb(col);
+  cudaMalloc(tiles, elems * sizeof(float));
+
+  int64_t offset = 0;
+  for (int64_t j = 0; j < K.mt(); ++j) {
+    // Tiles guaranteed to be local
+    slate::Tile<float> tile = K.at(j, col, K.tileDevice(j, col));
+    cudaMemcpy(*tiles + offset, tile.data(),
+               tile.mb() * tile.nb() * sizeof(float), cudaMemcpyDeviceToDevice);
+    offset += tile.mb() * tile.nb();
+  }
+
+  return elems;
 }
 
 cusparseDnMatDescr_t compute_kernel_matrix(slate::Matrix<float>& PT) {
@@ -74,25 +89,96 @@ cusparseDnMatDescr_t compute_kernel_matrix(slate::Matrix<float>& PT) {
   // Ensure tiles are row-major
   K.tileLayoutConvertOnDevices(blas::Layout::RowMajor);
 
-  // Initialize dense matrix buffer
+  // Copy tiles in local column to buffer
   float* values;
-  int col = K.mpiRank();
-  cudaMalloc(&values, K.m() * K.tileNb(col) * sizeof(float));
+  int count = extract_kernel_tiles(&values, K, rank);
 
-  // Copy all tiles in column to buffer
-  int64_t offset = 0;
-  for (int64_t j = 0; j < K.mt(); ++j) {
-    // Tiles guaranteed to be local
-    slate::Tile<float> tile = K.at(j, col, K.tileDevice(j, col));
-    cudaMemcpy(values + offset, tile.data(),
-               tile.mb() * tile.nb() * sizeof(float), cudaMemcpyDeviceToDevice);
-    offset += tile.mb() * tile.nb();
+  // Copy tiles in remainder column to buffer
+  float* _remainder;
+  int remainder_count = 0;
+  if (rank + size < K.nt()) {
+    float* remainder;
+    remainder_count = extract_kernel_tiles(&remainder, K, rank + size);
+    _remainder = (float*)malloc(remainder_count * sizeof(float));
+    cudaMemcpy(_remainder, remainder, remainder_count * sizeof(float),
+               cudaMemcpyDeviceToHost);
+    cudaFree(remainder);
+  }
+
+  // Gather remainder buffer sizes on root (i.e. last rank)
+  int root = size - 1;
+  int* recvcounts;
+  if (rank == root) {
+    recvcounts = (int*)malloc(size * sizeof(int));
+  }
+  MPI_Gather(&remainder_count, 1, MPI_INT, recvcounts, 1, MPI_INT, root,
+             PT.mpiComm());
+
+  // Gather remainder buffers on root (i.e. last rank)
+  int* displs;
+  int total = 0;
+  float* recvbuf;
+  if (rank == root) {
+    displs = (int*)malloc(size * sizeof(int));
+    displs[0] = 0;
+    total = recvcounts[0];
+    for (int i = 1; i < size; ++i) {
+      displs[i] = displs[i - 1] + recvcounts[i - 1];
+      total += recvcounts[i];
+    }
+    recvbuf = (float*)malloc(total * sizeof(float));
+  }
+  MPI_Gatherv(_remainder, remainder_count, MPI_FLOAT, recvbuf, recvcounts,
+              displs, MPI_FLOAT, root, PT.mpiComm());
+
+  // Reconstruct root buffer (i.e. last rank)
+  int rows = K.m();
+  int cols = (count + total) / rows;
+  if (rank == root) {
+    // Copy local column to host
+    float* _values = (float*)malloc(count * sizeof(float));
+    cudaMemcpy(_values, values, count * sizeof(float), cudaMemcpyDeviceToHost);
+
+    // Allocate output
+    float* tmp = (float*)malloc((count + total) * sizeof(float));
+
+    // Fill output buffer
+    int offset = 0;
+    for (int i = 0; i < rows; ++i) {
+      // Copy local row
+      int local_cols = K.tileNb(rank);
+      for (int j = 0; j < local_cols; ++j) {
+        tmp[offset++] = _values[i * local_cols + j];
+      }
+
+      // Copy remainder rows
+      for (int p = 0; p < size; ++p) {
+        int remainder_cols = recvcounts[p] / rows;
+        for (int j = 0; j < remainder_cols; ++j) {
+          tmp[offset++] = recvbuf[displs[p] + i * remainder_cols + j];
+        }
+      }
+    }
+
+    // Move data to device
+    cudaFree(values);
+    cudaMalloc(&values, (count + total) * sizeof(float));
+    cudaMemcpy(values, tmp, (count + total) * sizeof(float),
+               cudaMemcpyHostToDevice);
+
+    // Free host resources
+    free(recvcounts);
+    free(displs);
+    free(recvbuf);
+    free(_remainder);
+    free(_values);
+    free(tmp);
   }
 
   // Create cuSPARSE dense matrix descriptors
   cusparseDnMatDescr_t K_loc;
-  cusparseCreateDnMat(&K_loc, K.m(), K.tileNb(col), K.tileNb(col), values,
-                      CUDA_R_32F, CUSPARSE_ORDER_ROW);
+  cusparseCreateDnMat(&K_loc, rows, cols, cols, values, CUDA_R_32F,
+                      CUSPARSE_ORDER_ROW);
 
   return K_loc;
 }
