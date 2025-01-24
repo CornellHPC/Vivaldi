@@ -102,19 +102,23 @@ int main(int argc, char* argv[]) {
 
   /** INITIALIZE V */
   auto vi_start = hrc::now();
-  auto V = initialize_v(handle, m, k, comm);
+
+  Vmat V;
+  V.initialize(handle, m, k, comm);
+  // auto V = initialize_v(handle, m, k, comm);
   auto vi_elapsed = get_time_elapsed(vi_start);
 
   /** K MEANS CLUSTERING LOOP */
   int niter = 1;
   for (int i = 0; i < niter; ++i) {
     /** SPMM ET = VK */
-    auto ET = spmm(handle, V, K_loc);
+    auto ET = spmm(handle, V.global_v, K_loc);
 
     /** SPMV c = Vz */
     // auto c = compute_c(handle, V, ET, comm);
 
-    destroy(V);
+    destroy(V.global_v);
+    // TODO: destroy V.local_v
     destroy(ET);
     // destroy(c);
   }
