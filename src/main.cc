@@ -116,22 +116,25 @@ int main(int argc, char* argv[]) {
 
   /** INITIALIZE V */
   auto vi_start = hrc::now();
-
-  Vmat V;
-  V.initialize(handle, m, k, comm);
-  // auto V = initialize_v(handle, m, k, comm);
+  cusparseSpMatDescr_t gV;
+  cusparseSpMatDescr_t lV;
+  int t = rank == size - 1 ? m / size + m % size : m / size;
+  int* t_sizes = (int*)calloc(size, sizeof(int));
+  for (int i = 0; i < size; ++i)
+    t_sizes[i] = i == size - 1 ? m / size + m % size : m / size;
+  init_V(&gV, &lV, m, t, k, t_sizes, comm);
   auto vi_elapsed = get_time_elapsed(vi_start);
 
   /** K MEANS CLUSTERING LOOP */
   int niter = 1;
   for (int i = 0; i < niter; ++i) {
     /** SPMM ET = VK */
-    auto ET = spmm(handle, V.global_v, K_loc);
+    auto ET = spmm(handle, gV, K_loc);
 
     /** SPMV c = Vz */
     // auto c = compute_c(handle, V, ET, comm);
 
-    destroy(V.global_v);
+    destroy(gV);
     // TODO: destroy V.local_v
     destroy(ET);
     // destroy(c);

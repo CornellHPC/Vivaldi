@@ -6,72 +6,72 @@
 
 namespace cpop {
 
-struct Vmat {
-  // Global k-by-n matrix in CSR (CSR is faster for VK SpMM routine)
-  cusparseSpMatDescr_t global_v;
-
-  // Local k-by-t_size matrix in CSC (CSC is faster for c_norm initialization)
-  cusparseSpMatDescr_t local_v;
-
-  /**
-   * @brief Initializes V by round robin assignment
-   * 
-   * @param handle The cuSPARSE handle
-   * @param m The number of points
-   * @param k The number of clusters
-   * @param comm The MPI communicator used to distribute the matrix
-   * @return 1 on error
-   */
-  int initialize(cusparseHandle_t& handle, int m, int k, MPI_Comm comm);
-
-  /**
-   * @brief Initializes V by global cluster assignments vector (e.g. result of argmin on D matrix).
-   * Assignments vector and cluster sizes vectors are FREED by this method!
-   * 
-   * TODO: perhaps it makes more sense (after doing the D matrix computation stuff) to make this
-   * argument a cuSPARSE dense vector.
-   * 
-   * @param handle The cuSPARSE handle
-   * @param m The number of points
-   * @param k The number of clusters
-   * @param t_size The tile width
-   * @param assignments The distributed vector of assignments (e.g. containing cluster indices).
-   *                    Will be freed!
-   * @param cluster_sizes_loc Degree k vector containing the sizes of the local cluster. Will be freed!
-   *                          (TODO: To be calculated from D in a kernel along with argmins)
-   * @param comm The MPI communicator used to distribute the matrix
-   * @return 1 on error 
-   */
-  int compute_from_cluster_assignments(cusparseHandle_t& handle, int m, int k,
-                                       int t_size, int* assignments,
-                                       int32_t* cluster_sizes_loc,
-                                       MPI_Comm comm);
-};
+/**
+ * @brief Computes global assignments by AllgatherV from the local cluster assignments.
+ * 
+ * @param m The number of points
+ * @param t The tile width (e.g. width of column of K on this process)
+ * @param assignments t-size array of assignments (e.g. containing cluster indices)
+ * @param n_procs The number of processes
+ * @param t_sizes n_procs-size array of tile widths for each process
+ * @return int* Newly-allocated m-size global assignments array
+ */
+int* compute_g_assignments(int m, int t, int* assignments, int n_procs,
+                           int* t_sizes);
 
 /**
- * @brief Generates the global V matrix (k by n) in CSR using a round-robin assignment
- *
- * @param handle The cuSPARSE handle
- * @param m The number of points
+ * @brief Computes global cluster sizes by Allreduce from the local cluster sizes.
+ * 
  * @param k The number of clusters
- * @param comm The MPI communicator used to distribute the matrix
- * @return A cuSPARSE descriptor for the resulting sparse matrix
+ * @param cluster_sizes k-size array of local cluster sizes
+ * @return int* Newly-allocated k-size global cluster sizes array
  */
-// cusparseSpMatDescr_t initialize_global_v(cusparseHandle_t& handle, int m, int k,
-//                                          MPI_Comm comm);
+int* compute_g_cluster_sizes(int k, int* cluster_sizes);
 
 /**
- * @brief Generates the LOCAL V matrix (k by (n / p)) in CSC based on the assignment scheme of 
- * initialize_v. This local v is needed for the computation of c_norm.
- *
- * @param handle The cuSPARSE handle
+ * @brief Global k-by-m size V (global) matrix in CSR (CSR is faster for VK SpMM routine)
+ * Does not free g_assignments or g_cluster_sizes arrays.
+ * 
+ * @param gV The output gV matrix
  * @param m The number of points
  * @param k The number of clusters
- * @param comm The MPI communicator used to distribute the matrix
- * @return A cuSPARSE descriptor for the resulting sparse matrix
+ * @param g_assignments m-size array of global cluster assignments  (e.g. containing cluster indices)
+ * @param g_cluster_sizes k-size array of global cluster sizes
+ * @return int 
  */
-// cusparseSpMatDescr_t initialize_local_v(cusparseHandle_t& handle, int m, int k,
-//                                         MPI_Comm comm);
+int create_gV_csr(cusparseSpMatDescr_t* gV, int m, int k, int* g_assignments,
+                  int32_t* g_cluster_sizes);
+
+/**
+ * @brief Local k-by-t size V (partial) matrix in CSC (CSC is faster for c_norm initialization)
+ * Does not free assignments or g_cluster_sizes arrays.
+ * 
+ * @param lV The output lV matrix
+ * @param t The tile width (e.g. width of column of K on this process)
+ * @param k The number of clusters
+ * @param assignments t-size array of assignments (e.g. containing cluster indices)
+ * @param g_cluster_sizes k-size array of global cluster sizes
+ * @return int
+ */
+int create_lV_csc(cusparseSpMatDescr_t* lV, int t, int k, int* assignments,
+                  int32_t* g_cluster_sizes);
+
+/**
+ * @brief Constructs global and local V matrices based on this process's local assignments and cluster sizes.
+ * 
+ * See above methods for parameters.
+ */
+int reinit_V(cusparseSpMatDescr_t* gV, cusparseSpMatDescr_t* lV, int m, int t,
+             int k, int* assignments, int* cluster_sizes, int* t_sizes,
+             MPI_Comm comm);
+
+/**
+ * @brief Initializes V by round robin assignment
+ * 
+ * See above methods for parameters.
+ */
+int init_V(cusparseSpMatDescr_t* gV, cusparseSpMatDescr_t* lV, int m, int t,
+           int k, int* t_sizes, MPI_Comm comm);
 
 /**
  * @brief Multiplies a sparse matrix by a dense matrix
