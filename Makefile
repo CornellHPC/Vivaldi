@@ -26,15 +26,15 @@ alloc:
 		salloc --nodes 4 --qos interactive --time 03:00:00 --constraint gpu --gpus 16 --account m4341;\
 	fi
 
-small: alloc
+small:
 	srun --nodes=1 --ntasks-per-node=4 --cpus-per-task=32 --cpu-bind=cores --gpus=4 --gpu-bind=single:1 build/main data/small 11 8 4
 
-australian: alloc
+australian:
 	srun --nodes=1 --ntasks-per-node=4 --cpus-per-task=32 --cpu-bind=cores --gpus=4 --gpu-bind=single:1 build/main data/australian 690 14 2
 # srun --nodes=4 --ntasks-per-node=4 --cpus-per-task=32 --cpu-bind=cores --gpus=16 --gpu-bind=single:1 build/main+pat data/australian 690 14 2
 
-svmguide1: alloc
+svmguide1:
 	srun --nodes=4 --ntasks-per-node=4 --cpus-per-task=32 --cpu-bind=cores --gpus=16 --gpu-bind=single:1 build/main data/svmguide1 3089 4 2
 
-letter: alloc
+letter:
 	srun --nodes=4 --ntasks-per-node=4 --cpus-per-task=32 --cpu-bind=cores --gpus=16 --gpu-bind=single:1 build/main data/letter 15000 5000 26
