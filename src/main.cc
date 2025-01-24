@@ -47,16 +47,13 @@ void destroy(cusparseDnMatDescr_t& M) {
   cusparseDestroyDnMat(M);
 }
 
-void print(cusparseDnMatDescr_t& M) {
+void print(cusparseDnMatDescr_t& M, int rank) {
   // Get input information
   int64_t rows, cols, ld;
   void* values;
   cudaDataType type;
   cusparseOrder_t order;
   cusparseDnMatGet(M, &rows, &cols, &ld, &values, &type, &order);
-
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // Print resources
   std::cout << "Rank " << rank << ": Dense matrix has size " << rows << "x"
@@ -115,7 +112,7 @@ int main(int argc, char* argv[]) {
   auto k_start = hrc::now();
   auto K_loc = compute_kernel_matrix(PT);
   auto k_elapsed = get_time_elapsed(k_start);
-  print(K_loc);
+  print(K_loc, rank);
 
   /** INITIALIZE V */
   auto vi_start = hrc::now();
