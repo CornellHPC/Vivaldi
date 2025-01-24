@@ -21,17 +21,19 @@ using ms = std::chrono::milliseconds;
 void destroy(cusparseSpMatDescr_t& M) {
   // Get input information
   int64_t rows, cols, nnz;
-  void *cooRowInd, *cooColInd, *cooValues;
-  cusparseIndexType_t idxType;
-  cusparseIndexBase_t idxBase;
-  cudaDataType valueType;
-  cusparseCooGet(M, &rows, &cols, &nnz, &cooRowInd, &cooColInd, &cooValues,
-                 &idxType, &idxBase, &valueType);
+  void *d_row_offsets, *d_col_inds, *d_values;
+
+  cusparseIndexType_t csr_row_offsets_type, csr_col_inds_type;
+  cusparseIndexBase_t idx_base;
+  cudaDataType value_type;
+  cusparseCsrGet(M, &rows, &cols, &nnz, &d_row_offsets, &d_col_inds, &d_values,
+                 &csr_row_offsets_type, &csr_col_inds_type, &idx_base,
+                 &value_type);
 
   // Free resources
-  cudaFree(cooRowInd);
-  cudaFree(cooColInd);
-  cudaFree(cooValues);
+  cudaFree(d_row_offsets);
+  cudaFree(d_col_inds);
+  cudaFree(d_values);
   cusparseDestroySpMat(M);
 }
 

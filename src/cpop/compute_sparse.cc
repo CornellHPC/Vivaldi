@@ -22,39 +22,39 @@ cusparseSpMatDescr_t initialize_v(cusparseHandle_t& handle, int n, int k,
   int rank;
   MPI_Comm_rank(comm, &rank);
 
-  int32_t* rows = (int32_t*)malloc(n * sizeof(int32_t));
-  int32_t* cols = (int32_t*)malloc(n * sizeof(int32_t));
-  float* vals = (float*)malloc(n * sizeof(float));
+  // Manual CSR encoding of the initialized state
+  int32_t* row_offsets = (int32_t*)malloc((k + 1) * sizeof(int32_t));
+  row_offsets[0] = 0;
+  int32_t* col_inds = (int32_t*)malloc(n * sizeof(int32_t));
+  int32_t* values = (int32_t*)malloc(n * sizeof(int32_t));
 
-  int idx = 0;
   for (int32_t r = 0; r < k; ++r) {
     int32_t l = (n / k) + ((r < n % k) ? 1 : 0);
-    for (int32_t c = r; c < n; c += k) {
-      rows[idx] = r;
-      cols[idx] = c;
-      vals[idx] = 1.0f / l;
-      idx++;
+    row_offsets[r + 1] = row_offsets[r] + l;
+    for (int32_t i = 0; i < l; ++i) {
+      col_inds[i + row_offsets[r]] = r + i * k;
+      values[i + row_offsets[r]] = 1.0f / l;
     }
   }
 
-  int32_t *cooRowInds, *cooColInds;
-  float* cooValues;
+  int32_t* d_row_offsets;
+  cudaMalloc(&d_row_offsets, (k + 1) * sizeof(int32_t));
+  cudaMemcpy(d_row_offsets, row_offsets, (k + 1) * sizeof(int32_t),
+             cudaMemcpyHostToDevice);
+  int32_t* d_col_inds;
+  cudaMalloc(&d_col_inds, n * sizeof(int32_t));
+  cudaMemcpy(d_col_inds, col_inds, n * sizeof(int32_t), cudaMemcpyHostToDevice);
+  int32_t* d_values;
+  cudaMemcpy(d_values, values, n * sizeof(int32_t), cudaMemcpyHostToDevice);
 
-  cudaMalloc(&cooRowInds, n * sizeof(int32_t));
-  cudaMalloc(&cooColInds, n * sizeof(int32_t));
-  cudaMalloc(&cooValues, n * sizeof(float));
-
-  cudaMemcpy(cooRowInds, rows, n * sizeof(int32_t), cudaMemcpyHostToDevice);
-  cudaMemcpy(cooColInds, cols, n * sizeof(int32_t), cudaMemcpyHostToDevice);
-  cudaMemcpy(cooValues, vals, n * sizeof(float), cudaMemcpyHostToDevice);
-
-  free(rows);
-  free(cols);
-  free(vals);
+  free(row_offsets);
+  free(col_inds);
+  free(values);
 
   cusparseSpMatDescr_t V;
-  cusparseCreateCoo(&V, k, n, n, cooRowInds, cooColInds, cooValues,
-                    CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F);
+  cusparseCreateCsr(&V, k, n, n, d_row_offsets, d_col_inds, d_values,
+                    CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I,
+                    CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F);
   return V;
 }
 
@@ -88,13 +88,13 @@ cusparseDnMatDescr_t spmm(cusparseHandle_t& handle, cusparseSpMatDescr_t& V,
   void* buffer;
   cusparseSpMM_bufferSize(handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
                           CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, V, K, &beta,
-                          ET, CUDA_R_32F, CUSPARSE_SPMM_COO_ALG4, &buffer_size);
+                          ET, CUDA_R_32F, CUSPARSE_SPMM_CSR_ALG2, &buffer_size);
   cudaMalloc(&buffer, buffer_size);
 
   // Perform SpMM
   cusparseSpMM(handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
                CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, V, K, &beta, ET,
-               CUDA_R_32F, CUSPARSE_SPMM_COO_ALG4, buffer);
+               CUDA_R_32F, CUSPARSE_SPMM_CSR_ALG2, buffer);
 
   // Clean up
   cudaFree(buffer);
