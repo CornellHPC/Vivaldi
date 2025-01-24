@@ -26,7 +26,7 @@ cusparseSpMatDescr_t initialize_v(cusparseHandle_t& handle, int n, int k,
   int32_t* row_offsets = (int32_t*)malloc((k + 1) * sizeof(int32_t));
   row_offsets[0] = 0;
   int32_t* col_inds = (int32_t*)malloc(n * sizeof(int32_t));
-  int32_t* values = (int32_t*)malloc(n * sizeof(int32_t));
+  float* values = (float*)malloc(n * sizeof(float));
 
   for (int32_t r = 0; r < k; ++r) {
     int32_t l = (n / k) + ((r < n % k) ? 1 : 0);
@@ -44,8 +44,9 @@ cusparseSpMatDescr_t initialize_v(cusparseHandle_t& handle, int n, int k,
   int32_t* d_col_inds;
   cudaMalloc(&d_col_inds, n * sizeof(int32_t));
   cudaMemcpy(d_col_inds, col_inds, n * sizeof(int32_t), cudaMemcpyHostToDevice);
-  int32_t* d_values;
-  cudaMemcpy(d_values, values, n * sizeof(int32_t), cudaMemcpyHostToDevice);
+  float* d_values;
+  cudaMalloc(&d_values, n * sizeof(float));
+  cudaMemcpy(d_values, values, n * sizeof(float), cudaMemcpyHostToDevice);
 
   free(row_offsets);
   free(col_inds);
@@ -91,10 +92,15 @@ cusparseDnMatDescr_t spmm(cusparseHandle_t& handle, cusparseSpMatDescr_t& V,
                           ET, CUDA_R_32F, CUSPARSE_SPMM_CSR_ALG2, &buffer_size);
   cudaMalloc(&buffer, buffer_size);
 
+  // Preprocess
+  cusparseSpMM_preprocess(handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
+                          CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, V, K, &beta,
+                          ET, CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, buffer);
+
   // Perform SpMM
   cusparseSpMM(handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
                CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, V, K, &beta, ET,
-               CUDA_R_32F, CUSPARSE_SPMM_CSR_ALG2, buffer);
+               CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, buffer);
 
   // Clean up
   cudaFree(buffer);

@@ -112,11 +112,11 @@ int main(int argc, char* argv[]) {
     auto ET = spmm(handle, V, K_loc);
 
     /** SPMV c = Vz */
-    auto c = compute_c(handle, V, ET, comm);
+    // auto c = compute_c(handle, V, ET, comm);
 
     destroy(V);
     destroy(ET);
-    destroy(c);
+    // destroy(c);
   }
 
   /** PRINT TIMES */
