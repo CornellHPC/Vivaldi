@@ -11,6 +11,7 @@
 #include "cpop/compute_c.hh"
 #include "cpop/compute_kernel.hh"
 #include "cpop/compute_sparse.hh"
+#include "cpop/cusparse_helpers.hh"
 #include "cpop/utils.hh"
 
 using namespace cpop;
@@ -18,24 +19,24 @@ using namespace cpop;
 using hrc = std::chrono::high_resolution_clock;
 using ms = std::chrono::milliseconds;
 
-void destroy(cusparseSpMatDescr_t& M) {
-  // Get input information
-  int64_t rows, cols, nnz;
-  void *d_row_offsets, *d_col_inds, *d_values;
+// void destroy(cusparseSpMatDescr_t& M) {
+//   // Get input information
+//   int64_t rows, cols, nnz;
+//   void *d_row_offsets, *d_col_inds, *d_values;
 
-  cusparseIndexType_t csr_row_offsets_type, csr_col_inds_type;
-  cusparseIndexBase_t idx_base;
-  cudaDataType value_type;
-  cusparseCsrGet(M, &rows, &cols, &nnz, &d_row_offsets, &d_col_inds, &d_values,
-                 &csr_row_offsets_type, &csr_col_inds_type, &idx_base,
-                 &value_type);
+//   cusparseIndexType_t csr_row_offsets_type, csr_col_inds_type;
+//   cusparseIndexBase_t idx_base;
+//   cudaDataType value_type;
+//   cusparseCsrGet(M, &rows, &cols, &nnz, &d_row_offsets, &d_col_inds, &d_values,
+//                  &csr_row_offsets_type, &csr_col_inds_type, &idx_base,
+//                  &value_type);
 
-  // Free resources
-  cudaFree(d_row_offsets);
-  cudaFree(d_col_inds);
-  cudaFree(d_values);
-  cusparseDestroySpMat(M);
-}
+//   // Free resources
+//   cudaFree(d_row_offsets);
+//   cudaFree(d_col_inds);
+//   cudaFree(d_values);
+//   cusparseDestroySpMat(M);
+// }
 
 void destroy(cusparseDnMatDescr_t& M) {
   // Get input information
@@ -45,19 +46,6 @@ void destroy(cusparseDnMatDescr_t& M) {
   // Free resources
   cudaFree(values);
   cusparseDestroyDnMat(M);
-}
-
-void print(cusparseDnMatDescr_t& M, int rank) {
-  // Get input information
-  int64_t rows, cols, ld;
-  void* values;
-  cudaDataType type;
-  cusparseOrder_t order;
-  cusparseDnMatGet(M, &rows, &cols, &ld, &values, &type, &order);
-
-  // Print resources
-  std::cout << "Rank " << rank << ": Dense matrix has size " << rows << "x"
-            << cols << std::endl;
 }
 
 void destroy(cusparseDnVecDescr_t& V) {
@@ -111,8 +99,9 @@ int main(int argc, char* argv[]) {
   /** COMPUTE K */
   auto k_start = hrc::now();
   auto K_loc = compute_kernel_matrix(PT);
+  PT.releaseWorkspace();
   auto k_elapsed = get_time_elapsed(k_start);
-  print(K_loc, rank);
+  // print(K_loc, rank);
 
   /** INITIALIZE V */
   auto vi_start = hrc::now();
@@ -129,14 +118,17 @@ int main(int argc, char* argv[]) {
   int niter = 1;
   for (int i = 0; i < niter; ++i) {
     /** SPMM ET = VK */
-    auto ET = spmm(handle, gV, K_loc);
+    cusparseDnMatDescr_t ET;
+    spmm(handle, gV, K_loc, &ET);
 
     /** SPMV c = Vz */
-    // auto c = compute_c(handle, V, ET, comm);
+    cusparseDnVecDescr_t z;
+    compute_c(handle, lV, ET, &z, comm);
 
-    destroy(gV);
+    // TODO: Destroy gV as CSR and lV as CSC
+    // destroy(gV);
     // TODO: destroy V.local_v
-    destroy(ET);
+    // destroy(ET);
     // destroy(c);
   }
 

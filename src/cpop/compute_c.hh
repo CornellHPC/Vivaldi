@@ -10,13 +10,15 @@ namespace cpop {
  * @brief Computes the c norm vector
  *
  * @param handle The cuSPARSE handle
- * @param V The assignment matrix V
+ * @param V The local CSC assignment matrix V
  * @param ET The transposed point-centroid product matrix ET
+ * @param c_norm A cuSPARSE descriptor for the resulting dense vector
  * @param comm The MPI communicator used to distribute ET
- * @return A cuSPARSE descriptor for the resulting dense vector
+ * @return int
  */
-cusparseDnVecDescr_t compute_c(cusparseHandle_t& handle, cusparseSpMatDescr_t V,
-                               cusparseDnMatDescr_t ET, MPI_Comm comm);
+int compute_c(cusparseHandle_t& handle, cusparseSpMatDescr_t& lV,
+              cusparseDnMatDescr_t& ET, cusparseDnVecDescr_t* c_norm,
+              MPI_Comm comm);
 
 }  // namespace cpop
 

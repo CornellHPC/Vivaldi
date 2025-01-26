@@ -16,8 +16,8 @@ namespace cpop {
  * @param t_sizes n_procs-size array of tile widths for each process
  * @return int* Newly-allocated m-size global assignments array
  */
-int* compute_g_assignments(int m, int t, int* assignments, int n_procs,
-                           int* t_sizes);
+int64_t* compute_g_assignments(int64_t m, int64_t t, int64_t* assignments,
+                               int n_procs, int* t_sizes);
 
 /**
  * @brief Computes global cluster sizes by Allreduce from the local cluster sizes.
@@ -26,7 +26,7 @@ int* compute_g_assignments(int m, int t, int* assignments, int n_procs,
  * @param cluster_sizes k-size array of local cluster sizes
  * @return int* Newly-allocated k-size global cluster sizes array
  */
-int* compute_g_cluster_sizes(int k, int* cluster_sizes);
+int64_t* compute_g_cluster_sizes(int64_t k, int64_t* cluster_sizes);
 
 /**
  * @brief Global k-by-m size V (global) matrix in CSR (CSR is faster for VK SpMM routine)
@@ -39,8 +39,8 @@ int* compute_g_cluster_sizes(int k, int* cluster_sizes);
  * @param g_cluster_sizes k-size array of global cluster sizes
  * @return int 
  */
-int create_gV_csr(cusparseSpMatDescr_t* gV, int m, int k, int* g_assignments,
-                  int32_t* g_cluster_sizes);
+int create_gV_csr(cusparseSpMatDescr_t* gV, int64_t m, int64_t k,
+                  int64_t* g_assignments, int64_t* g_cluster_sizes);
 
 /**
  * @brief Local k-by-t size V (partial) matrix in CSC (CSC is faster for c_norm initialization)
@@ -53,25 +53,25 @@ int create_gV_csr(cusparseSpMatDescr_t* gV, int m, int k, int* g_assignments,
  * @param g_cluster_sizes k-size array of global cluster sizes
  * @return int
  */
-int create_lV_csc(cusparseSpMatDescr_t* lV, int t, int k, int* assignments,
-                  int32_t* g_cluster_sizes);
+int create_lV_csc(cusparseSpMatDescr_t* lV, int64_t t, int64_t k,
+                  int64_t* assignments, int64_t* g_cluster_sizes);
 
 /**
  * @brief Constructs global and local V matrices based on this process's local assignments and cluster sizes.
  * 
  * See above methods for parameters.
  */
-int reinit_V(cusparseSpMatDescr_t* gV, cusparseSpMatDescr_t* lV, int m, int t,
-             int k, int* assignments, int* cluster_sizes, int* t_sizes,
-             MPI_Comm comm);
+int reinit_V(cusparseSpMatDescr_t* gV, cusparseSpMatDescr_t* lV, int64_t m,
+             int64_t t, int64_t k, int64_t* assignments, int64_t* cluster_sizes,
+             int* t_sizes, MPI_Comm comm);
 
 /**
  * @brief Initializes V by round robin assignment
  * 
  * See above methods for parameters.
  */
-int init_V(cusparseSpMatDescr_t* gV, cusparseSpMatDescr_t* lV, int m, int t,
-           int k, int* t_sizes, MPI_Comm comm);
+int init_V(cusparseSpMatDescr_t* gV, cusparseSpMatDescr_t* lV, int64_t m,
+           int64_t t, int64_t k, int* t_sizes, MPI_Comm comm);
 
 /**
  * @brief Multiplies a sparse matrix by a dense matrix
@@ -79,10 +79,11 @@ int init_V(cusparseSpMatDescr_t* gV, cusparseSpMatDescr_t* lV, int m, int t,
  * @param handle The cuSPARSE handle
  * @param V The sparse matrix
  * @param K The dense matrix
- * @return a cuSPARSE descriptor for the resulting dense matrix
+ * @param ET cuSPARSE descriptor for the resulting dense matrix
+ * @return int
  */
-cusparseDnMatDescr_t spmm(cusparseHandle_t& handle, cusparseSpMatDescr_t& V,
-                          cusparseDnMatDescr_t& K);
+int spmm(cusparseHandle_t& handle, cusparseSpMatDescr_t& V,
+         cusparseDnMatDescr_t& K, cusparseDnMatDescr_t* ET);
 
 }  // namespace cpop
 
