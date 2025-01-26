@@ -51,7 +51,7 @@ __global__ void z_vector_kernel(int64_t t, float* z, int64_t* assignments,
   }
 }
 
-void compute_z_vector(int64_t t, float* z, int64_t* assignments, float* ET) {
+void launch_z_kernel(int64_t t, float* z, int64_t* assignments, float* ET) {
   // 1024 max threads for current CUDA compute capability (<= 7.5)
   // 16x16 blocks, with upwards round for more coverage
   // block cap is set to prevent overflow
@@ -59,8 +59,6 @@ void compute_z_vector(int64_t t, float* z, int64_t* assignments, float* ET) {
   int nblocks = std::min(int64_t(1048576), (t + nthreads - 1) / nthreads);
 
   z_vector_kernel<<<nblocks, nthreads>>>(t, z, assignments, ET);
-  gpuErrchk(cudaPeekAtLastError());
-  gpuErrchk(cudaDeviceSynchronize());
 }
 
 }  // namespace cpop

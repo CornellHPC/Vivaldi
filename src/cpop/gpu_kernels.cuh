@@ -24,7 +24,7 @@ void launch_polynomial_kernel(int64_t m, int64_t n, float* B, float gamma,
  * @param assignments Cluster assignments on this process
  * @param ET This process's ET partial/submatrix (ET is k-by-t in row-major)
  */
-void compute_z_vector(int64_t t, float* z, int64_t* assignments, float* ET);
+void launch_z_kernel(int64_t t, float* z, int64_t* assignments, float* ET);
 
 }  // namespace cpop
 

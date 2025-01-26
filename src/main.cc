@@ -78,15 +78,17 @@ int main(int argc, char* argv[]) {
   /** Allocate variables for K-means loop */
   cusparseDnMatDescr_t ET;
   init_ET(gV, K_loc, &ET);
-  cusparseDnVecDescr_t c;
-  init_c(lV, &c);
+  // TODO: assert that t equals the width of ET and K_loc
+  cusparseDnVecDescr_t z, c;
+  init_z(t, &z);
+  init_c(k, &c);
 
   /** K MEANS CLUSTERING LOOP */
   int niter = 1;
   for (int i = 0; i < niter; ++i) {
-    spmm(handle, gV, K_loc, ET);         // SoMM: ET = VK
-    compute_c(handle, lV, ET, c, comm);  // Calculate z and SpMV: c = Vz
-    // TODO: z should also not be reallocated every loop
+    spmm(handle, gV, K_loc, ET);  // SoMM: ET = VK using global V
+    compute_z(lV, ET, z);         // Calculate z from the mask of local V on ET
+    spmv(handle, lV, z, c);       // SpMV: c = Vz using local V
   }
 
   /** PRINT TIMES */
@@ -101,6 +103,7 @@ int main(int argc, char* argv[]) {
   destroy(gV);
   destroy(lV);
   destroy(ET);
+  destroy(z);
   destroy(c);
   cusparseDestroy(handle);
 
