@@ -19,7 +19,7 @@ __global__ void polynomial_kernel(int64_t m, int64_t n, float* B, float gamma,
   for (int64_t i = blockIdx.x * blockDim.x + threadIdx.x; i < m * n;
        i += blockDim.x * gridDim.x) {
     // this for loop runs once unless the matrix is extraordinarily large
-    B[i] = 0.5f;  // powf(gamma * B[i] + c, r);
+    B[i] = powf(gamma * B[i] + c, r);
   }
 }
 

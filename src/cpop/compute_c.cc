@@ -10,14 +10,19 @@
 
 namespace cpop {
 
-int compute_c(cusparseHandle_t& handle, cusparseSpMatDescr_t& lV,
-              cusparseDnMatDescr_t& ET, cusparseDnVecDescr_t* c_norm,
-              MPI_Comm comm) {
-  // Get MPI information
-  int rank, size;
-  MPI_Comm_rank(comm, &rank);
-  MPI_Comm_size(comm, &size);
+int init_c(cusparseSpMatDescr_t& lV, cusparseDnVecDescr_t* c) {
+  int64_t rows, cols, nnz;
+  CHECK_CUSPARSE(cusparseSpMatGetSize(lV, &rows, &cols, &nnz));
 
+  float* dc;
+  CHECK_CUDA(cudaMalloc((void**)&dc, rows * sizeof(float)));
+  CHECK_CUSPARSE(cusparseCreateDnVec(c, rows, dc, CUDA_R_32F));
+  return EXIT_SUCCESS;
+}
+
+int compute_c(cusparseHandle_t& handle, cusparseSpMatDescr_t& lV,
+              cusparseDnMatDescr_t& ET, cusparseDnVecDescr_t& c,
+              MPI_Comm comm) {
   // Get input information
   int64_t sp_rows, sp_cols, nnz, dn_rows, dn_cols, ld;
   int64_t *csc_col_offset, *csc_row_inds;
@@ -46,21 +51,17 @@ int compute_c(cusparseHandle_t& handle, cusparseSpMatDescr_t& lV,
   float alpha = 1.0f;
   float beta = 0.0f;
 
-  float* dc_norm;
-  CHECK_CUDA(cudaMalloc((void**)&dc_norm, sp_rows * sizeof(float)));
-  CHECK_CUSPARSE(cusparseCreateDnVec(c_norm, sp_rows, dc_norm, CUDA_R_32F));
-
   // allocate an external buffer if needed
   void* dBuffer = NULL;
   size_t bufferSize = 0;
   CHECK_CUSPARSE(cusparseSpMV_bufferSize(
-      handle, CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, lV, z, &beta, *c_norm,
+      handle, CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, lV, z, &beta, c,
       CUDA_R_32F, CUSPARSE_SPMV_ALG_DEFAULT, &bufferSize));
   CHECK_CUDA(cudaMalloc(&dBuffer, bufferSize));
 
   // execute SpMV
   CHECK_CUSPARSE(cusparseSpMV(handle, CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha,
-                              lV, z, &beta, *c_norm, CUDA_R_32F,
+                              lV, z, &beta, c, CUDA_R_32F,
                               CUSPARSE_SPMV_ALG_DEFAULT, dBuffer));
 
   // cleanup

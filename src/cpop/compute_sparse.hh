@@ -74,16 +74,27 @@ int init_V(cusparseSpMatDescr_t* gV, cusparseSpMatDescr_t* lV, int64_t m,
            int64_t t, int64_t k, int* t_sizes, MPI_Comm comm);
 
 /**
+ * @brief Initializes the ET matrix before the SpMM routine
+ * 
+ * @param gV The sparse matrix
+ * @param K The dense matrix
+ * @param ET cuSPARSE descriptor for the resulting dense matrix
+ * @return int 
+ */
+int init_ET(cusparseSpMatDescr_t& gV, cusparseDnMatDescr_t& K,
+            cusparseDnMatDescr_t* ET);
+
+/**
  * @brief Multiplies a sparse matrix by a dense matrix
  *
  * @param handle The cuSPARSE handle
- * @param V The sparse matrix
+ * @param gV The sparse matrix
  * @param K The dense matrix
  * @param ET cuSPARSE descriptor for the resulting dense matrix
  * @return int
  */
-int spmm(cusparseHandle_t& handle, cusparseSpMatDescr_t& V,
-         cusparseDnMatDescr_t& K, cusparseDnMatDescr_t* ET);
+int spmm(cusparseHandle_t& handle, cusparseSpMatDescr_t& gV,
+         cusparseDnMatDescr_t& K, cusparseDnMatDescr_t& ET);
 
 }  // namespace cpop
 

@@ -75,20 +75,18 @@ int main(int argc, char* argv[]) {
   init_V(&gV, &lV, m, t, k, t_sizes, comm);
   auto vi_elapsed = get_time_elapsed(vi_start);
 
+  /** Allocate variables for K-means loop */
+  cusparseDnMatDescr_t ET;
+  init_ET(gV, K_loc, &ET);
+  cusparseDnVecDescr_t c;
+  init_c(lV, &c);
+
   /** K MEANS CLUSTERING LOOP */
   int niter = 1;
   for (int i = 0; i < niter; ++i) {
-    /** SPMM ET = VK */
-    cusparseDnMatDescr_t ET;
-    spmm(handle, gV, K_loc, &ET);
-
-    /** SPMV c = Vz */
-    cusparseDnVecDescr_t c_norm;
-    compute_c(handle, lV, ET, &c_norm, comm);
-
-    // TODO: destroying and realloc is a real waste
-    // destroy(ET);
-    destroy(c_norm);
+    spmm(handle, gV, K_loc, ET);         // SoMM: ET = VK
+    compute_c(handle, lV, ET, c, comm);  // Calculate z and SpMV: c = Vz
+    // TODO: z should also not be reallocated every loop
   }
 
   /** PRINT TIMES */
@@ -102,6 +100,8 @@ int main(int argc, char* argv[]) {
   destroy(K_loc);
   destroy(gV);
   destroy(lV);
+  destroy(ET);
+  destroy(c);
   cusparseDestroy(handle);
 
   /** EXIT */

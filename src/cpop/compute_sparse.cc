@@ -110,7 +110,7 @@ int reinit_V(cusparseSpMatDescr_t* gV, cusparseSpMatDescr_t* lV, int64_t m,
 
   create_gV_csr(gV, m, k, g_assignments, g_cluster_sizes);
   create_lV_csc(lV, t, k, assignments, g_cluster_sizes);
-  return 0;
+  return EXIT_SUCCESS;
 }
 
 int init_V(cusparseSpMatDescr_t* gV, cusparseSpMatDescr_t* lV, int64_t m,
@@ -136,52 +136,56 @@ int init_V(cusparseSpMatDescr_t* gV, cusparseSpMatDescr_t* lV, int64_t m,
   return reinit_V(gV, lV, m, t, k, assignments, cluster_sizes, t_sizes, comm);
 }
 
-int spmm(cusparseHandle_t& handle, cusparseSpMatDescr_t& V,
-         cusparseDnMatDescr_t& K, cusparseDnMatDescr_t* ET) {
+int init_ET(cusparseSpMatDescr_t& gV, cusparseDnMatDescr_t& K,
+            cusparseDnMatDescr_t* ET) {
   // Get input information
   int64_t sp_rows, sp_cols, nnz, dn_rows, dn_cols, ld;
   cudaDataType type;
   cusparseOrder_t order;
   float* dn_values;
-  CHECK_CUSPARSE(cusparseSpMatGetSize(V, &sp_rows, &sp_cols, &nnz));
+  CHECK_CUSPARSE(cusparseSpMatGetSize(gV, &sp_rows, &sp_cols, &nnz));
   CHECK_CUSPARSE(cusparseDnMatGet(K, &dn_rows, &dn_cols, &ld,
                                   (void**)&dn_values, &type, &order));
 
   assert(sp_cols == dn_rows && "Inner dimension must be equal in size.");
   assert(type == CUDA_R_32F && "Matrix data must be FP32.");
 
-  // Define constants
-  float alpha = 1.0f;
-  float beta = 0.0f;
-
   // Allocate memory for output
   float* values;
   CHECK_CUDA(cudaMalloc(&values, sp_rows * dn_cols * sizeof(float)));
   CHECK_CUSPARSE(cusparseCreateDnMat(ET, sp_rows, dn_cols, dn_cols,
                                      (void*)values, type, order));
+  return EXIT_SUCCESS;
+}
+
+int spmm(cusparseHandle_t& handle, cusparseSpMatDescr_t& gV,
+         cusparseDnMatDescr_t& K, cusparseDnMatDescr_t& ET) {
+  // Define constants
+  float alpha = 1.0f;
+  float beta = 0.0f;
 
   // Allocate workspace buffer
   size_t buffer_size;
   void* buffer;
   CHECK_CUSPARSE(cusparseSpMM_bufferSize(
       handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
-      CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, V, K, &beta, *ET, CUDA_R_32F,
+      CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, gV, K, &beta, ET, CUDA_R_32F,
       CUSPARSE_SPMM_CSR_ALG2, &buffer_size));
   CHECK_CUDA(cudaMalloc(&buffer, buffer_size));
 
   // // Preprocess (may not work with later cusparseSpMV_preprocess)
   // cusparseSpMM_preprocess(handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
-  //                         CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, V, K, &beta,
+  //                         CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, gV, K, &beta,
   //                         *ET, CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, buffer);
 
   // Perform SpMM
   CHECK_CUSPARSE(cusparseSpMM(handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
-                              CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, V, K,
-                              &beta, *ET, CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT,
+                              CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, gV, K,
+                              &beta, ET, CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT,
                               buffer));
 
   // Clean up
-  // CHECK_CUDA(cudaFree(buffer));
+  CHECK_CUDA(cudaFree(buffer));
 
   return 0;
 }
