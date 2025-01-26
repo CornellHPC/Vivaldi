@@ -19,45 +19,6 @@ using namespace cpop;
 using hrc = std::chrono::high_resolution_clock;
 using ms = std::chrono::milliseconds;
 
-// void destroy(cusparseSpMatDescr_t& M) {
-//   // Get input information
-//   int64_t rows, cols, nnz;
-//   void *d_row_offsets, *d_col_inds, *d_values;
-
-//   cusparseIndexType_t csr_row_offsets_type, csr_col_inds_type;
-//   cusparseIndexBase_t idx_base;
-//   cudaDataType value_type;
-//   cusparseCsrGet(M, &rows, &cols, &nnz, &d_row_offsets, &d_col_inds, &d_values,
-//                  &csr_row_offsets_type, &csr_col_inds_type, &idx_base,
-//                  &value_type);
-
-//   // Free resources
-//   cudaFree(d_row_offsets);
-//   cudaFree(d_col_inds);
-//   cudaFree(d_values);
-//   cusparseDestroySpMat(M);
-// }
-
-void destroy(cusparseDnMatDescr_t& M) {
-  // Get input information
-  void* values;
-  cusparseDnMatGetValues(M, &values);
-
-  // Free resources
-  cudaFree(values);
-  cusparseDestroyDnMat(M);
-}
-
-void destroy(cusparseDnVecDescr_t& V) {
-  // Get input information
-  void* values;
-  cusparseDnVecGetValues(V, &values);
-
-  // Free resources
-  cudaFree(values);
-  cusparseDestroyDnVec(V);
-}
-
 /**
  * Runs the distributed popcorn kernel k-means clustering algorithm.
  * Usage: srun cpop [path] [m] [n] [k]
@@ -122,14 +83,12 @@ int main(int argc, char* argv[]) {
     spmm(handle, gV, K_loc, &ET);
 
     /** SPMV c = Vz */
-    cusparseDnVecDescr_t z;
-    compute_c(handle, lV, ET, &z, comm);
+    cusparseDnVecDescr_t c_norm;
+    compute_c(handle, lV, ET, &c_norm, comm);
 
-    // TODO: Destroy gV as CSR and lV as CSC
-    // destroy(gV);
-    // TODO: destroy V.local_v
+    // TODO: destroying and realloc is a real waste
     // destroy(ET);
-    // destroy(c);
+    destroy(c_norm);
   }
 
   /** PRINT TIMES */
@@ -141,6 +100,8 @@ int main(int argc, char* argv[]) {
 
   /** DESTROY */
   destroy(K_loc);
+  destroy(gV);
+  destroy(lV);
   cusparseDestroy(handle);
 
   /** EXIT */

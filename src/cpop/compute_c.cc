@@ -66,8 +66,9 @@ int compute_c(cusparseHandle_t& handle, cusparseSpMatDescr_t& lV,
   // cleanup
   CHECK_CUDA(cudaFree(dz));
   CHECK_CUSPARSE(cusparseDestroyDnVec(z));
-  CHECK_CUDA(cudaFree(dBuffer))
-  return 0;
+  CHECK_CUDA(cudaFree(dBuffer));
+
+  return EXIT_SUCCESS;
 }
 
 }  // namespace cpop

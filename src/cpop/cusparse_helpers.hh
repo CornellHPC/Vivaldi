@@ -20,7 +20,7 @@ void print_arr_(int* arr, int64_t size);
 
 void print(cusparseDnMatDescr_t& M, int rank);
 
-void print(cusparseDnVecDescr_t& M, int rank);
+void print(cusparseDnVecDescr_t& V, int rank);
 
 /**
  * @brief Print a local sparse matrix, e.g. local V (CSC)
@@ -31,6 +31,12 @@ void print(cusparseSpMatDescr_t& M, int rank);
  * @brief Print a global sparse matrix, e.g. global V (CSR)
  */
 void print(cusparseSpMatDescr_t& M);
+
+int destroy(cusparseDnMatDescr_t& M);
+
+int destroy(cusparseDnVecDescr_t& V);
+
+int destroy(cusparseSpMatDescr_t& M);
 
 }  // namespace cpop
 

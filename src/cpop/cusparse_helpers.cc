@@ -1,5 +1,7 @@
 #include "cusparse_helpers.hh"
 
+#include "utils.hh"
+
 namespace cpop {
 
 void print_arr_(float* arr, int64_t size) {
@@ -51,11 +53,11 @@ void print(cusparseDnMatDescr_t& M, int rank) {
   free(values_loc);
 }
 
-void print(cusparseDnVecDescr_t& M, int rank) {
+void print(cusparseDnVecDescr_t& V, int rank) {
   int64_t size;
   float* values;
   cudaDataType_t data_type;
-  cusparseDnVecGet(M, &size, (void**)&values, &data_type);
+  cusparseDnVecGet(V, &size, (void**)&values, &data_type);
   float* values_loc = (float*)malloc(size * sizeof(float));
   cudaMemcpy(values_loc, values, size * sizeof(float), cudaMemcpyDeviceToHost);
 
@@ -139,6 +141,69 @@ void print(cusparseSpMatDescr_t& M) {
   free(row_offsets_loc);
   free(col_inds_loc);
   free(values_loc);
+}
+
+int destroy(cusparseDnMatDescr_t& M) {
+  // Get input information
+  void* values;
+  CHECK_CUSPARSE(cusparseDnMatGetValues(M, &values));
+
+  // Free resources
+  CHECK_CUDA(cudaFree(values));
+  CHECK_CUSPARSE(cusparseDestroyDnMat(M));
+  return EXIT_SUCCESS;
+}
+
+int destroy(cusparseDnVecDescr_t& V) {
+  // Get input information
+  void* values;
+  CHECK_CUSPARSE(cusparseDnVecGetValues(V, &values));
+
+  // Free resources
+  CHECK_CUDA(cudaFree(values));
+  CHECK_CUSPARSE(cusparseDestroyDnVec(V));
+  return EXIT_SUCCESS;
+}
+
+int destroy(cusparseSpMatDescr_t& M) {
+  cusparseFormat_t format;
+  CHECK_CUSPARSE(cusparseSpMatGetFormat(M, &format));
+
+  if (format == CUSPARSE_FORMAT_CSC) {
+    int64_t rows, cols, nnz;
+    int64_t *col_offsets, *row_inds;
+    float* values;
+    cusparseIndexType_t col_offsets_type, row_inds_type;
+    cusparseIndexBase_t base_idx;
+    cudaDataType_t data_type;
+    CHECK_CUSPARSE(cusparseCscGet(M, &rows, &cols, &nnz, (void**)&col_offsets,
+                                  (void**)&row_inds, (void**)&values,
+                                  &col_offsets_type, &row_inds_type, &base_idx,
+                                  &data_type));
+    CHECK_CUDA(cudaFree(col_offsets));
+    CHECK_CUDA(cudaFree(row_inds));
+    CHECK_CUDA(cudaFree(values));
+    CHECK_CUSPARSE(cusparseDestroySpMat(M));
+  } else if (format == CUSPARSE_FORMAT_CSR) {
+    int64_t rows, cols, nnz;
+    int64_t *row_offsets, *col_inds;
+    float* values;
+    cusparseIndexType_t row_offsets_type, col_inds_type;
+    cusparseIndexBase_t base_idx;
+    cudaDataType_t data_type;
+    CHECK_CUSPARSE(cusparseCsrGet(M, &rows, &cols, &nnz, (void**)&row_offsets,
+                                  (void**)&col_inds, (void**)&values,
+                                  &row_offsets_type, &col_inds_type, &base_idx,
+                                  &data_type));
+    CHECK_CUDA(cudaFree(row_offsets));
+    CHECK_CUDA(cudaFree(col_inds));
+    CHECK_CUDA(cudaFree(values));
+    CHECK_CUSPARSE(cusparseDestroySpMat(M));
+  } else {
+    assert(false && "Unrecognized sparse mat format!");
+  }
+
+  return EXIT_SUCCESS;
 }
 
 }  // namespace cpop
