@@ -33,9 +33,9 @@ int extract_kernel_tiles(float** files, slate::Matrix<float>* K, int col);
  * Generates kernel matrix K
  *
  * @param PT transposed points matrix
- * @return the transposed dense slate matrix.
+ * @return the transposed dense slate matrix on the device
  */
-cusparseDnMatDescr_t compute_kernel_matrix(slate::Matrix<float>& PT);
+float* compute_kernel_matrix(slate::Matrix<float>& PT);
 
 }  // namespace cpop
 

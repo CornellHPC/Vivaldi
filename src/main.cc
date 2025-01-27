@@ -8,10 +8,8 @@
 #include "cusparse.h"
 #include "mpi.h"
 
-#include "cpop/compute_c.hh"
+#include "cpop/cluster.hh"
 #include "cpop/compute_kernel.hh"
-#include "cpop/compute_sparse.hh"
-#include "cpop/cusparse_helpers.hh"
 #include "cpop/utils.hh"
 
 using namespace cpop;
@@ -57,38 +55,40 @@ int main(int argc, char* argv[]) {
   /** START THE TIMER (after dataset IO) */
   auto start = hrc::now();
 
-  /** COMPUTE K */
-  auto k_start = hrc::now();
-  auto K_loc = compute_kernel_matrix(PT);
-  PT.releaseWorkspace();
-  auto k_elapsed = get_time_elapsed(k_start);
-  // print(K_loc, rank);
-
-  /** INITIALIZE V */
-  auto vi_start = hrc::now();
-  cusparseSpMatDescr_t gV;
-  cusparseSpMatDescr_t lV;
   int t = rank == size - 1 ? m / size + m % size : m / size;
   int* t_sizes = (int*)calloc(size, sizeof(int));
   for (int i = 0; i < size; ++i)
     t_sizes[i] = i == size - 1 ? m / size + m % size : m / size;
-  init_V(&gV, &lV, m, t, k, t_sizes, comm);
+
+  /** COMPUTE K */
+  auto k_start = hrc::now();
+  DnMat_t K;
+  K.initialize(m, t, compute_kernel_matrix(PT));
+  PT.releaseWorkspace();
+  auto k_elapsed = get_time_elapsed(k_start);
+
+  /** INITIALIZE V */
+  auto vi_start = hrc::now();
+  L_t ell;
+  ell.round_robin_initialize(m, t, k, t_sizes);
+  V_t V;
+  V.initialize(m, t, k);
+  reinit_V(V, ell);
   auto vi_elapsed = get_time_elapsed(vi_start);
 
   /** Allocate variables for K-means loop */
-  cusparseDnMatDescr_t ET;
-  init_ET(gV, K_loc, &ET);
-  // TODO: assert that t equals the width of ET and K_loc
-  cusparseDnVecDescr_t z, c;
-  init_z(t, &z);
-  init_c(k, &c);
+  DnMat_t E;
+  E.initialize(k, t);
+  DnVec_t z, c;
+  z.initialize(t);
+  c.initialize(k);
 
   /** K MEANS CLUSTERING LOOP */
   int niter = 1;
   for (int i = 0; i < niter; ++i) {
-    spmm(handle, gV, K_loc, ET);  // SoMM: ET = VK using global V
-    compute_z(lV, ET, z);         // Calculate z from the mask of local V on ET
-    spmv(handle, lV, z, c);       // SpMV: c = Vz using local V
+    spmm(handle, V, K, E);  // SpMM: ET = VK using global V
+    compute_z(V, E, z);     // Calculate z from the mask of local V on ET
+    spmv(handle, V, z, c);  // SpMV: c = Vz using local V
   }
 
   /** PRINT TIMES */
@@ -99,12 +99,13 @@ int main(int argc, char* argv[]) {
   }
 
   /** DESTROY */
-  destroy(K_loc);
-  destroy(gV);
-  destroy(lV);
-  destroy(ET);
-  destroy(z);
-  destroy(c);
+  K.destroy();
+  ell.destroy();
+  V.destroy();
+  E.destroy();
+  z.destroy();
+  c.destroy();
+  free(t_sizes);
   cusparseDestroy(handle);
 
   /** EXIT */

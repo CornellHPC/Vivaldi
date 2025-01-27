@@ -63,7 +63,7 @@ int extract_kernel_tiles(float** tiles, slate::Matrix<float>& K, int col) {
   return elems;
 }
 
-cusparseDnMatDescr_t compute_kernel_matrix(slate::Matrix<float>& PT) {
+float* compute_kernel_matrix(slate::Matrix<float>& PT) {
   int rank, size;
   MPI_Comm_rank(PT.mpiComm(), &rank);
   MPI_Comm_size(PT.mpiComm(), &size);
@@ -176,11 +176,7 @@ cusparseDnMatDescr_t compute_kernel_matrix(slate::Matrix<float>& PT) {
   }
 
   // Create cuSPARSE dense matrix descriptors
-  cusparseDnMatDescr_t K_loc;
-  cusparseCreateDnMat(&K_loc, rows, cols, cols, values, CUDA_R_32F,
-                      CUSPARSE_ORDER_ROW);
-
-  return K_loc;
+  return values;
 }
 
 }  // namespace cpop
