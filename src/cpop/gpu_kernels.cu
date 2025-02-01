@@ -1,8 +1,8 @@
-#include "gpu_kernels.cuh"
-
 #include <float.h>
 #include <stdio.h>
 #include <cassert>
+
+#include "gpu_kernels.cuh"
 
 #define gpuErrchk(ans) \
   { gpuAssert((ans), __FILE__, __LINE__); }
@@ -44,6 +44,22 @@ __global__ void z_vector_kernel(int64_t t, float* z, int64_t* assignments,
     // we fetch the element at (assignments[i], i) from ET which is basically as
     // mask of ET using V + flattening column-wise
     z[i] = ET[t * assignments[i] + i];
+  }
+}
+
+__global__ void argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
+                              cpop::Argmin* a) {
+  int64_t size = k * t;
+  for (int64_t i = threadIdx.x; i < size; i += blockDim.x) {
+    // Compute 2D coordinate for this thread
+    int64_t m = i / k;
+    int64_t n = i % k;
+
+    // Compute the distance and update argmin
+    float d = dc[m] - 2 * dE[i];
+    if (m == 0 || d < a[n].mn) {
+      a[n] = cpop::Argmin{d, m};
+    }
   }
 }
 
@@ -107,6 +123,14 @@ void launch_z_kernel(int64_t t, float* z, int64_t* assignments, float* ET) {
   int nblocks = std::min(int64_t(1048576), (t + nthreads - 1) / nthreads);
 
   z_vector_kernel<<<nblocks, nthreads>>>(t, z, assignments, ET);
+}
+
+void launch_argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
+                          Argmin* a) {
+  // TODO: Support multiple thread blocks
+  int nthreads = 1024;
+  int nblocks = 1;
+  argmin_kernel<<<nblocks, nthreads>>>(k, t, dE, dc, a);
 }
 
 void launch_d_kernel(int64_t k, int64_t t, float* dE, float* dc, int64_t* a) {
