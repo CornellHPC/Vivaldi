@@ -1,5 +1,6 @@
 #include <float.h>
 #include <stdio.h>
+#include <algorithm>
 #include <cassert>
 
 #include "gpu_kernels.cuh"
@@ -52,8 +53,8 @@ __global__ void argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
   int64_t size = k * t;
   for (int64_t i = threadIdx.x; i < size; i += blockDim.x) {
     // Compute 2D coordinate for this thread
-    int64_t m = i / k;
-    int64_t n = i % k;
+    int64_t m = i / t;
+    int64_t n = i % t;
 
     // Compute the distance and update argmin
     float d = dc[m] - 2 * dE[i];
@@ -128,7 +129,7 @@ void launch_z_kernel(int64_t t, float* z, int64_t* assignments, float* ET) {
 void launch_argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
                           Argmin* a) {
   // TODO: Support multiple thread blocks
-  int nthreads = 1024;
+  int nthreads = std::min(t, int64_t(1024));
   int nblocks = 1;
   argmin_kernel<<<nblocks, nthreads>>>(k, t, dE, dc, a);
 }

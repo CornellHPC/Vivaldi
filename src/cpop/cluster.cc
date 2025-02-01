@@ -1,4 +1,5 @@
 #include <cassert>
+#include <cstring>
 #include <iostream>
 #include "cuda_runtime.h"
 #include "mpi.h"
@@ -32,6 +33,27 @@ int L_t::round_robin_initialize(int64_t m, int64_t t, int64_t k, int* t_sizes) {
     ll[cluster]++;
   }
 
+  return EXIT_SUCCESS;
+}
+
+int L_t::d_initialize(DnMat_t E, DnVec_t c) {
+  Argmin* da;
+  CHECK_CUDA(cudaMalloc(&da, E.w_ * sizeof(Argmin)));
+  launch_argmin_kernel(E.h_, E.w_, E.dM, c.dz, da);
+
+  Argmin* a = (Argmin*)malloc(E.w_ * sizeof(Argmin));
+  CHECK_CUDA(cudaMemcpy(a, da, E.w_ * sizeof(Argmin), cudaMemcpyDeviceToHost));
+
+  // Update local assignments
+  memset(ll, 0, k_ * sizeof(int64_t));
+  for (int i = 0; i < E.w_; ++i) {
+    Argmin x = a[i];
+    la[i] = x.mni;
+    ll[x.mni]++;
+  }
+
+  free(a);
+  CHECK_CUDA(cudaFree(da));
   return EXIT_SUCCESS;
 }
 
@@ -218,9 +240,7 @@ int DnVec_t::destroy() {
 }
 
 int reinit_V(V_t& V, L_t& ell) {
-  int n_procs;
-  MPI_Comm_size(MPI_COMM_WORLD, &n_procs);
-
+  V.reset_local();
   ell.gather_assignments();
   ell.gather_clusters();
 

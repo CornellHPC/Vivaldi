@@ -6,6 +6,62 @@
 
 namespace cpop {
 
+struct DnMat_t {
+  float* dM;
+  cusparseDnMatDescr_t M;
+
+  int h_, w_;
+
+  /**
+   * @brief Constructor
+   * 
+   * @param h The height
+   * @param w The width
+   * @return int 
+   */
+  int initialize(int64_t h, int64_t w);
+
+  /**
+   * @brief Constructor
+   * 
+   * @param h The height
+   * @param w The width
+   * @param dM_ The on-device array of size h * w
+   * @return int 
+   */
+  int initialize(int64_t h, int64_t w, float* dM_);
+
+  int print();
+
+  int destroy();
+};
+
+struct DnVec_t {
+  float* dz;
+  cusparseDnVecDescr_t z;
+  int64_t size;
+
+  /**
+   * @brief Constructor
+   * 
+   * @param t The size
+   * @return int 
+   */
+  int initialize(int t);
+
+  /**
+   * @brief Sums dense vector across ranks
+   *
+   * @param comm The MPI communicator
+   * @return int
+   */
+  int sum(MPI_Comm comm);
+
+  int print();
+
+  int destroy();
+};
+
 /** Struct to hold cluster sizes (l) and point assignments (a) */
 struct L_t {
   // All variables here are local (e.g. on the CPU, not GPU)
@@ -30,6 +86,15 @@ struct L_t {
    * @return int 
    */
   int round_robin_initialize(int64_t m, int64_t t, int64_t k, int* t_sizes);
+
+  /**
+   * @brief Initializes assignments based on E and c
+   *
+   * @param E The local E matrix
+   * @param c The global c norm vector
+   * @return int
+   */
+  int d_initialize(DnMat_t E, DnVec_t c);
 
   /**
    * @brief MPI Allreduce on local clusters (populates ga using la)
@@ -86,62 +151,6 @@ struct V_t {
    * @return int 
    */
   int cp_local();
-
-  int destroy();
-};
-
-struct DnMat_t {
-  float* dM;
-  cusparseDnMatDescr_t M;
-
-  int h_, w_;
-
-  /**
-   * @brief Constructor
-   * 
-   * @param h The height
-   * @param w The width
-   * @return int 
-   */
-  int initialize(int64_t h, int64_t w);
-
-  /**
-   * @brief Constructor
-   * 
-   * @param h The height
-   * @param w The width
-   * @param dM_ The on-device array of size h * w
-   * @return int 
-   */
-  int initialize(int64_t h, int64_t w, float* dM_);
-
-  int print();
-
-  int destroy();
-};
-
-struct DnVec_t {
-  float* dz;
-  cusparseDnVecDescr_t z;
-  int64_t size;
-
-  /**
-   * @brief Constructor
-   * 
-   * @param t The size
-   * @return int 
-   */
-  int initialize(int t);
-
-  /**
-   * @brief Sums dense vector across ranks
-   *
-   * @param comm The MPI communicator
-   * @return int
-   */
-  int sum(MPI_Comm comm);
-
-  int print();
 
   int destroy();
 };

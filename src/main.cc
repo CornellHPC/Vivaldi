@@ -1,7 +1,6 @@
 #include <cassert>
 #include <chrono>
 #include <cmath>
-#include <cstdint>
 #include <cstdlib>
 #include <iostream>
 
@@ -18,29 +17,18 @@ using hrc = std::chrono::high_resolution_clock;
 using ms = std::chrono::milliseconds;
 
 /**
- * Runs the distributed popcorn kernel k-means clustering algorithm.
- * Usage: srun cpop [path] [m] [n] [k]
+ * The distributed popcorn kernel k-means clustering algorithm.
  *
  * @param path path to the dataset
  * @param m number of samples in the dataset
  * @param n number of features
  * @param k number of clusters to form
  */
-int main(int argc, char* argv[]) {
-  /** INITIALIZE MPI */
-  MPI_Init(&argc, &argv);
-  MPI_Comm comm = MPI_COMM_WORLD;
-
+int cluster(char* path, int m, int n, int k, MPI_Comm comm) {
+  /** GET MPI INFO */
   int rank, size;
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
-
-  /** PARSE ARGUMENTS */
-  assert(argc == 5 && "Invalid args. Must provide params [path] [m] [n] [k]");
-  char* fpath = argv[1];
-  int m = std::atoi(argv[2]);
-  int n = std::atoi(argv[3]);
-  int k = std::atoi(argv[4]);
 
   /** INITIALIZE GPU */
   wake_gpus(rank);
@@ -49,7 +37,7 @@ int main(int argc, char* argv[]) {
   cusparseCreate(&handle);
 
   /** LOAD DATA */
-  auto PT = load_matrix(fpath, m, n, comm);
+  auto PT = load_matrix(path, m, n, comm);
   // slate::print("PT", PT);
 
   /** START THE TIMER (after dataset IO) */
@@ -76,7 +64,7 @@ int main(int argc, char* argv[]) {
   reinit_V(V, ell);
   auto vi_elapsed = get_time_elapsed(vi_start);
 
-  /** Allocate variables for K-means loop */
+  /** ALLOCATE VARIABLES */
   DnMat_t E;
   E.initialize(k, t);
   DnVec_t z, c;
@@ -86,10 +74,12 @@ int main(int argc, char* argv[]) {
   /** K MEANS CLUSTERING LOOP */
   int niter = 1;
   for (int i = 0; i < niter; ++i) {
-    spmm(handle, V, K, E);  // SpMM: ET = VK using global V
-    compute_z(V, E, z);     // Calculate z from the mask of local V on ET
-    spmv(handle, V, z, c);  // SpMV: c = Vz using local V
-    c.sum(comm);            // Calculate global c by summing
+    spmm(handle, V, K, E);   // SpMM: ET = VK using global V
+    compute_z(V, E, z);      // Calculate z from the mask of local V on ET
+    spmv(handle, V, z, c);   // SpMV: c = Vz using local V
+    c.sum(comm);             // Calculate global c by summing across ranks
+    ell.d_initialize(E, c);  // Calculate updated local cluster assignments
+    reinit_V(V, ell);        // Reinitialize V with updated assignments
   }
 
   /** PRINT TIMES */
@@ -108,6 +98,33 @@ int main(int argc, char* argv[]) {
   c.destroy();
   free(t_sizes);
   cusparseDestroy(handle);
+
+  return EXIT_SUCCESS;
+}
+
+/**
+ * Runs the distributed popcorn kernel k-means clustering algorithm.
+ * Usage: srun cpop [path] [m] [n] [k]
+ *
+ * @param path path to the dataset
+ * @param m number of samples in the dataset
+ * @param n number of features
+ * @param k number of clusters to form
+ */
+int main(int argc, char* argv[]) {
+  /** INITIALIZE MPI */
+  MPI_Init(&argc, &argv);
+  MPI_Comm comm = MPI_COMM_WORLD;
+
+  /** PARSE ARGUMENTS */
+  assert(argc == 5 && "Invalid args. Must provide params [path] [m] [n] [k]");
+  char* path = argv[1];
+  int m = std::atoi(argv[2]);
+  int n = std::atoi(argv[3]);
+  int k = std::atoi(argv[4]);
+
+  /** CLUSTER POINTS */
+  cluster(path, m, n, k, comm);
 
   /** EXIT */
   MPI_Finalize();
