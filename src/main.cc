@@ -72,7 +72,7 @@ int cluster(char* path, int m, int n, int k, MPI_Comm comm) {
   c.initialize(k);
 
   /** K MEANS CLUSTERING LOOP */
-  int niter = 1;
+  int niter = 100;
   for (int i = 0; i < niter; ++i) {
     spmm(handle, V, K, E);   // SpMM: ET = VK using global V
     compute_z(V, E, z);      // Calculate z from the mask of local V on ET
