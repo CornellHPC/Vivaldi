@@ -115,6 +115,8 @@ struct DnMat_t {
    */
   int initialize(int64_t h, int64_t w, float* dM_);
 
+  int print();
+
   int destroy();
 };
 
@@ -130,6 +132,8 @@ struct DnVec_t {
    * @return int 
    */
   int initialize(int t);
+
+  int print();
 
   int destroy();
 };

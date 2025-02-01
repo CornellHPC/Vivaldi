@@ -156,6 +156,22 @@ int DnMat_t::initialize(int64_t h, int64_t w, float* dM_) {
   return EXIT_SUCCESS;
 }
 
+int DnMat_t::print() {
+  float* m = (float*)malloc(h_ * w_ * sizeof(float));
+  CHECK_CUDA(
+      cudaMemcpy(m, dM, h_ * w_ * sizeof(float), cudaMemcpyDeviceToHost));
+
+  for (int i = 0; i < h_; ++i) {
+    for (int j = 0; j < w_; ++j) {
+      std::cout << m[i * w_ + j] << " ";
+    }
+    std::cout << std::endl;
+  }
+
+  free(m);
+  return EXIT_SUCCESS;
+}
+
 int DnMat_t::destroy() {
   CHECK_CUDA(cudaFree(dM));
   CHECK_CUSPARSE(cusparseDestroyDnMat(M));
@@ -166,6 +182,19 @@ int DnVec_t::initialize(int t) {
   CHECK_CUDA(cudaMalloc(&dz, t * sizeof(float)));
   CHECK_CUSPARSE(cusparseCreateDnVec(&z, t, dz, CUDA_R_32F));
   size = t;
+  return EXIT_SUCCESS;
+}
+
+int DnVec_t::print() {
+  float* v = (float*)malloc(size * sizeof(float));
+  CHECK_CUDA(cudaMemcpy(v, dz, size * sizeof(float), cudaMemcpyDeviceToHost));
+
+  for (int i = 0; i < size; ++i) {
+    std::cout << v[i] << " ";
+  }
+  std::cout << std::endl;
+
+  free(v);
   return EXIT_SUCCESS;
 }
 
