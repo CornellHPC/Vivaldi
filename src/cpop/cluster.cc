@@ -185,6 +185,19 @@ int DnVec_t::initialize(int t) {
   return EXIT_SUCCESS;
 }
 
+int DnVec_t::sum(MPI_Comm comm) {
+  float* v = (float*)malloc(size * sizeof(float));
+  float* o = (float*)malloc(size * sizeof(float));
+  CHECK_CUDA(cudaMemcpy(v, dz, size * sizeof(float), cudaMemcpyDeviceToHost));
+
+  MPI_Allreduce(v, o, size, MPI_FLOAT, MPI_SUM, comm);
+  CHECK_CUDA(cudaMemcpy(dz, o, size * sizeof(float), cudaMemcpyHostToDevice));
+
+  free(v);
+  free(o);
+  return EXIT_SUCCESS;
+}
+
 int DnVec_t::print() {
   float* v = (float*)malloc(size * sizeof(float));
   CHECK_CUDA(cudaMemcpy(v, dz, size * sizeof(float), cudaMemcpyDeviceToHost));

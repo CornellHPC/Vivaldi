@@ -133,6 +133,14 @@ struct DnVec_t {
    */
   int initialize(int t);
 
+  /**
+   * @brief Sums dense vector across ranks
+   *
+   * @param comm The MPI communicator
+   * @return int
+   */
+  int sum(MPI_Comm comm);
+
   int print();
 
   int destroy();

@@ -89,6 +89,7 @@ int main(int argc, char* argv[]) {
     spmm(handle, V, K, E);  // SpMM: ET = VK using global V
     compute_z(V, E, z);     // Calculate z from the mask of local V on ET
     spmv(handle, V, z, c);  // SpMV: c = Vz using local V
+    c.sum(comm);            // Calculate global c by summing
   }
 
   /** PRINT TIMES */
