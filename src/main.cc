@@ -82,6 +82,10 @@ int cluster(char* path, int m, int n, int k, MPI_Comm comm) {
     reinit_V(V, ell);        // Reinitialize V with updated assignments
   }
 
+  /** SAVE ASSIGNMENTS */
+  std::string path_out = std::string(path) + "_out";
+  ell.save(path_out.c_str(), comm);
+
   /** PRINT TIMES */
   MPI_Barrier(comm);
   if (rank == 0) {

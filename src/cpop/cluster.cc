@@ -1,8 +1,10 @@
 #include <cassert>
 #include <cstring>
 #include <iostream>
+
 #include "cuda_runtime.h"
 #include "mpi.h"
+#include "mpio.h"
 
 #include "cluster.hh"
 #include "gpu_kernels.cuh"
@@ -71,6 +73,31 @@ int L_t::gather_assignments() {
   memset(ga, 0, m_ * sizeof(int64_t));
   MPI_Allgatherv(la, t_, MPI_INT64_T, ga, t_sizes_, displs, MPI_INT64_T,
                  MPI_COMM_WORLD);
+  return EXIT_SUCCESS;
+}
+
+int L_t::save(const char* path, MPI_Comm comm) {
+  MPI_File fh;
+  MPI_File_open(comm, path, MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL,
+                &fh);
+
+  // Compute offset for rank
+  int offset = 0;
+  for (int i = 0; i < rank; ++i) {
+    offset += t_sizes_[i];
+  }
+
+  std::cout << "Rank " << rank << " at " << offset * sizeof(int64_t) << ": ";
+  for (int i = 0; i < t_sizes_[rank]; ++i) {
+    std::cout << la[i] << " ";
+  }
+  std::cout << std::endl;
+
+  // Write the data to disk
+  MPI_File_write_at(fh, offset * sizeof(int64_t), la, t_sizes_[rank],
+                    MPI_INT64_T, MPI_STATUS_IGNORE);
+
+  MPI_File_close(&fh);
   return EXIT_SUCCESS;
 }
 

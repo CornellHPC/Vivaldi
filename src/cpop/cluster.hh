@@ -110,6 +110,15 @@ struct L_t {
    */
   int gather_assignments();
 
+  /**
+   * @brief Saves the cluster assignments to a file
+   *
+   * @param path The path to the file
+   * @param comm The MPI communicator used to distribute assignments
+   * @return int
+   */
+  int save(const char* path, MPI_Comm comm);
+
   int destroy();
 };
 
