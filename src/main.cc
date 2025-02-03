@@ -53,6 +53,7 @@ int cluster(char* path, int m, int n, int k, MPI_Comm comm) {
   DnMat_t K;
   K.initialize(m, t, compute_kernel_matrix(PT));
   PT.releaseWorkspace();
+  MPI_Barrier(comm);
   auto k_elapsed = get_time_elapsed(k_start);
 
   /** INITIALIZE V */
@@ -62,6 +63,7 @@ int cluster(char* path, int m, int n, int k, MPI_Comm comm) {
   V_t V;
   V.initialize(m, t, k);
   reinit_V(V, ell);
+  MPI_Barrier(comm);
   auto vi_elapsed = get_time_elapsed(vi_start);
 
   /** ALLOCATE VARIABLES */
