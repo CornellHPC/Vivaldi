@@ -71,27 +71,49 @@ int cluster(char* path, int m, int n, int k, MPI_Comm comm) {
   z.initialize(t);
   c.initialize(k);
 
+  /** CREATE BENCHMARK VARIABLES */
+  int64_t e_elapsed = 0;
+  int64_t z_elapsed = 0;
+  int64_t c_elapsed = 0;
+  int64_t vr_elapsed = 0;
+
   /** K MEANS CLUSTERING LOOP */
   int niter = 100;
   for (int i = 0; i < niter; ++i) {
-    spmm(handle, V, K, E);   // SpMM: ET = VK using global V
-    compute_z(V, E, z);      // Calculate z from the mask of local V on ET
-    spmv(handle, V, z, c);   // SpMV: c = Vz using local V
-    c.sum(comm);             // Calculate global c by summing across ranks
+    auto e_start = hrc::now();
+    spmm(handle, V, K, E);  // SpMM: ET = VK using global V
+    e_elapsed += get_time_elapsed(e_start);
+
+    auto z_start = hrc::now();
+    compute_z(V, E, z);  // Calculate z from the mask of local V on ET
+    z_elapsed += get_time_elapsed(z_start);
+
+    auto c_start = hrc::now();
+    spmv(handle, V, z, c);  // SpMV: c = Vz using local V
+    c.sum(comm);            // Calculate global c by summing across ranks
+    c_elapsed += get_time_elapsed(c_start);
+
+    auto vr_start = hrc::now();
     ell.d_initialize(E, c);  // Calculate updated local cluster assignments
     reinit_V(V, ell);        // Reinitialize V with updated assignments
+    vr_elapsed += get_time_elapsed(vr_start);
+  }
+
+  /** PRINT TIMES */
+  auto elapsed = get_time_elapsed(start);
+  if (rank == 0) {
+    std::cout << elapsed << std::endl;
+    std::cout << k_elapsed << std::endl;
+    std::cout << vi_elapsed << std::endl;
+    std::cout << e_elapsed << std::endl;
+    std::cout << z_elapsed << std::endl;
+    std::cout << c_elapsed << std::endl;
+    std::cout << vr_elapsed << std::endl;
   }
 
   /** SAVE ASSIGNMENTS */
   std::string path_out = std::string(path) + "_out";
   ell.save(path_out.c_str(), comm);
-
-  /** PRINT TIMES */
-  MPI_Barrier(comm);
-  if (rank == 0) {
-    std::cout << "Time K: " << k_elapsed << "ms" << std::endl;
-    std::cout << "Time Init V: " << vi_elapsed << "ms" << std::endl;
-  }
 
   /** DESTROY */
   K.destroy();
