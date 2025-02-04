@@ -38,7 +38,7 @@ int L_t::round_robin_initialize(int64_t m, int64_t t, int64_t k, int* t_sizes) {
   return EXIT_SUCCESS;
 }
 
-int L_t::d_initialize(DnMat_t E, DnVec_t c) {
+int L_t::d_initialize(DnMat_t& E, DnVec_t& c) {
   Argmin* da;
   CHECK_CUDA(cudaMalloc(&da, E.w_ * sizeof(Argmin)));
   launch_argmin_kernel(E.h_, E.w_, E.dM, c.dz, da);
@@ -95,12 +95,11 @@ int L_t::save(const char* path, MPI_Comm comm) {
   return EXIT_SUCCESS;
 }
 
-int L_t::destroy() {
+L_t::~L_t() {
   free(ga);
   free(la);
   free(gl);
   free(ll);
-  return EXIT_SUCCESS;
 }
 
 int V_t::initialize(int64_t m, int64_t t, int64_t k) {
@@ -159,15 +158,15 @@ int V_t::cp_local() {
   return EXIT_SUCCESS;
 }
 
-int V_t::destroy() {
-  CHECK_CUDA(cudaFree(csr_row_offsets));
-  CHECK_CUDA(cudaFree(csr_col_inds));
-  CHECK_CUDA(cudaFree(csc_col_offsets));
-  CHECK_CUDA(cudaFree(csc_row_inds));
-  CHECK_CUDA(cudaFree(dgV));
-  CHECK_CUDA(cudaFree(dlV));
-  CHECK_CUSPARSE(cusparseDestroySpMat(gV));
-  CHECK_CUSPARSE(cusparseDestroySpMat(lV));
+V_t::~V_t() {
+  cudaFree(csr_row_offsets);
+  cudaFree(csr_col_inds);
+  cudaFree(csc_col_offsets);
+  cudaFree(csc_row_inds);
+  cudaFree(dgV);
+  cudaFree(dlV);
+  cusparseDestroySpMat(gV);
+  cusparseDestroySpMat(lV);
 
   free(local_csr_row_offsets);
   free(local_csr_col_inds);
@@ -176,7 +175,6 @@ int V_t::destroy() {
   free(local_csc_row_inds);
   free(local_lV);
   free(cluster_loc_ptrs);
-  return EXIT_SUCCESS;
 }
 
 int DnMat_t::initialize(int64_t h, int64_t w) {
@@ -215,10 +213,9 @@ int DnMat_t::print() {
   return EXIT_SUCCESS;
 }
 
-int DnMat_t::destroy() {
-  CHECK_CUDA(cudaFree(dM));
-  CHECK_CUSPARSE(cusparseDestroyDnMat(M));
-  return EXIT_SUCCESS;
+DnMat_t::~DnMat_t() {
+  cudaFree(dM);
+  cusparseDestroyDnMat(M);
 }
 
 int DnVec_t::initialize(int t) {
@@ -254,10 +251,9 @@ int DnVec_t::print() {
   return EXIT_SUCCESS;
 }
 
-int DnVec_t::destroy() {
-  CHECK_CUDA(cudaFree(dz));
-  CHECK_CUSPARSE(cusparseDestroyDnVec(z));
-  return EXIT_SUCCESS;
+DnVec_t::~DnVec_t() {
+  cudaFree(dz);
+  cusparseDestroyDnVec(z);
 }
 
 int reinit_V(V_t& V, L_t& ell) {

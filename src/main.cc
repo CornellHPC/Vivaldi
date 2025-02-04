@@ -32,7 +32,7 @@ int cluster(char* path, int m, int n, int k, MPI_Comm comm) {
 
   /** INITIALIZE GPU */
   wake_gpus(rank);
-  slate::gpu_aware_mpi(true);
+  slate::gpu_aware_mpi(false);
   cusparseHandle_t handle;
   cusparseCreate(&handle);
 
@@ -117,16 +117,9 @@ int cluster(char* path, int m, int n, int k, MPI_Comm comm) {
   std::string path_out = std::string(path) + "_out";
   ell.save(path_out.c_str(), comm);
 
-  /** DESTROY */
-  K.destroy();
-  ell.destroy();
-  V.destroy();
-  E.destroy();
-  z.destroy();
-  c.destroy();
+  /** EXIT */
   free(t_sizes);
   cusparseDestroy(handle);
-
   return EXIT_SUCCESS;
 }
 

@@ -33,7 +33,7 @@ struct DnMat_t {
 
   int print();
 
-  int destroy();
+  ~DnMat_t();
 };
 
 struct DnVec_t {
@@ -59,7 +59,7 @@ struct DnVec_t {
 
   int print();
 
-  int destroy();
+  ~DnVec_t();
 };
 
 /** Struct to hold cluster sizes (l) and point assignments (a) */
@@ -94,7 +94,7 @@ struct L_t {
    * @param c The global c norm vector
    * @return int
    */
-  int d_initialize(DnMat_t E, DnVec_t c);
+  int d_initialize(DnMat_t& E, DnVec_t& c);
 
   /**
    * @brief MPI Allreduce on local clusters (populates ga using la)
@@ -119,7 +119,7 @@ struct L_t {
    */
   int save(const char* path, MPI_Comm comm);
 
-  int destroy();
+  ~L_t();
 };
 
 struct V_t {
@@ -161,7 +161,7 @@ struct V_t {
    */
   int cp_local();
 
-  int destroy();
+  ~V_t();
 };
 
 /**
