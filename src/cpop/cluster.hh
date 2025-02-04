@@ -72,9 +72,8 @@ struct L_t {
    * @param t The local number of points
    * @param k The number of clusters
    * @param t_sizes n_procs-size array of tile widths for each process
-   * @return int 
    */
-  int round_robin_initialize(int64_t m, int64_t t, int64_t k, int* t_sizes);
+  L_t(int64_t m, int64_t t, int64_t k, int* t_sizes);
 
   /**
    * @brief MPI Allreduce on local clusters (populates ga using la)

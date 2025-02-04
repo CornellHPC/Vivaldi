@@ -57,8 +57,7 @@ int cluster(char* path, int m, int n, int k, MPI_Comm comm) {
 
   /** INITIALIZE V */
   auto vi_start = hrc::now();
-  L_t ell;
-  ell.round_robin_initialize(m, t, k, t_sizes);
+  L_t ell(m, t, k, t_sizes);
   V_t V;
   V.initialize(m, t, k);
   reinit_V(V, ell);

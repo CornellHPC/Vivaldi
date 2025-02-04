@@ -12,7 +12,7 @@
 
 namespace cpop {
 
-int L_t::round_robin_initialize(int64_t m, int64_t t, int64_t k, int* t_sizes) {
+L_t::L_t(int64_t m, int64_t t, int64_t k, int* t_sizes) {
   ga = (int64_t*)calloc(m, sizeof(int64_t));
   la = (int64_t*)calloc(t, sizeof(int64_t));
   gl = (int64_t*)calloc(k, sizeof(int64_t));
@@ -34,8 +34,6 @@ int L_t::round_robin_initialize(int64_t m, int64_t t, int64_t k, int* t_sizes) {
     la[i] = cluster;
     ll[cluster]++;
   }
-
-  return EXIT_SUCCESS;
 }
 
 int L_t::gather_clusters() {
