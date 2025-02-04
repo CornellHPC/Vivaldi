@@ -38,27 +38,6 @@ int L_t::round_robin_initialize(int64_t m, int64_t t, int64_t k, int* t_sizes) {
   return EXIT_SUCCESS;
 }
 
-int L_t::d_initialize(DnMat_t& E, DnVec_t& c) {
-  Argmin* da;
-  CHECK_CUDA(cudaMalloc(&da, E.w_ * sizeof(Argmin)));
-  launch_argmin_kernel(E.h_, E.w_, E.dM, c.dz, da);
-
-  Argmin* a = (Argmin*)malloc(E.w_ * sizeof(Argmin));
-  CHECK_CUDA(cudaMemcpy(a, da, E.w_ * sizeof(Argmin), cudaMemcpyDeviceToHost));
-
-  // Update local assignments
-  memset(ll, 0, k_ * sizeof(int64_t));
-  for (int i = 0; i < E.w_; ++i) {
-    Argmin x = a[i];
-    la[i] = x.mni;
-    ll[x.mni]++;
-  }
-
-  free(a);
-  CHECK_CUDA(cudaFree(da));
-  return EXIT_SUCCESS;
-}
-
 int L_t::gather_clusters() {
   memset(gl, 0, k_ * sizeof(int64_t));
   MPI_Allreduce(ll, gl, k_, MPI_INT64_T, MPI_SUM, MPI_COMM_WORLD);
@@ -225,19 +204,6 @@ int DnVec_t::initialize(int t) {
   return EXIT_SUCCESS;
 }
 
-int DnVec_t::sum(MPI_Comm comm) {
-  float* v = (float*)malloc(size * sizeof(float));
-  float* o = (float*)malloc(size * sizeof(float));
-  CHECK_CUDA(cudaMemcpy(v, dz, size * sizeof(float), cudaMemcpyDeviceToHost));
-
-  MPI_Allreduce(v, o, size, MPI_FLOAT, MPI_SUM, comm);
-  CHECK_CUDA(cudaMemcpy(dz, o, size * sizeof(float), cudaMemcpyHostToDevice));
-
-  free(v);
-  free(o);
-  return EXIT_SUCCESS;
-}
-
 int DnVec_t::print() {
   float* v = (float*)malloc(size * sizeof(float));
   CHECK_CUDA(cudaMemcpy(v, dz, size * sizeof(float), cudaMemcpyDeviceToHost));
@@ -254,31 +220,6 @@ int DnVec_t::print() {
 DnVec_t::~DnVec_t() {
   cudaFree(dz);
   cusparseDestroyDnVec(z);
-}
-
-int reinit_V(V_t& V, L_t& ell) {
-  V.reset_local();
-  ell.gather_assignments();
-  ell.gather_clusters();
-
-  // TODO: convert to kernel for speediness (also reduces number of cudaMemcpys)
-  for (int i = 0; i < V.k_; ++i)
-    V.local_csr_row_offsets[i + 1] = V.local_csr_row_offsets[i] + ell.gl[i];
-  for (int64_t i = 0; i < V.m_; ++i) {
-    int cluster = ell.ga[i];  // get the cluster for this point
-    int offset =
-        V.local_csr_row_offsets[cluster] + (V.cluster_loc_ptrs[cluster]++);
-    V.local_gV[offset] = 1.0f / ell.gl[cluster];
-    V.local_csr_col_inds[offset] = i;
-  }
-  std::memcpy(V.local_csc_row_inds, ell.la, V.t_ * sizeof(int64_t));
-  for (int i = 0; i < V.t_; ++i) {
-    V.local_csc_col_offsets[i + 1] =
-        i + 1;  // this works for CSC since 1 point per column
-    V.local_lV[i] = 1.0f / ell.gl[ell.la[i]];
-  }
-  V.cp_local();  // copies the local buffers to GPU
-  return EXIT_SUCCESS;
 }
 
 int spmm(cusparseHandle_t& handle, V_t& V, DnMat_t& K, DnMat_t& E) {
@@ -337,6 +278,67 @@ int spmv(cusparseHandle_t& handle, V_t& V, DnVec_t& z, DnVec_t& c) {
 
   // cleanup
   CHECK_CUDA(cudaFree(dBuffer));
+  return EXIT_SUCCESS;
+}
+
+int sum_vec(DnVec_t& c, MPI_Comm comm) {
+  float* v = (float*)malloc(c.size * sizeof(float));
+  float* o = (float*)malloc(c.size * sizeof(float));
+  CHECK_CUDA(
+      cudaMemcpy(v, c.dz, c.size * sizeof(float), cudaMemcpyDeviceToHost));
+
+  MPI_Allreduce(v, o, c.size, MPI_FLOAT, MPI_SUM, comm);
+  CHECK_CUDA(
+      cudaMemcpy(c.dz, o, c.size * sizeof(float), cudaMemcpyHostToDevice));
+
+  free(v);
+  free(o);
+  return EXIT_SUCCESS;
+}
+
+int reinit_ell(L_t& ell, DnMat_t& E, DnVec_t& c) {
+  Argmin* da;
+  CHECK_CUDA(cudaMalloc(&da, E.w_ * sizeof(Argmin)));
+  launch_argmin_kernel(E.h_, E.w_, E.dM, c.dz, da);
+
+  Argmin* a = (Argmin*)malloc(E.w_ * sizeof(Argmin));
+  CHECK_CUDA(cudaMemcpy(a, da, E.w_ * sizeof(Argmin), cudaMemcpyDeviceToHost));
+
+  // Update local assignments
+  memset(ell.ll, 0, ell.k_ * sizeof(int64_t));
+  for (int i = 0; i < E.w_; ++i) {
+    Argmin x = a[i];
+    ell.la[i] = x.mni;
+    ell.ll[x.mni]++;
+  }
+
+  free(a);
+  CHECK_CUDA(cudaFree(da));
+  return EXIT_SUCCESS;
+}
+
+int reinit_V(V_t& V, L_t& ell) {
+  V.reset_local();
+  ell.gather_assignments();
+  ell.gather_clusters();
+
+  // TODO: convert to kernel for speediness (also reduces number of cudaMemcpys)
+  for (int i = 0; i < V.k_; ++i)
+    V.local_csr_row_offsets[i + 1] = V.local_csr_row_offsets[i] + ell.gl[i];
+  for (int64_t i = 0; i < V.m_; ++i) {
+    int cluster = ell.ga[i];  // get the cluster for this point
+    int offset =
+        V.local_csr_row_offsets[cluster] + (V.cluster_loc_ptrs[cluster]++);
+    V.local_gV[offset] = 1.0f / ell.gl[cluster];
+    V.local_csr_col_inds[offset] = i;
+  }
+  std::memcpy(V.local_csc_row_inds, ell.la, V.t_ * sizeof(int64_t));
+  for (int i = 0; i < V.t_; ++i) {
+    V.local_csc_col_offsets[i + 1] =
+        i + 1;  // this works for CSC since 1 point per column
+    V.local_lV[i] = 1.0f / ell.gl[ell.la[i]];
+  }
+  V.cp_local();  // copies the local buffers to GPU
   return EXIT_SUCCESS;
 }
 

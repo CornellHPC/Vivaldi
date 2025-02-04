@@ -92,12 +92,12 @@ int cluster(char* path, int m, int n, int k, MPI_Comm comm) {
 
     auto c_start = hrc::now();
     spmv(handle, V, z, c);  // SpMV: c = Vz using local V
-    c.sum(comm);            // Calculate global c by summing across ranks
+    sum_vec(c, comm);       // Calculate global c by summing across ranks
     c_elapsed += get_time_elapsed(c_start);
 
     auto vr_start = hrc::now();
-    ell.d_initialize(E, c);  // Calculate updated local cluster assignments
-    reinit_V(V, ell);        // Reinitialize V with updated assignments
+    reinit_ell(ell, E, c);  // Calculate updated local cluster assignments
+    reinit_V(V, ell);       // Reinitialize V with updated assignments
     vr_elapsed += get_time_elapsed(vr_start);
   }
 

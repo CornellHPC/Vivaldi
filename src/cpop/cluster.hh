@@ -49,14 +49,6 @@ struct DnVec_t {
    */
   int initialize(int t);
 
-  /**
-   * @brief Sums dense vector across ranks
-   *
-   * @param comm The MPI communicator
-   * @return int
-   */
-  int sum(MPI_Comm comm);
-
   int print();
 
   ~DnVec_t();
@@ -86,15 +78,6 @@ struct L_t {
    * @return int 
    */
   int round_robin_initialize(int64_t m, int64_t t, int64_t k, int* t_sizes);
-
-  /**
-   * @brief Initializes assignments based on E and c
-   *
-   * @param E The local E matrix
-   * @param c The global c norm vector
-   * @return int
-   */
-  int d_initialize(DnMat_t& E, DnVec_t& c);
 
   /**
    * @brief MPI Allreduce on local clusters (populates ga using la)
@@ -165,15 +148,6 @@ struct V_t {
 };
 
 /**
- * @brief Reinitializes V based on the local assignments and cluster sizes
- * 
- * @param V The V matrix
- * @param ell The struct containing "la" (local assignments vector) and "ll" (local cluster sizes vector)
- * @return int 
- */
-int reinit_V(V_t& V, L_t& ell);
-
-/**
  * @brief Computes E by SpMM routine
  * 
  * @param handle The cuSPARSE handle
@@ -204,6 +178,33 @@ int compute_z(V_t& V, DnMat_t& E, DnVec_t& z);
  * @return int
  */
 int spmv(cusparseHandle_t& handle, V_t& V, DnVec_t& z, DnVec_t& c);
+
+/**
+ * @brief Sums the vector across the communicator
+ *
+ * @param c The vector to sum
+ * @param comm The communicator over which to sum
+ * @return int
+ */
+int sum_vec(DnVec_t& c, MPI_Comm comm);
+
+/**
+ * @brief Reinitializes L based on the distance matrix
+ *
+ * @param ell The struct containing "la" (local assignments vector) and "ll" (local cluster sizes vector)
+ * @param E The E matrix
+ * @param c The c norm vector
+ */
+int reinit_ell(L_t& ell, DnMat_t& E, DnVec_t& c);
+
+/**
+ * @brief Reinitializes V based on the local assignments and cluster sizes
+ * 
+ * @param V The V matrix
+ * @param ell The struct containing "la" (local assignments vector) and "ll" (local cluster sizes vector)
+ * @return int 
+ */
+int reinit_V(V_t& V, L_t& ell);
 
 }  // namespace cpop
 
