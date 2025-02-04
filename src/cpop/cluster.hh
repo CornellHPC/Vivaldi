@@ -122,9 +122,8 @@ struct V_t {
    * @param m The global number of points
    * @param t The local number of points
    * @param k The number of clusters
-   * @return int 
    */
-  int initialize(int64_t m, int64_t t, int64_t k);
+  V_t(int64_t m, int64_t t, int64_t k);
 
   /**
    * @brief Cleans the local arrays by setting them all to 0, preparing them for reinit_V

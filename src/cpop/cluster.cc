@@ -79,7 +79,7 @@ L_t::~L_t() {
   free(ll);
 }
 
-int V_t::initialize(int64_t m, int64_t t, int64_t k) {
+V_t::V_t(int64_t m, int64_t t, int64_t k) {
   CHECK_CUDA(cudaMalloc(&csr_row_offsets, (k + 1) * sizeof(int64_t)));
   CHECK_CUDA(cudaMalloc(&csr_col_inds, m * sizeof(int64_t)));
   CHECK_CUDA(cudaMalloc(&dgV, m * sizeof(int64_t)));
@@ -104,7 +104,6 @@ int V_t::initialize(int64_t m, int64_t t, int64_t k) {
   m_ = m;
   t_ = t;
   k_ = k;
-  return EXIT_SUCCESS;
 }
 
 int V_t::reset_local() {

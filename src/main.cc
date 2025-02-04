@@ -58,8 +58,7 @@ int cluster(char* path, int m, int n, int k, MPI_Comm comm) {
   /** INITIALIZE V */
   auto vi_start = hrc::now();
   L_t ell(m, t, k, t_sizes);
-  V_t V;
-  V.initialize(m, t, k);
+  V_t V(m, t, k);
   reinit_V(V, ell);
   MPI_Barrier(comm);
   auto vi_elapsed = get_time_elapsed(vi_start);
