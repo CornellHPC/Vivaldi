@@ -156,24 +156,22 @@ V_t::~V_t() {
   free(cluster_loc_ptrs);
 }
 
-int DnMat_t::initialize(int64_t h, int64_t w) {
+DnMat_t::DnMat_t(int64_t h, int64_t w) {
   CHECK_CUDA(cudaMalloc(&dM, h * w * sizeof(float)));
   CHECK_CUSPARSE(
       cusparseCreateDnMat(&M, h, w, w, dM, CUDA_R_32F, CUSPARSE_ORDER_ROW));
 
   h_ = h;
   w_ = w;
-  return EXIT_SUCCESS;
 }
 
-int DnMat_t::initialize(int64_t h, int64_t w, float* dM_) {
+DnMat_t::DnMat_t(int64_t h, int64_t w, float* dM_) {
   dM = dM_;
   CHECK_CUSPARSE(
       cusparseCreateDnMat(&M, h, w, w, dM, CUDA_R_32F, CUSPARSE_ORDER_ROW));
 
   h_ = h;
   w_ = w;
-  return EXIT_SUCCESS;
 }
 
 int DnMat_t::print() {
@@ -197,11 +195,10 @@ DnMat_t::~DnMat_t() {
   cusparseDestroyDnMat(M);
 }
 
-int DnVec_t::initialize(int t) {
+DnVec_t::DnVec_t(int t) {
   CHECK_CUDA(cudaMalloc(&dz, t * sizeof(float)));
   CHECK_CUSPARSE(cusparseCreateDnVec(&z, t, dz, CUDA_R_32F));
   size = t;
-  return EXIT_SUCCESS;
 }
 
 int DnVec_t::print() {

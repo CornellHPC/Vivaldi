@@ -50,8 +50,7 @@ int cluster(char* path, int m, int n, int k, MPI_Comm comm) {
 
   /** COMPUTE K */
   auto k_start = hrc::now();
-  DnMat_t K;
-  K.initialize(m, t, compute_kernel_matrix(PT));
+  DnMat_t K(m, t, compute_kernel_matrix(PT));
   PT.releaseWorkspace();
   MPI_Barrier(comm);
   auto k_elapsed = get_time_elapsed(k_start);
@@ -67,11 +66,9 @@ int cluster(char* path, int m, int n, int k, MPI_Comm comm) {
   auto vi_elapsed = get_time_elapsed(vi_start);
 
   /** ALLOCATE VARIABLES */
-  DnMat_t E;
-  E.initialize(k, t);
-  DnVec_t z, c;
-  z.initialize(t);
-  c.initialize(k);
+  DnMat_t E(k, t);
+  DnVec_t z(t);
+  DnVec_t c(k);
 
   /** CREATE BENCHMARK VARIABLES */
   int64_t e_elapsed = 0;

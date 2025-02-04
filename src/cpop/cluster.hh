@@ -17,9 +17,8 @@ struct DnMat_t {
    * 
    * @param h The height
    * @param w The width
-   * @return int 
    */
-  int initialize(int64_t h, int64_t w);
+  DnMat_t(int64_t h, int64_t w);
 
   /**
    * @brief Constructor
@@ -27,9 +26,8 @@ struct DnMat_t {
    * @param h The height
    * @param w The width
    * @param dM_ The on-device array of size h * w
-   * @return int 
    */
-  int initialize(int64_t h, int64_t w, float* dM_);
+  DnMat_t(int64_t h, int64_t w, float* dM_);
 
   int print();
 
@@ -45,9 +43,8 @@ struct DnVec_t {
    * @brief Constructor
    * 
    * @param t The size
-   * @return int 
    */
-  int initialize(int t);
+  DnVec_t(int t);
 
   int print();
 
