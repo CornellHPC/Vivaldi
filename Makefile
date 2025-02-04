@@ -2,12 +2,12 @@
 
 .PHONY: alloc build env small australian letter
 
-export SLATE_INSTALL := $(shell cd slate/_install && pwd) # Change slate directory as necessary
+export SLATE_INSTALL := $(shell cd ~/slate/_install && pwd) # Change slate directory as necessary
 export mpi := cray
 export blas := libsci
 export CXX := CC
 export DVS_MAXNODES := 1__
-export SLATE_GPU_AWARE_MPI := 0
+export SLATE_GPU_AWARE_MPI := 1
 export MPICH_GPU_SUPPORT_ENABLED := 1
 export OMP_NUM_THREADS := 1
 export OMP_PLACES := threads
@@ -27,7 +27,7 @@ alloc:
 	fi
 
 small:
-	srun --nodes=1 --ntasks-per-node=4 --cpus-per-task=32 --cpu-bind=cores --gpus=4 --gpu-bind=single:1 build/main data/small 11 8 4
+	srun --nodes=1 --ntasks-per-node=4 --cpus-per-task=32 --cpu-bind=cores --gpus=4 --gpu-bind=single:1 build/main data/small 14 8 4
 
 australian:
 	srun --nodes=1 --ntasks-per-node=4 --cpus-per-task=32 --cpu-bind=cores --gpus=4 --gpu-bind=single:1 build/main data/australian 690 14 2

@@ -32,7 +32,7 @@ int cluster(char* path, int m, int n, int k, MPI_Comm comm) {
 
   /** INITIALIZE GPU */
   wake_gpus(rank);
-  slate::gpu_aware_mpi(false);
+  slate::gpu_aware_mpi(true);
   cusparseHandle_t handle;
   cusparseCreate(&handle);
 
