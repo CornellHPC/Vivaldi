@@ -276,17 +276,7 @@ int spmv(cusparseHandle_t& handle, V_t& V, DnVec_t& z, DnVec_t& c) {
 }
 
 int sum_vec(DnVec_t& c, MPI_Comm comm) {
-  float* v = (float*)malloc(c.size * sizeof(float));
-  float* o = (float*)malloc(c.size * sizeof(float));
-  CHECK_CUDA(
-      cudaMemcpy(v, c.dz, c.size * sizeof(float), cudaMemcpyDeviceToHost));
-
-  MPI_Allreduce(v, o, c.size, MPI_FLOAT, MPI_SUM, comm);
-  CHECK_CUDA(
-      cudaMemcpy(c.dz, o, c.size * sizeof(float), cudaMemcpyHostToDevice));
-
-  free(v);
-  free(o);
+  MPI_Allreduce(MPI_IN_PLACE, c.dz, c.size, MPI_FLOAT, MPI_SUM, comm);
   return EXIT_SUCCESS;
 }
 
