@@ -135,14 +135,14 @@ int V_t::cp_local() {
 }
 
 V_t::~V_t() {
-  cudaFree(csr_row_offsets);
-  cudaFree(csr_col_inds);
-  cudaFree(csc_col_offsets);
-  cudaFree(csc_row_inds);
-  cudaFree(dgV);
-  cudaFree(dlV);
-  cusparseDestroySpMat(gV);
-  cusparseDestroySpMat(lV);
+  CHECK_CUDA(cudaFree(csr_row_offsets));
+  CHECK_CUDA(cudaFree(csr_col_inds));
+  CHECK_CUDA(cudaFree(csc_col_offsets));
+  CHECK_CUDA(cudaFree(csc_row_inds));
+  CHECK_CUDA(cudaFree(dgV));
+  CHECK_CUDA(cudaFree(dlV));
+  CHECK_CUSPARSE(cusparseDestroySpMat(gV));
+  CHECK_CUSPARSE(cusparseDestroySpMat(lV));
 
   free(local_csr_row_offsets);
   free(local_csr_col_inds);
@@ -188,8 +188,8 @@ int DnMat_t::print() {
 }
 
 DnMat_t::~DnMat_t() {
-  cudaFree(dM);
-  cusparseDestroyDnMat(M);
+  CHECK_CUDA(cudaFree(dM));
+  CHECK_CUSPARSE(cusparseDestroyDnMat(M));
 }
 
 DnVec_t::DnVec_t(int t) {
@@ -212,8 +212,8 @@ int DnVec_t::print() {
 }
 
 DnVec_t::~DnVec_t() {
-  cudaFree(dz);
-  cusparseDestroyDnVec(z);
+  CHECK_CUDA(cudaFree(dz));
+  CHECK_CUSPARSE(cusparseDestroyDnVec(z));
 }
 
 int spmm(cusparseHandle_t& handle, V_t& V, DnMat_t& K, DnMat_t& E) {
