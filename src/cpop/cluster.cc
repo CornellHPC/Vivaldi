@@ -10,147 +10,179 @@
 #include "gpu_kernels.cuh"
 #include "utils.hh"
 
+void print_cu_vec(int64_t* vec, int64_t size) {
+  int64_t* h_vec = (int64_t*)malloc(size * sizeof(int64_t));
+  cudaMemcpy(h_vec, vec, size * sizeof(int64_t), cudaMemcpyDeviceToHost);
+  std::cout << "Size " << size << "vector [ ";
+  for (int i = 0; i < size; ++i) {
+    std::cout << h_vec[i] << " ";
+  }
+  std::cout << "]" << std::endl;
+  free(h_vec);
+}
+
+void print_cu_vec(int* vec, int64_t size) {
+  int* h_vec = (int*)malloc(size * sizeof(int));
+  cudaMemcpy(h_vec, vec, size * sizeof(int), cudaMemcpyDeviceToHost);
+  std::cout << "Size " << size << "vector [ ";
+  for (int i = 0; i < size; ++i) {
+    std::cout << h_vec[i] << " ";
+  }
+  std::cout << "]" << std::endl;
+  free(h_vec);
+}
+
+void print_cu_vec(float* vec, int64_t size) {
+  float* h_vec = (float*)malloc(size * sizeof(float));
+  cudaMemcpy(h_vec, vec, size * sizeof(float), cudaMemcpyDeviceToHost);
+  std::cout << "Size " << size << "vector [ ";
+  for (int i = 0; i < size; ++i) {
+    std::cout << h_vec[i] << " ";
+  }
+  std::cout << "]" << std::endl;
+  free(h_vec);
+}
+
 namespace cpop {
 
-L_t::L_t(int64_t m, int64_t t, int64_t k, int* t_sizes) {
-  ga = (int64_t*)calloc(m, sizeof(int64_t));
-  la = (int64_t*)calloc(t, sizeof(int64_t));
-  gl = (int64_t*)calloc(k, sizeof(int64_t));
-  ll = (int64_t*)calloc(k, sizeof(int64_t));
+V_t::V_t(int64_t m, int64_t t, int64_t k, int* t_sizes, MPI_Comm comm) {
+  // CUDA array initializations
+  CHECK_CUDA(cudaMalloc(&global_assignments, m * sizeof(int64_t)));
+  CHECK_CUDA(cudaMalloc(&global_cluster_sizes, k * sizeof(int64_t)));
+  CHECK_CUDA(cudaMalloc(&local_assignments, t * sizeof(int64_t)));
+  CHECK_CUDA(cudaMalloc(&local_cluster_sizes, k * sizeof(int64_t)));
+  CHECK_CUDA(cudaMalloc(&values, m * sizeof(int64_t)));
+  CHECK_CUDA(cudaMalloc(&global_csc_col_offsets, (m + 1) * sizeof(int64_t)));
+  CHECK_CUDA(cudaMalloc(&local_csc_col_offsets, (t + 1) * sizeof(int64_t)));
+
+  // MPI initializations
+  MPI_Comm_rank(comm, &rank);
+  MPI_Comm_size(comm, &n_procs);
+  t_sizes_ = t_sizes;
+  displs = (int*)calloc(n_procs, sizeof(int));
+  for (int i = 1; i < n_procs; ++i)
+    displs[i] = displs[i - 1] + t_sizes_[i - 1];  // MPI displacements
+
+  // basic CSC initializations (todo: GPU)
+  int64_t* global_csc_col_offsets_ = (int64_t*)calloc(m + 1, sizeof(int64_t));
+  for (int64_t i = 0; i < m; ++i)
+    global_csc_col_offsets_[i + 1] = i + 1;
+  CHECK_CUDA(cudaMemcpy(global_csc_col_offsets, global_csc_col_offsets_,
+                        (m + 1) * sizeof(int64_t), cudaMemcpyHostToDevice));
+  CHECK_CUDA(cudaMemcpy(local_csc_col_offsets, global_csc_col_offsets_,
+                        (t + 1) * sizeof(int64_t), cudaMemcpyHostToDevice));
+  free(global_csc_col_offsets_);
+
+  // round robin initialization (todo: GPU)
+  int* init_global_cluster_sizes = (int*)calloc(k, sizeof(int));
+  int64_t* init_assignments = (int64_t*)calloc(m, sizeof(int64_t));
+  float* init_values = (float*)calloc(m, sizeof(float));
+  for (int64_t i = 0; i < k; ++i)
+    init_global_cluster_sizes[i] = (m / k) + ((i < m % k) ? 1 : 0);
+  CHECK_CUDA(cudaMemcpy(global_cluster_sizes, init_global_cluster_sizes,
+                        k * sizeof(int), cudaMemcpyHostToDevice));
+  for (int64_t i = 0; i < m; ++i) {
+    init_assignments[i] = i % k;
+    init_values[i] = 1.0f / init_global_cluster_sizes[i % k];
+  }
+  CHECK_CUDA(cudaMemcpy(global_assignments, init_assignments,
+                        m * sizeof(int64_t), cudaMemcpyHostToDevice));
+  CHECK_CUDA(cudaMemcpy(values, init_values, m * sizeof(float),
+                        cudaMemcpyHostToDevice));
+  free(init_global_cluster_sizes);
+  free(init_assignments);
+  free(init_values);
+
+  // cusparse initializations
+  CHECK_CUSPARSE(cusparseCreateCsc(&gV, k, m, m, global_csc_col_offsets,
+                                   global_assignments, values,
+                                   CUSPARSE_INDEX_64I, CUSPARSE_INDEX_64I,
+                                   CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));
+
+  // the local partition of V in CSC is found by slicing the global partition at [displs[rank]:displs[rank] + t]
+  // (since displs[rank] is the displacement of this rank's first point)
+  // this is done with simple pointer arithmetic
+  local_ptr_to_assignments = global_assignments + displs[rank];
+  local_ptr_to_values = values + displs[rank];
+  CHECK_CUSPARSE(cusparseCreateCsc(
+      &lV, k, t, t, local_csc_col_offsets, local_ptr_to_assignments,
+      local_ptr_to_values, CUSPARSE_INDEX_64I, CUSPARSE_INDEX_64I,
+      CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));
   m_ = m;
   t_ = t;
   k_ = k;
-  t_sizes_ = t_sizes;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &n_procs);
-
-  int rr_start_cluster = 0;  // round robin
-  for (int i = 0; i < rank; ++i)
-    rr_start_cluster += t_sizes[i];
-  rr_start_cluster %= k;
-
-  for (int i = 0; i < t; ++i) {
-    int cluster = (rr_start_cluster + i) % k;
-    la[i] = cluster;
-    ll[cluster]++;
-  }
+  this->comm = comm;
 }
 
-int L_t::gather_clusters() {
-  memset(gl, 0, k_ * sizeof(int64_t));
-  MPI_Allreduce(ll, gl, k_, MPI_INT64_T, MPI_SUM, MPI_COMM_WORLD);
+int V_t::reinit(float* dE, float* dc) {
+  // compute argmin
+  launch_argmin_kernel(k_, t_, dE, dc, local_assignments, local_cluster_sizes);
+
+  // reduce over nprocs
+  MPI_Allreduce(local_cluster_sizes, global_cluster_sizes, k_, MPI_INT, MPI_SUM,
+                MPI_COMM_WORLD);
+  MPI_Allgatherv(local_assignments, t_, MPI_INT64_T, global_assignments,
+                 t_sizes_, displs, MPI_INT64_T, MPI_COMM_WORLD);
+
+  // reinitialize
+  launch_reinit_kernel(values, global_assignments, global_cluster_sizes, m_);
   return EXIT_SUCCESS;
 }
 
-int L_t::gather_assignments() {
-  auto displs = (int*)calloc(n_procs, sizeof(int));
-  for (int i = 1; i < n_procs; ++i) {
-    displs[i] = displs[i - 1] + t_sizes_[i - 1];
-  }
-  memset(ga, 0, m_ * sizeof(int64_t));
-  MPI_Allgatherv(la, t_, MPI_INT64_T, ga, t_sizes_, displs, MPI_INT64_T,
-                 MPI_COMM_WORLD);
-  return EXIT_SUCCESS;
-}
-
-int L_t::save(const char* path, MPI_Comm comm) {
+int V_t::save(const char* path) {
   MPI_File fh;
   MPI_File_open(comm, path, MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL,
                 &fh);
 
   // Compute offset for rank
-  int offset = 0;
-  for (int i = 0; i < rank; ++i) {
-    offset += t_sizes_[i];
+  int offset = displs[rank];
+
+  int64_t* assignments = (int64_t*)malloc(t_ * sizeof(int64_t));
+  CHECK_CUDA(cudaMemcpy(assignments, local_ptr_to_assignments,
+                        t_ * sizeof(int64_t), cudaMemcpyDeviceToHost));
+  std::cout << "Final assignments [ ";
+  for (int i = 0; i < t_; ++i) {
+    std::cout << assignments[i] << " ";
   }
+  std::cout << "]" << std::endl;
 
   // Write the data to disk
-  MPI_File_write_at(fh, offset * sizeof(int64_t), la, t_sizes_[rank],
-                    MPI_INT64_T, MPI_STATUS_IGNORE);
-
+  MPI_File_write_at(fh, offset * sizeof(int64_t), assignments, t_, MPI_INT64_T,
+                    MPI_STATUS_IGNORE);
   MPI_File_close(&fh);
+  free(assignments);
   return EXIT_SUCCESS;
 }
 
-L_t::~L_t() {
-  free(ga);
-  free(la);
-  free(gl);
-  free(ll);
-}
-
-V_t::V_t(int64_t m, int64_t t, int64_t k) {
-  CHECK_CUDA(cudaMalloc(&csr_row_offsets, (k + 1) * sizeof(int64_t)));
-  CHECK_CUDA(cudaMalloc(&csr_col_inds, m * sizeof(int64_t)));
-  CHECK_CUDA(cudaMalloc(&dgV, m * sizeof(int64_t)));
-  CHECK_CUSPARSE(cusparseCreateCsr(&gV, k, m, m, csr_row_offsets, csr_col_inds,
-                                   dgV, CUSPARSE_INDEX_64I, CUSPARSE_INDEX_64I,
-                                   CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));
-  CHECK_CUDA(cudaMalloc(&csc_col_offsets, (t + 1) * sizeof(int64_t)));
-  CHECK_CUDA(cudaMalloc(&csc_row_inds, t * sizeof(int64_t)));
-  CHECK_CUDA(cudaMalloc(&dlV, t * sizeof(int64_t)));
-  CHECK_CUSPARSE(cusparseCreateCsc(&lV, k, t, t, csc_col_offsets, csc_row_inds,
-                                   dlV, CUSPARSE_INDEX_64I, CUSPARSE_INDEX_64I,
-                                   CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));
-
-  local_csr_row_offsets = (int64_t*)calloc(k + 1, sizeof(int64_t));
-  local_csr_col_inds = (int64_t*)calloc(m, sizeof(int64_t));
-  local_gV = (float*)calloc(m, sizeof(float));
-  local_csc_col_offsets = (int64_t*)calloc(t + 1, sizeof(int64_t));
-  local_csc_row_inds = (int64_t*)calloc(t, sizeof(int64_t));
-  local_lV = (float*)calloc(t, sizeof(float));
-  cluster_loc_ptrs = (int64_t*)calloc(k, sizeof(int64_t));
-
-  m_ = m;
-  t_ = t;
-  k_ = k;
-}
-
-int V_t::reset_local() {
-  memset(local_csr_row_offsets, 0, (k_ + 1) * sizeof(int64_t));
-  memset(local_csr_col_inds, 0, m_ * sizeof(int64_t));
-  memset(local_gV, 0, m_ * sizeof(float));
-  memset(local_csc_col_offsets, 0, (t_ + 1) * sizeof(int64_t));
-  memset(local_csc_row_inds, 0, t_ * sizeof(int64_t));
-  memset(local_lV, 0, t_ * sizeof(float));
-  memset(cluster_loc_ptrs, 0, k_ * sizeof(int64_t));
-  return EXIT_SUCCESS;
-}
-
-int V_t::cp_local() {
-  CHECK_CUDA(cudaMemcpy(csr_row_offsets, local_csr_row_offsets,
-                        (k_ + 1) * sizeof(int64_t), cudaMemcpyHostToDevice));
-  CHECK_CUDA(cudaMemcpy(csr_col_inds, local_csr_col_inds, m_ * sizeof(int64_t),
-                        cudaMemcpyHostToDevice));
-  CHECK_CUDA(
-      cudaMemcpy(dgV, local_gV, m_ * sizeof(float), cudaMemcpyHostToDevice));
-  CHECK_CUDA(cudaMemcpy(csc_col_offsets, local_csc_col_offsets,
-                        (t_ + 1) * sizeof(int64_t), cudaMemcpyHostToDevice));
-  CHECK_CUDA(cudaMemcpy(csc_row_inds, local_csc_row_inds, t_ * sizeof(int64_t),
-                        cudaMemcpyHostToDevice));
-  CHECK_CUDA(
-      cudaMemcpy(dlV, local_lV, t_ * sizeof(float), cudaMemcpyHostToDevice));
-  reset_local();
-  return EXIT_SUCCESS;
+void V_t::print() {
+  std::cout << "Printing V from rank " << rank << std::endl;
+  std::cout << "Local displacement is " << displs[rank] << std::endl;
+  std::cout << "Global device vectors:" << std::endl;
+  print_cu_vec(global_assignments, m_);
+  print_cu_vec(global_csc_col_offsets, m_ + 1);
+  print_cu_vec(values, m_);
+  std::cout << "Local device vectors:" << std::endl;
+  print_cu_vec(local_ptr_to_assignments, t_);
+  print_cu_vec(local_csc_col_offsets, t_ + 1);
+  print_cu_vec(local_ptr_to_values, t_);
+  std::cout << "Working vectors:" << std::endl;
+  print_cu_vec(global_cluster_sizes, k_);
+  print_cu_vec(local_assignments, t_);
+  print_cu_vec(local_cluster_sizes, k_);
+  std::cout << "-------------------" << std::endl;
 }
 
 V_t::~V_t() {
-  CHECK_CUDA(cudaFree(csr_row_offsets));
-  CHECK_CUDA(cudaFree(csr_col_inds));
-  CHECK_CUDA(cudaFree(csc_col_offsets));
-  CHECK_CUDA(cudaFree(csc_row_inds));
-  CHECK_CUDA(cudaFree(dgV));
-  CHECK_CUDA(cudaFree(dlV));
+  CHECK_CUDA(cudaFree(global_assignments));
+  CHECK_CUDA(cudaFree(global_cluster_sizes));
+  CHECK_CUDA(cudaFree(local_assignments));
+  CHECK_CUDA(cudaFree(local_cluster_sizes));
+  CHECK_CUDA(cudaFree(values));
+  CHECK_CUDA(cudaFree(global_csc_col_offsets));
+  CHECK_CUDA(cudaFree(local_csc_col_offsets));
   CHECK_CUSPARSE(cusparseDestroySpMat(gV));
   CHECK_CUSPARSE(cusparseDestroySpMat(lV));
-
-  free(local_csr_row_offsets);
-  free(local_csr_col_inds);
-  free(local_gV);
-  free(local_csc_col_offsets);
-  free(local_csc_row_inds);
-  free(local_lV);
-  free(cluster_loc_ptrs);
+  free(displs);
 }
 
 DnMat_t::DnMat_t(int64_t h, int64_t w) {
@@ -227,7 +259,7 @@ int spmm(cusparseHandle_t& handle, V_t& V, DnMat_t& K, DnMat_t& E) {
   CHECK_CUSPARSE(cusparseSpMM_bufferSize(
       handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
       CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, V.gV, K.M, &beta, E.M,
-      CUDA_R_32F, CUSPARSE_SPMM_CSR_ALG2, &buffer_size));
+      CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, &buffer_size));
   CHECK_CUDA(cudaMalloc(&buffer, buffer_size));
 
   // // Preprocess (may not work with later cusparseSpMV_preprocess)
@@ -249,7 +281,7 @@ int spmm(cusparseHandle_t& handle, V_t& V, DnMat_t& K, DnMat_t& E) {
 int compute_z(V_t& V, DnMat_t& E, DnVec_t& z) {
   // Because we're using CSC, the cluster assignments vector is exactly the
   // CSC row indices vector of V
-  launch_z_kernel(z.size, z.dz, V.csc_row_inds, E.dM);
+  launch_z_kernel(z.size, z.dz, V.local_ptr_to_assignments, E.dM);
   return EXIT_SUCCESS;
 }
 
@@ -277,52 +309,6 @@ int spmv(cusparseHandle_t& handle, V_t& V, DnVec_t& z, DnVec_t& c) {
 
 int sum_vec(DnVec_t& c, MPI_Comm comm) {
   MPI_Allreduce(MPI_IN_PLACE, c.dz, c.size, MPI_FLOAT, MPI_SUM, comm);
-  return EXIT_SUCCESS;
-}
-
-int reinit_ell(L_t& ell, DnMat_t& E, DnVec_t& c) {
-  Argmin* da;
-  CHECK_CUDA(cudaMalloc(&da, E.w_ * sizeof(Argmin)));
-  launch_argmin_kernel(E.h_, E.w_, E.dM, c.dz, da);
-
-  Argmin* a = (Argmin*)malloc(E.w_ * sizeof(Argmin));
-  CHECK_CUDA(cudaMemcpy(a, da, E.w_ * sizeof(Argmin), cudaMemcpyDeviceToHost));
-
-  // Update local assignments
-  memset(ell.ll, 0, ell.k_ * sizeof(int64_t));
-  for (int i = 0; i < E.w_; ++i) {
-    Argmin x = a[i];
-    ell.la[i] = x.mni;
-    ell.ll[x.mni]++;
-  }
-
-  free(a);
-  CHECK_CUDA(cudaFree(da));
-  return EXIT_SUCCESS;
-}
-
-int reinit_V(V_t& V, L_t& ell) {
-  V.reset_local();
-  ell.gather_assignments();
-  ell.gather_clusters();
-
-  // TODO: convert to kernel for speediness (also reduces number of cudaMemcpys)
-  for (int i = 0; i < V.k_; ++i)
-    V.local_csr_row_offsets[i + 1] = V.local_csr_row_offsets[i] + ell.gl[i];
-  for (int64_t i = 0; i < V.m_; ++i) {
-    int cluster = ell.ga[i];  // get the cluster for this point
-    int offset =
-        V.local_csr_row_offsets[cluster] + (V.cluster_loc_ptrs[cluster]++);
-    V.local_gV[offset] = 1.0f / ell.gl[cluster];
-    V.local_csr_col_inds[offset] = i;
-  }
-  std::memcpy(V.local_csc_row_inds, ell.la, V.t_ * sizeof(int64_t));
-  for (int i = 0; i < V.t_; ++i) {
-    V.local_csc_col_offsets[i + 1] =
-        i + 1;  // this works for CSC since 1 point per column
-    V.local_lV[i] = 1.0f / ell.gl[ell.la[i]];
-  }
-  V.cp_local();  // copies the local buffers to GPU
   return EXIT_SUCCESS;
 }
 

@@ -57,13 +57,11 @@ int cluster(char* path, int m, int n, int k, MPI_Comm comm) {
 
   /** INITIALIZE V */
   auto vi_start = hrc::now();
-  L_t ell(m, t, k, t_sizes);
-  V_t V(m, t, k);
-  reinit_V(V, ell);
+  V_t V(m, t, k, t_sizes, comm);
   MPI_Barrier(comm);
   auto vi_elapsed = get_time_elapsed(vi_start);
 
-  /** ALLOCATE VARIABLES */
+  // /** ALLOCATE VARIABLES */
   DnMat_t E(k, t);
   DnVec_t z(t);
   DnVec_t c(k);
@@ -75,7 +73,7 @@ int cluster(char* path, int m, int n, int k, MPI_Comm comm) {
   int64_t vr_elapsed = 0;
 
   /** K MEANS CLUSTERING LOOP */
-  int niter = 100;
+  int niter = 1;
   for (int i = 0; i < niter; ++i) {
     auto e_start = hrc::now();
     spmm(handle, V, K, E);  // SpMM: ET = VK using global V
@@ -91,8 +89,8 @@ int cluster(char* path, int m, int n, int k, MPI_Comm comm) {
     c_elapsed += get_time_elapsed(c_start);
 
     auto vr_start = hrc::now();
-    reinit_ell(ell, E, c);  // Calculate updated local cluster assignments
-    reinit_V(V, ell);       // Reinitialize V with updated assignments
+    V.reinit(E.dM, c.dz);  // Reinitialize V based on D matrix
+                           // (which itself is based on E and c)
     vr_elapsed += get_time_elapsed(vr_start);
   }
 
@@ -110,7 +108,7 @@ int cluster(char* path, int m, int n, int k, MPI_Comm comm) {
 
   /** SAVE ASSIGNMENTS */
   std::string path_out = std::string(path) + "_out";
-  ell.save(path_out.c_str(), comm);
+  V.save(path_out.c_str());
 
   /** EXIT */
   free(t_sizes);

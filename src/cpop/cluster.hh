@@ -51,19 +51,32 @@ struct DnVec_t {
   ~DnVec_t();
 };
 
-/** Struct to hold cluster sizes (l) and point assignments (a) */
-struct L_t {
-  // All variables here are local (e.g. on the CPU, not GPU)
+struct V_t {
+  cusparseSpMatDescr_t gV, lV;
 
-  int64_t* ga;  // global point to cluster assignments (of size m)
-  int64_t* la;  // local point to cluster assignments (of size t)
-  int64_t* gl;  // global cluster sizes (of size k)
-  int64_t* ll;  // local cluster sizes (of size k)
+  // GPU pointers to the components of the global CSC V matrix
+  int64_t* global_assignments;      // CSC row indices
+  int64_t* global_csc_col_offsets;  // CSC column offsets
+  float* values;                    // CSC values of global V
 
+  // GPU pointers to the components of the local CSC V matrix
+  // Aside from local_csc_col_offsets, these are the same as the global ones
+  //    plus some offset (which is determined by displs[rank])
+  int64_t* local_ptr_to_assignments;
+  int64_t* local_csc_col_offsets;
+  float* local_ptr_to_values;
+
+  // Working vectors used in V reinitialization
+  int* global_cluster_sizes;
+  int64_t* local_assignments;
+  int* local_cluster_sizes;
+
+  // Other basic vars
   int64_t m_, t_, k_;
-
-  int rank, n_procs;
   int* t_sizes_;
+  int rank, n_procs;
+  int* displs;
+  MPI_Comm comm;
 
   /**
    * @brief Constructor
@@ -72,72 +85,26 @@ struct L_t {
    * @param t The local number of points
    * @param k The number of clusters
    * @param t_sizes n_procs-size array of tile widths for each process
-   */
-  L_t(int64_t m, int64_t t, int64_t k, int* t_sizes);
-
-  /**
-   * @brief MPI Allreduce on local clusters (populates ga using la)
-   * 
-   * @return int 
-   */
-  int gather_clusters();
-
-  /**
-   * @brief MPI Allgatherv on local assignments (populates gl using ll)
-   *
-   * @return int 
-   */
-  int gather_assignments();
-
-  /**
-   * @brief Saves the cluster assignments to a file
-   *
-   * @param path The path to the file
    * @param comm The MPI communicator used to distribute assignments
-   * @return int
    */
-  int save(const char* path, MPI_Comm comm);
-
-  ~L_t();
-};
-
-struct V_t {
-  // Local (on the CPU) values (used in initialization and reinitialization)
-  int64_t *local_csr_row_offsets, *local_csr_col_inds, *local_csc_col_offsets,
-      *local_csc_row_inds, *cluster_loc_ptrs;
-  float *local_gV, *local_lV;
-
-  // Device (on the GPU) values
-  int64_t *csr_row_offsets, *csr_col_inds, *csc_col_offsets, *csc_row_inds;
-  float* dgV;  // global V values in CSR
-  float* dlV;  // local V values in CSC
-
-  cusparseSpMatDescr_t gV, lV;
-
-  int64_t m_, t_, k_;
+  V_t(int64_t m, int64_t t, int64_t k, int* t_sizes, MPI_Comm comm);
 
   /**
-   * @brief Constructor
+   * @brief Runs the argmin kernel on dE and dc (device pointers to the values of E and c)
    * 
-   * @param m The global number of points
-   * @param t The local number of points
-   * @param k The number of clusters
+   * Allreduces local clusters, allgathers local assignments, and reinitializes
+   * 
    */
-  V_t(int64_t m, int64_t t, int64_t k);
+  int reinit(float* dE, float* dc);
+
+  int save(const char* path);
 
   /**
-   * @brief Cleans the local arrays by setting them all to 0, preparing them for reinit_V
+   * @brief Prints the CSC vectors for V
    * 
-   * @return int 
+   * Used in debugging only
    */
-  int reset_local();
-
-  /**
-   * @brief Copies the local memory buffers to the device buffers and then zeroes the local buffers
-   * 
-   * @return int 
-   */
-  int cp_local();
+  void print();
 
   ~V_t();
 };
@@ -183,23 +150,23 @@ int spmv(cusparseHandle_t& handle, V_t& V, DnVec_t& z, DnVec_t& c);
  */
 int sum_vec(DnVec_t& c, MPI_Comm comm);
 
-/**
- * @brief Reinitializes L based on the distance matrix
- *
- * @param ell The struct containing "la" (local assignments vector) and "ll" (local cluster sizes vector)
- * @param E The E matrix
- * @param c The c norm vector
- */
-int reinit_ell(L_t& ell, DnMat_t& E, DnVec_t& c);
+// /**
+//  * @brief Reinitializes L based on the distance matrix
+//  *
+//  * @param ell The struct containing "la" (local assignments vector) and "ll" (local cluster sizes vector)
+//  * @param E The E matrix
+//  * @param c The c norm vector
+//  */
+// int reinit_ell(L_t& ell, DnMat_t& E, DnVec_t& c);
 
-/**
- * @brief Reinitializes V based on the local assignments and cluster sizes
- * 
- * @param V The V matrix
- * @param ell The struct containing "la" (local assignments vector) and "ll" (local cluster sizes vector)
- * @return int 
- */
-int reinit_V(V_t& V, L_t& ell);
+// /**
+//  * @brief Reinitializes V based on the local assignments and cluster sizes
+//  *
+//  * @param V The V matrix
+//  * @param ell The struct containing "la" (local assignments vector) and "ll" (local cluster sizes vector)
+//  * @return int
+//  */
+// int reinit_V(V_t& V, L_t& ell);
 
 }  // namespace cpop
 

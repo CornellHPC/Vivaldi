@@ -4,14 +4,6 @@
 namespace cpop {
 
 /**
- * @brief Attaches index information to minimum value
- */
-struct Argmin {
-  float mn;     // The minimum value
-  int64_t mni;  // The index of the minimum value
-};
-
-/**
  * Applies polynomial kernel function to matrix B.
  * 
  * @param m Number of rows in B
@@ -42,22 +34,43 @@ void launch_z_kernel(int64_t t, float* z, int64_t* assignments, float* ET);
  * @param t The number of points in this tile, i.e. the width of E
  * @param dE The local E matrix of size k-by-t
  * @param dc The local c vector of size k
- * @param a The local cluster assignments vector of size t
+ * @param local_assignments The local cluster assignments vector of size t
+ * @param local_cluster_sizes The local cluster sizes vector of size k
  */
 void launch_argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
-                          Argmin* a);
+                          int64_t* local_assignments, int* local_cluster_sizes);
 
 /**
- * @brief Launches the D kernel, which computes D = -2E + c, takes the argmin
- * over columns, and stores the result in a.
+ * @brief Launches the reinit kernel, which computes V = 1 / cluster_size
  * 
- * @param k The number of clusters, i.e. the height of E
- * @param t The number of points in this tile, i.e. the width of E
- * @param dE The local E matrix of size k-by-t
- * @param dc The local c vector of size k
- * @param a The local cluster assignments vector of size t
+ * @param V_global_values Full m-length vector of V values
+ * @param global_assignments Full m-length vector of point-to-cluster assignments
+ * @param global_cluster_sizes K-length vector of global cluster sizes
+ * @param m Number of points
  */
-void launch_d_kernel(int64_t k, int64_t t, float* dE, float* dc, float* a);
+void launch_reinit_kernel(float* V_global_values, int64_t* global_assignments,
+                          int* global_cluster_sizes, int64_t m);
+
+// /**
+//  * @brief Launches the D kernel, which computes D = -2E + c, takes the argmin
+//  * over columns, and stores the result in a.
+//  *
+//  * @param k The number of clusters, i.e. the height of E
+//  * @param t The number of points in this tile, i.e. the width of E
+//  * @param dE The local E matrix of size k-by-t
+//  * @param dc The local c vector of size k
+//  * @param a The local cluster assignments vector of size t
+//  */
+// void launch_d_kernel(int64_t k, int64_t t, float* dE, float* dc, float* a);
+
+/**
+ * @brief Performs an exclusive scan using CUB, which is used in the reinit of V (CSR)
+ * 
+ * @param d_in device vector of size (k-1)
+ * @param d_out device vector buffer of size k
+ * @param k size
+ */
+void scan(int64_t* d_in, int64_t* d_out, int64_t k);
 
 }  // namespace cpop
 

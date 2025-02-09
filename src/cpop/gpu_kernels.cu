@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <algorithm>
 #include <cassert>
+#include <cub/cub.cuh>
 
 #include "gpu_kernels.cuh"
 
@@ -49,18 +50,37 @@ __global__ void z_vector_kernel(int64_t t, float* z, int64_t* assignments,
 }
 
 __global__ void argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
-                              cpop::Argmin* a) {
-  int64_t size = k * t;
-  for (int64_t i = threadIdx.x; i < size; i += blockDim.x) {
-    // Compute 2D coordinate for this thread
-    int64_t m = i / t;
-    int64_t n = i % t;
-
-    // Compute the distance and update argmin
-    float d = dc[m] - 2 * dE[i];
-    if (m == 0 || d < a[n].mn) {
-      a[n] = cpop::Argmin{d, m};
+                              int64_t* local_assignments,
+                              int* local_cluster_sizes) {
+  for (int64_t point = blockIdx.x * blockDim.x + threadIdx.x; point < t;
+       point += blockDim.x * gridDim.x) {
+    // printf("Argmin kernel started with point %lld\n", point);
+    float min = FLT_MAX;
+    int64_t min_cluster = INT_MAX;
+    for (int64_t cluster = 0; cluster < k; ++cluster) {
+      float value = dc[cluster] - 2 * dE[cluster * t + point];
+      // printf("C %f E %f (idx %lld) -> Value %f\n", dc[cluster], dE[cluster * t + point], cluster * t + point, value);
+      if ((value < min || (value == min && cluster < min_cluster))) {
+        min = value;
+        min_cluster = cluster;
+      }
     }
+    // printf("Min %f idx %lld\n", min, min_cluster);
+    local_assignments[point] = min_cluster;
+    atomicAdd(&local_cluster_sizes[min_cluster], 1);
+    // printf("Finished argmin kernel\n");
+  }
+}
+
+__global__ void reinit_kernel(float* V_global_values,
+                              int64_t* global_assignments,
+                              int* global_cluster_sizes, int64_t m) {
+  for (int64_t i = blockIdx.x * blockDim.x + threadIdx.x; i < m;
+       i += blockDim.x * gridDim.x) {
+    // this for loop runs once unless the matrix is extraordinarily large
+
+    // todo: the global_assignments[i] call is coalesced, but the global_cluster_sizes[...] call is not!
+    V_global_values[i] = 1.0f / global_cluster_sizes[global_assignments[i]];
   }
 }
 
@@ -127,34 +147,67 @@ void launch_z_kernel(int64_t t, float* z, int64_t* assignments, float* ET) {
 }
 
 void launch_argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
-                          Argmin* a) {
-  // TODO: Support multiple thread blocks
-  int nthreads = std::min(t, int64_t(1024));
-  int nblocks = 1;
-  argmin_kernel<<<nblocks, nthreads>>>(k, t, dE, dc, a);
-}
+                          int64_t* local_assignments,
+                          int* local_cluster_sizes) {
+  if (k == 0 || t == 0)
+    return;
 
-void launch_d_kernel(int64_t k, int64_t t, float* dE, float* dc, int64_t* a) {
   // 1024 max threads for current CUDA compute capability (<= 7.5)
   // 16x16 blocks, with upwards round for more coverage
   // block cap is set to prevent overflow
-  int clusters_tsize = 16;
-  int points_tsize = 16;
-  dim3 nthreads(clusters_tsize, points_tsize);
+  int nthreads = 256;
+  int nblocks = std::min(int64_t(1048576), (t + nthreads - 1) / nthreads);
+  argmin_kernel<<<nblocks, nthreads>>>(k, t, dE, dc, local_assignments,
+                                       local_cluster_sizes);
+}
 
-  // t may be very large so it may span across multiple grids
-  // k is assumed to be smaller than INT_MAX. If it's not, this would greatly
-  // complicate the argmin kernel, so we assume that this is not the case
-  assert(k < INT_MAX && "k is too large");
-  // long long int test_a = 7;  // TODO: rm
-  // int64_t test_b = 7;
-  // assert(sizeof(test_a) == sizeof(test_b) &&
-  //        "The system does not equate long long int with int64_t");
-  dim3 nblocks(
-      (k + clusters_tsize - 1) / clusters_tsize,
-      std::min(int64_t(1048576), (t + points_tsize - 1) / points_tsize));
+void launch_reinit_kernel(float* V_global_values, int64_t* global_assignments,
+                          int* global_cluster_sizes, int64_t m) {
+  if (m == 0)
+    return;
 
-  // d_kernel<<<nblocks, nthreads>>>(k, t, dE, dc, a);
+  // 1024 max threads for current CUDA compute capability (<= 7.5)
+  // 16x16 blocks, with upwards round for more coverage
+  // block cap is set to prevent overflow
+  int nthreads = 256;
+  int nblocks = std::min(int64_t(1048576), (m + nthreads - 1) / nthreads);
+  reinit_kernel<<<nblocks, nthreads>>>(V_global_values, global_assignments,
+                                       global_cluster_sizes, m);
+}
+
+// void launch_d_kernel(int64_t k, int64_t t, float* dE, float* dc, int64_t* a) {
+//   // 1024 max threads for current CUDA compute capability (<= 7.5)
+//   // 16x16 blocks, with upwards round for more coverage
+//   // block cap is set to prevent overflow
+//   int clusters_tsize = 16;
+//   int points_tsize = 16;
+//   dim3 nthreads(clusters_tsize, points_tsize);
+
+//   // t may be very large so it may span across multiple grids
+//   // k is assumed to be smaller than INT_MAX. If it's not, this would greatly
+//   // complicate the argmin kernel, so we assume that this is not the case
+//   assert(k < INT_MAX && "k is too large");
+//   // long long int test_a = 7;  // TODO: rm
+//   // int64_t test_b = 7;
+//   // assert(sizeof(test_a) == sizeof(test_b) &&
+//   //        "The system does not equate long long int with int64_t");
+//   dim3 nblocks(
+//       (k + clusters_tsize - 1) / clusters_tsize,
+//       std::min(int64_t(1048576), (t + points_tsize - 1) / points_tsize));
+
+//   // d_kernel<<<nblocks, nthreads>>>(k, t, dE, dc, a);
+// }
+
+void scan(int64_t* d_in, int64_t* d_out, int64_t k) {
+  void* d_temp_storage = nullptr;
+  size_t temp_storage_bytes = 0;
+  cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, d_in, d_out,
+                                k + 1);
+  // Allocate temporary storage
+  cudaMalloc(&d_temp_storage, temp_storage_bytes);
+  // Run exclusive prefix sum
+  cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, d_in, d_out,
+                                k + 1);
 }
 
 }  // namespace cpop
