@@ -5,10 +5,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
+# Constant definitions
 P = [2**i for i in range(6)]
-C = ["K", "Vi", "E", "Z", "C", "Vr"]
+C = ["K", "Vi", "E", "C", "Vr"]
+# C = ["K", "Vi", "E", "Z", "C", "Vr"]
 
 
+# Extract statistics
 savgs = {}
 wavgs = {}
 pattern = re.compile(r"((\d+\r?\n){7})")
@@ -34,6 +37,14 @@ for p in P:
         print(f"Could not find {filepath}")
 
 
+# Filter Z (runtime is negligible)
+for k, v in savgs.items():
+    savgs[k] = np.delete(v, 4)
+for k, v in wavgs.items():
+    wavgs[k] = np.delete(v, 4)
+
+
+# Create graphs
 plt.title("Strong Scaling Runtime")
 plt.plot(P, [savgs[p][0] for p in P], label="Actual")
 plt.plot(P, [savgs[P[0]][0] / p for p in P], label="Theoretical")

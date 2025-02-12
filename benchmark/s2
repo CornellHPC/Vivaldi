@@ -3,65 +3,65 @@ Running strong scaling test on 2 ranks!
 Trial 1
 Number of GPUs per node: 1
 Waking the GPUs... DONE!
-2109
-1514
+3997
+3189
 5
-242
+361
 0
-61
-200
+39
+301
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 
 Trial 2
 Number of GPUs per node: 1
 Waking the GPUs... DONE!
-1935
-1476
+3835
+3080
 5
-107
+306
 0
-16
-200
+34
+301
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 
 Trial 3
 Number of GPUs per node: 1
 Waking the GPUs... DONE!
-1887
-1470
-4
-106
+3843
+3065
+5
+306
 0
-17
-200
+35
+338
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 
 Trial 4
 Number of GPUs per node: 1
 Waking the GPUs... DONE!
-1868
-1451
+3814
+3056
 5
-107
+306
 0
-17
-200
+36
+301
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 
 Trial 5
 Number of GPUs per node: 1
 Waking the GPUs... DONE!
-1865
-1448
+3788
+3032
 5
-106
+306
 0
-18
-200
+34
+301
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 

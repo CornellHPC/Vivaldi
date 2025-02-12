@@ -9,7 +9,7 @@
 
 export DVS_MAXNODES=1__
 export EXE_PATH="$PWD/../build/main"
-export DATA="$PWD/../data/rand 32000 64"
+export DATA="$PWD/../data/rand 46000 64"
 export CLUSTERS=128
 
 echo "Running strong scaling test on 4 ranks!"
