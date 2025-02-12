@@ -3,7 +3,6 @@ import time
 
 import numpy as np
 from scipy.sparse import csc_matrix
-
 from sklearn.cluster import KMeans
 
 def read_data(fname):
@@ -26,11 +25,12 @@ def read_data(fname):
                 list(map(lambda feature: float(feature.split(':')[1]), features)))
             data.append(features)
     
-    # dump data as binary
     data = np.array(data)
-    out = open("../data/" + fname, 'wb')
-    data.tofile(out)
-    out.close()
+
+    # dump data as binary
+    # out = open("../data/" + fname, 'wb')
+    # data.tofile(out)
+    # out.close()
 
     return data
 
@@ -70,22 +70,21 @@ def calculate_score(data, clusters, k):
 
 if __name__ == "__main__":
     fname = sys.argv[1]
-    ranks = int(sys.argv[2])
-    k = int(sys.argv[3])
+    k = int(sys.argv[2])
 
     # Read Data
     data = read_data(fname)  # read data and construct matrix
     n = data.shape[0]
 
-    model = KMeans(n_clusters=k, random_state=0, n_init='auto')
-    model.fit(data)
-    print('sklearn kmeans inertia (not kernelized):', model.inertia_)
+    # model = KMeans(n_clusters=k, random_state=0, n_init='auto')
+    # model.fit(data)
+    # print('sklearn kmeans inertia (not kernelized):', model.inertia_)
 
     start_time = time.time()
 
     # Construct Kernel Matrix and P tilde
     K = polynomial_kernel(data, 1, 1, 1)  # kernel matrix
-    print(K)
+    # print(K)
     P = np.tile(np.diag(K), (k, 1)).T  # P tilde
 
     # Initialize cluster assignments and V sparse matrix
@@ -123,8 +122,9 @@ if __name__ == "__main__":
     elapsed_time = end_time - start_time
     print("Elapsed time:", elapsed_time, "seconds")
     
-    score = calculate_score(data, clusters, k)
-    print('kernel kmeans score (sum of squared dists):', score)
+    # score = calculate_score(data, clusters, k)
+    # print('kernel kmeans score (sum of squared dists):', score)
 
     clusters = clusters.astype(np.int32)
-    clusters.tofile("../results/" + fname + "_py")
+    print(clusters)
+    # clusters.tofile("../results/" + fname + "_py")
