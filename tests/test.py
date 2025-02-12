@@ -125,6 +125,6 @@ if __name__ == "__main__":
     # score = calculate_score(data, clusters, k)
     # print('kernel kmeans score (sum of squared dists):', score)
 
-    clusters = clusters.astype(np.int32)
+    clusters = clusters.astype(np.int64)
     print(clusters)
-    # clusters.tofile("../results/" + fname + "_py")
+    clusters.tofile("../results/" + fname + "_py")
