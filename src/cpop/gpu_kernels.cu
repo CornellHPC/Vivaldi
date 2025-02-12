@@ -56,11 +56,12 @@ __global__ void argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
        point += blockDim.x * gridDim.x) {
     // printf("Argmin kernel started with point %lld\n", point);
     float min = FLT_MAX;
-    int64_t min_cluster = INT_MAX;
+    int64_t min_cluster = 0;
     for (int64_t cluster = 0; cluster < k; ++cluster) {
       float value = dc[cluster] - 2 * dE[cluster * t + point];
-      // printf("C %f E %f (idx %lld) -> Value %f\n", dc[cluster], dE[cluster * t + point], cluster * t + point, value);
-      if ((value < min || (value == min && cluster < min_cluster))) {
+      // printf("C %f E %f (idx %lld) -> Value %f\n", dc[cluster],
+      //        dE[cluster * t + point], cluster * t + point, value);
+      if (value < min) {
         min = value;
         min_cluster = cluster;
       }
