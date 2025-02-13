@@ -52,6 +52,11 @@ __global__ void z_vector_kernel(int64_t t, float* z, int64_t* assignments,
 __global__ void argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
                               int64_t* local_assignments,
                               int* local_cluster_sizes) {
+  for (int64_t point = blockIdx.x * blockDim.x + threadIdx.x; point < k;
+       point += blockDim.x * gridDim.x) {
+    local_cluster_sizes[point] = 0;
+  }
+
   for (int64_t point = blockIdx.x * blockDim.x + threadIdx.x; point < t;
        point += blockDim.x * gridDim.x) {
     // printf("Argmin kernel started with point %lld\n", point);
