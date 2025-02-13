@@ -39,9 +39,6 @@ int cluster(char* path, int m, int n, int k, MPI_Comm comm) {
   /** LOAD DATA */
   auto PT = load_matrix(path, m, n, comm);
 
-  /** PRINT DATA */
-  slate::print("PT", PT);
-
   /** START THE TIMER (after dataset IO) */
   auto start = hrc::now();
 
@@ -51,15 +48,6 @@ int cluster(char* path, int m, int n, int k, MPI_Comm comm) {
   for (int i = 0; i < size; ++i)
     t_sizes[i] = i == size - 1 ? m / size + m % size : m / size;
 
-  /** PRINT TILE SIZES */
-  if (rank == 0) {
-    std::cout << "T sizes: ";
-    for (int i = 0; i < size; ++i) {
-      std::cout << t_sizes[i] << " ";
-    }
-    std::cout << std::endl;
-  }
-
   /** COMPUTE K */
   auto k_start = hrc::now();
   DnMat_t K(m, t, compute_kernel_matrix(PT));
@@ -67,22 +55,13 @@ int cluster(char* path, int m, int n, int k, MPI_Comm comm) {
   MPI_Barrier(comm);
   auto k_elapsed = get_time_elapsed(k_start);
 
-  /** PRINT K */
-  for (int i = 0; i < size; ++i) {
-    if (rank == i) {
-      std::cout << "K[" << i << "]" << std::endl;
-      K.print();
-    }
-    MPI_Barrier(comm);
-  }
-
   /** INITIALIZE V */
   auto vi_start = hrc::now();
   V_t V(m, t, k, t_sizes, comm);
   MPI_Barrier(comm);
   auto vi_elapsed = get_time_elapsed(vi_start);
 
-  // /** ALLOCATE VARIABLES */
+  /** ALLOCATE VARIABLES */
   DnMat_t E(k, t);
   DnVec_t z(t);
   DnVec_t c(k);
@@ -94,51 +73,23 @@ int cluster(char* path, int m, int n, int k, MPI_Comm comm) {
   int64_t vr_elapsed = 0;
 
   /** K MEANS CLUSTERING LOOP */
-  int niter = 1;
+  int niter = 100;
   for (int i = 0; i < niter; ++i) {
     auto e_start = hrc::now();
     spmm(handle, V, K, E);  // SpMM: ET = VK using global V
     e_elapsed += get_time_elapsed(e_start);
 
-    /** PRINT E */
-    for (int i = 0; i < size; ++i) {
-      if (rank == i) {
-        std::cout << "E[" << i << "]" << std::endl;
-        E.print();
-      }
-      MPI_Barrier(comm);
-    }
-
     auto z_start = hrc::now();
     compute_z(V, E, z);  // Calculate z from the mask of local V on ET
     z_elapsed += get_time_elapsed(z_start);
-
-    /** PRINT Z */
-    for (int i = 0; i < size; ++i) {
-      if (rank == i) {
-        std::cout << "z[" << i << "]" << std::endl;
-        z.print();
-      }
-      MPI_Barrier(comm);
-    }
 
     auto c_start = hrc::now();
     spmv(handle, V, z, c);  // SpMV: c = Vz using local V
     sum_vec(c, comm);       // Calculate global c by summing across ranks
     c_elapsed += get_time_elapsed(c_start);
 
-    /** PRINT C */
-    for (int i = 0; i < size; ++i) {
-      if (rank == i) {
-        std::cout << "c[" << i << "]" << std::endl;
-        c.print();
-      }
-      MPI_Barrier(comm);
-    }
-
     auto vr_start = hrc::now();
-    V.reinit(E.dM, c.dz);  // Reinitialize V based on D matrix
-                           // (which itself is based on E and c)
+    reinit_V(E, c, V);  // Reinitialize V based on D matrix (i.e. E and c)
     vr_elapsed += get_time_elapsed(vr_start);
   }
 

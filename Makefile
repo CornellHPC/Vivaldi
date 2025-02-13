@@ -27,7 +27,7 @@ alloc:
 	fi
 
 small:
-	srun --nodes=1 --ntasks-per-node=4 --cpus-per-task=32 --cpu-bind=cores --gpus=4 --gpu-bind=single:1 build/main data/small 14 8 2
+	srun --nodes=1 --ntasks-per-node=4 --cpus-per-task=32 --cpu-bind=cores --gpus=4 --gpu-bind=single:1 build/main data/small 11 8 2
 
 australian:
 	srun --nodes=1 --ntasks-per-node=4 --cpus-per-task=32 --cpu-bind=cores --gpus=4 --gpu-bind=single:1 build/main data/australian 690 14 2

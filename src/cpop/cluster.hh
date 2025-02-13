@@ -90,13 +90,10 @@ struct V_t {
   V_t(int64_t m, int64_t t, int64_t k, int* t_sizes, MPI_Comm comm);
 
   /**
-   * @brief Runs the argmin kernel on dE and dc (device pointers to the values of E and c)
-   * 
-   * Allreduces local clusters, allgathers local assignments, and reinitializes
-   * 
+   * @brief Saves the cluster assignments to disk
+   *
+   * @param path The path to the output file
    */
-  int reinit(float* dE, float* dc);
-
   int save(const char* path);
 
   /**
@@ -150,23 +147,15 @@ int spmv(cusparseHandle_t& handle, V_t& V, DnVec_t& z, DnVec_t& c);
  */
 int sum_vec(DnVec_t& c, MPI_Comm comm);
 
-// /**
-//  * @brief Reinitializes L based on the distance matrix
-//  *
-//  * @param ell The struct containing "la" (local assignments vector) and "ll" (local cluster sizes vector)
-//  * @param E The E matrix
-//  * @param c The c norm vector
-//  */
-// int reinit_ell(L_t& ell, DnMat_t& E, DnVec_t& c);
-
-// /**
-//  * @brief Reinitializes V based on the local assignments and cluster sizes
-//  *
-//  * @param V The V matrix
-//  * @param ell The struct containing "la" (local assignments vector) and "ll" (local cluster sizes vector)
-//  * @return int
-//  */
-// int reinit_V(V_t& V, L_t& ell);
+/**
+ * @brief Reinitializes V based on the distances matrix (computed from E and c)
+ *
+ * @param E The E matrix
+ * @param c The c norm vector
+ * @param V The V matrix
+ * @return int
+ */
+int reinit_V(DnMat_t& E, DnVec_t& c, V_t& V);
 
 }  // namespace cpop
 

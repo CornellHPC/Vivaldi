@@ -114,21 +114,6 @@ V_t::V_t(int64_t m, int64_t t, int64_t k, int* t_sizes, MPI_Comm comm) {
   this->comm = comm;
 }
 
-int V_t::reinit(float* dE, float* dc) {
-  // compute argmin
-  launch_argmin_kernel(k_, t_, dE, dc, local_assignments, local_cluster_sizes);
-
-  // reduce over nprocs
-  MPI_Allreduce(local_cluster_sizes, global_cluster_sizes, k_, MPI_INT, MPI_SUM,
-                MPI_COMM_WORLD);
-  MPI_Allgatherv(local_assignments, t_, MPI_INT64_T, global_assignments,
-                 t_sizes_, displs, MPI_INT64_T, MPI_COMM_WORLD);
-
-  // reinitialize
-  launch_reinit_kernel(values, global_assignments, global_cluster_sizes, m_);
-  return EXIT_SUCCESS;
-}
-
 int V_t::save(const char* path) {
   MPI_File fh;
   MPI_File_open(comm, path, MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL,
@@ -309,6 +294,23 @@ int spmv(cusparseHandle_t& handle, V_t& V, DnVec_t& z, DnVec_t& c) {
 
 int sum_vec(DnVec_t& c, MPI_Comm comm) {
   MPI_Allreduce(MPI_IN_PLACE, c.dz, c.size, MPI_FLOAT, MPI_SUM, comm);
+  return EXIT_SUCCESS;
+}
+
+int reinit_V(DnMat_t& E, DnVec_t& c, V_t& V) {
+  // compute argmin
+  launch_argmin_kernel(V.k_, V.t_, E.dM, c.dz, V.local_assignments,
+                       V.local_cluster_sizes);
+
+  // reduce over nprocs
+  MPI_Allreduce(V.local_cluster_sizes, V.global_cluster_sizes, V.k_, MPI_INT,
+                MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allgatherv(V.local_assignments, V.t_, MPI_INT64_T, V.global_assignments,
+                 V.t_sizes_, V.displs, MPI_INT64_T, MPI_COMM_WORLD);
+
+  // reinitialize
+  launch_reinit_kernel(V.values, V.global_assignments, V.global_cluster_sizes,
+                       V.m_);
   return EXIT_SUCCESS;
 }
 
