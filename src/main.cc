@@ -32,7 +32,7 @@ int cluster(char* path, int m, int n, int k, MPI_Comm comm) {
 
   /** INITIALIZE GPU */
   wake_gpus(rank);
-  slate::gpu_aware_mpi(false);
+  slate::gpu_aware_mpi(true);
   cusparseHandle_t handle;
   cusparseCreate(&handle);
 
@@ -73,7 +73,7 @@ int cluster(char* path, int m, int n, int k, MPI_Comm comm) {
   int64_t vr_elapsed = 0;
 
   /** K MEANS CLUSTERING LOOP */
-  int niter = 100;
+  int niter = 2;
   for (int i = 0; i < niter; ++i) {
     auto e_start = hrc::now();
     spmm(handle, V, K, E);  // SpMM: ET = VK using global V
