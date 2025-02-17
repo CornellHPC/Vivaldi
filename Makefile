@@ -2,7 +2,7 @@
 
 .PHONY: alloc build env small australian letter
 
-export SLATE_INSTALL := $(shell cd ~/slate/_install && pwd) # Change slate directory as necessary
+export SLATE_INSTALL := $(shell cd ~/cpp/slate/_install && pwd) # Change slate directory as necessary
 export mpi := cray
 export blas := libsci
 export CXX := CC
@@ -20,9 +20,10 @@ build:
 	cmake -DSLATE_INSTALL=$$SLATE_INSTALL .. && \
 	cmake --build . && \
 	touch device_wrapper && \
+	chmod +x device_wrapper && \
 	echo "#!/bin/bash" > device_wrapper && \
-  echo "export CUDA_VISIBLE_DEVICES=\$$((3-\$$SLURM_LOCALID))" >> device_wrapper && \
-  echo "exec \$$*" >> device_wrapper && \
+	echo "export CUDA_VISIBLE_DEVICES=\$$((3-\$$SLURM_LOCALID))" >> device_wrapper && \
+	echo "exec \$$*" >> device_wrapper && \
 	echo "Build finished!" && \
 	cd ..
 
