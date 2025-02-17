@@ -43,3 +43,9 @@ svmguide1:
 
 letter:
 	srun -N 4 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 16 ./build/device_wrapper ./build/main data/letter 15000 5000 26
+
+profile:
+	srun -N 1 --ntasks-per-node 1 --cpus-per-task 32 --cpu-bind cores -G 1 \
+		nsys profile --stats=true --cuda-memory-usage=true --trace=cuda,cublas,cusparse --output=/tmp/report \
+		build/device_wrapper build/main data/rand 46000 64 128
+
