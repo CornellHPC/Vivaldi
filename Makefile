@@ -21,9 +21,9 @@ build:
 	cmake --build . && \
 	touch device_wrapper && \
 	chmod +x device_wrapper && \
-	echo "#!/bin/bash" > device_wrapper && \
-	echo "export CUDA_VISIBLE_DEVICES=\$SLURM_LOCALID" >> device_wrapper && \
-	echo "exec \$$*" >> device_wrapper && \
+	echo '#!/bin/bash' >> device_wrapper && \
+	echo 'export CUDA_VISIBLE_DEVICES=$$SLURM_LOCALID' >> device_wrapper && \
+	echo 'exec $$*' >> device_wrapper && \
 	echo "Build finished!" && \
 	cd ..
 
