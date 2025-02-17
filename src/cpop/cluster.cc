@@ -125,11 +125,6 @@ int V_t::save(const char* path) {
   int64_t* assignments = (int64_t*)malloc(t_ * sizeof(int64_t));
   CHECK_CUDA(cudaMemcpy(assignments, local_ptr_to_assignments,
                         t_ * sizeof(int64_t), cudaMemcpyDeviceToHost));
-  std::cout << "Final assignments [ ";
-  for (int i = 0; i < t_; ++i) {
-    std::cout << assignments[i] << " ";
-  }
-  std::cout << "]" << std::endl;
 
   // Write the data to disk
   MPI_File_write_at(fh, offset * sizeof(int64_t), assignments, t_, MPI_INT64_T,
