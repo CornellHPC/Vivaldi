@@ -3,43 +3,44 @@ Running strong scaling test on 4 ranks!
 Trial 1
 Number of GPUs per node: 1
 Waking the GPUs... DONE!
-2176
-1811
-2
-257
+4318
+3664
+8
+556
 0
-38
-2
+41
+3
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 
 Trial 2
-srun: Step created for StepId=35946458.1
+srun: Step created for StepId=35974312.1
 Number of GPUs per node: 1
 Waking the GPUs... DONE!
-1849
-1548
-2
-206
+4025
+3457
+8
+507
 0
-21
-2
+3
+4
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 
 Trial 3
+srun: Step created for StepId=35974312.2
 Number of GPUs per node: 1
 Waking the GPUs... DONE!
-1843
-1543
-2
-207
+4105
+3541
+8
+507
 0
-20
+3
 2
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
@@ -47,14 +48,15 @@ Waking the GPUs... DONE!
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 
 Trial 4
+srun: Step created for StepId=35974312.3
 Number of GPUs per node: 1
 Waking the GPUs... DONE!
-1897
-1597
-2
-207
+4046
+3481
+8
+507
 0
-20
+3
 2
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
@@ -62,15 +64,15 @@ Waking the GPUs... DONE!
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 
 Trial 5
-srun: Step created for StepId=35946458.4
+srun: Step created for StepId=35974312.4
 Number of GPUs per node: 1
 Waking the GPUs... DONE!
-2081
-1780
-2
-206
+4199
+3635
+8
+506
 0
-21
+3
 2
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries

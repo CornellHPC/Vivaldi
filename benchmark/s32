@@ -3,13 +3,13 @@ Running strong scaling test on 32 ranks!
 Trial 1
 Number of GPUs per node: 1
 Waking the GPUs... DONE!
-649
-459
+936
+702
 2
-55
+52
 0
-44
-2
+48
+5
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
@@ -44,15 +44,16 @@ Waking the GPUs... DONE!
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 
 Trial 2
+srun: Step created for StepId=35974331.1
 Number of GPUs per node: 1
 Waking the GPUs... DONE!
-601
-499
+775
+628
 2
 7
 0
 3
-4
+7
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
@@ -89,13 +90,13 @@ Waking the GPUs... DONE!
 Trial 3
 Number of GPUs per node: 1
 Waking the GPUs... DONE!
-775
-673
-2
+1144
+1001
+4
 7
 0
-4
 3
+2
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
@@ -130,16 +131,15 @@ Waking the GPUs... DONE!
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 
 Trial 4
-srun: Step created for StepId=35946472.3
 Number of GPUs per node: 1
 Waking the GPUs... DONE!
-484
-378
+915
+773
 2
 7
 0
-5
-4
+3
+3
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
@@ -174,16 +174,16 @@ Waking the GPUs... DONE!
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 
 Trial 5
-srun: Step created for StepId=35946472.4
+srun: Step created for StepId=35974331.4
 Number of GPUs per node: 1
 Waking the GPUs... DONE!
-570
-467
+1001
+841
 2
 7
 0
-4
 3
+10
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries

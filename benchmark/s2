@@ -3,12 +3,12 @@ Running strong scaling test on 2 ranks!
 Trial 1
 Number of GPUs per node: 1
 Waking the GPUs... DONE!
-3653
-3104
-2
-461
+8036
+6929
+6
+962
 0
-41
+42
 1
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
@@ -16,12 +16,12 @@ Waking the GPUs... DONE!
 Trial 2
 Number of GPUs per node: 1
 Waking the GPUs... DONE!
-3510
-3027
-3
-406
+8148
+7134
+6
+908
 0
-27
+3
 1
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
@@ -29,25 +29,26 @@ Waking the GPUs... DONE!
 Trial 3
 Number of GPUs per node: 1
 Waking the GPUs... DONE!
-3608
-3127
-2
-406
+7942
+6900
+6
+955
 0
-29
+3
 1
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 
 Trial 4
+srun: Step created for StepId=35974269.3
 Number of GPUs per node: 1
 Waking the GPUs... DONE!
-3583
-3085
-2
-425
+7839
+6825
+6
+908
 0
-4
+3
 1
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
@@ -55,12 +56,12 @@ Waking the GPUs... DONE!
 Trial 5
 Number of GPUs per node: 1
 Waking the GPUs... DONE!
-3507
-3026
-2
-406
+8021
+6952
+6
+973
 0
-29
+3
 1
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries

@@ -9,7 +9,7 @@
 
 export DVS_MAXNODES=1__
 export EXE_PATH="$PWD/../build/device_wrapper $PWD/../build/main"
-export DATA="$PWD/../data/rand 128000 64"
+export DATA="$PWD/../data/rand 280000 64"
 export CLUSTERS=128
 
 echo "Running weak scaling test on 16 ranks!"
