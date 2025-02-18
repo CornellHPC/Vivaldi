@@ -47,8 +47,8 @@ slate::Matrix<float> load_matrix(const char* fname, int64_t rows, int64_t cols,
   return M;
 }
 
-int extract_kernel_tiles(float** tiles, slate::Matrix<float>& K, int col) {
-  int elems = K.m() * K.tileNb(col);
+int64_t extract_kernel_tiles(float** tiles, slate::Matrix<float>& K, int col) {
+  int64_t elems = K.m() * K.tileNb(col);
   cudaMalloc(tiles, elems * sizeof(float));
 
   int64_t offset = 0;
@@ -91,14 +91,14 @@ float* compute_kernel_matrix(slate::Matrix<float>& PT) {
 
   // Copy tiles in local column to buffer
   float* values;
-  int count = extract_kernel_tiles(&values, K, rank);
+  int64_t count = extract_kernel_tiles(&values, K, rank);
 
   // Copy tiles in remainder column to buffer
   float* _remainder;
   int remainder_count = 0;
   if (rank + size < K.nt()) {
     float* remainder;
-    remainder_count = extract_kernel_tiles(&remainder, K, rank + size);
+    remainder_count = (int)extract_kernel_tiles(&remainder, K, rank + size);
     _remainder = (float*)malloc(remainder_count * sizeof(float));
     cudaMemcpy(_remainder, remainder, remainder_count * sizeof(float),
                cudaMemcpyDeviceToHost);
@@ -116,7 +116,7 @@ float* compute_kernel_matrix(slate::Matrix<float>& PT) {
 
   // Gather remainder buffers on root (i.e. last rank)
   int* displs;
-  int total = 0;
+  int64_t total = 0;
   float* recvbuf;
   if (rank == root) {
     displs = (int*)malloc(size * sizeof(int));
@@ -132,8 +132,8 @@ float* compute_kernel_matrix(slate::Matrix<float>& PT) {
               displs, MPI_FLOAT, root, PT.mpiComm());
 
   // Reconstruct root buffer (i.e. last rank)
-  int rows = K.m();
-  int cols = (count + total) / rows;
+  int64_t rows = K.m();
+  int64_t cols = (count + total) / rows;
   if (rank == root) {
     // Copy local column to host
     float* _values = (float*)malloc(count * sizeof(float));
@@ -143,18 +143,18 @@ float* compute_kernel_matrix(slate::Matrix<float>& PT) {
     float* tmp = (float*)malloc((count + total) * sizeof(float));
 
     // Fill output buffer
-    int offset = 0;
-    for (int i = 0; i < rows; ++i) {
+    int64_t offset = 0;
+    for (int64_t i = 0; i < rows; ++i) {
       // Copy local row
-      int local_cols = K.tileNb(rank);
-      for (int j = 0; j < local_cols; ++j) {
+      int64_t local_cols = K.tileNb(rank);
+      for (int64_t j = 0; j < local_cols; ++j) {
         tmp[offset++] = _values[i * local_cols + j];
       }
 
       // Copy remainder rows
-      for (int p = 0; p < size; ++p) {
-        int remainder_cols = recvcounts[p] / rows;
-        for (int j = 0; j < remainder_cols; ++j) {
+      for (int64_t p = 0; p < size; ++p) {
+        int64_t remainder_cols = recvcounts[p] / rows;
+        for (int64_t j = 0; j < remainder_cols; ++j) {
           tmp[offset++] = recvbuf[displs[p] + i * remainder_cols + j];
         }
       }

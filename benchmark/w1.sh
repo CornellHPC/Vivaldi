@@ -8,8 +8,8 @@
 #SBATCH --output=w1
 
 export DVS_MAXNODES=1__
-export EXE_PATH="$PWD/../build/main"
-export DATA="$PWD/../data/rand 16000 64"
+export EXE_PATH="$PWD/../build/device_wrapper $PWD/../build/main"
+export DATA="$PWD/../data/rand 32000 64"
 export CLUSTERS=128
 
 echo "Running weak scaling test on 1 rank!"
@@ -17,7 +17,7 @@ echo ""
 
 for i in {1..5}; do
   echo "Trial $i"
-  srun --nodes=1 --ntasks=1 --cpus-per-task=32 --cpu-bind=cores --gpus=1 --gpu-bind=single:1 $EXE_PATH $DATA $CLUSTERS
+  srun -N 1 --ntasks-per-node 1 --cpus-per-task 32 --cpu-bind cores -G 1 $EXE_PATH $DATA $CLUSTERS
   echo ""
 done
 

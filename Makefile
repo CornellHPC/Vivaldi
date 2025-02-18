@@ -1,6 +1,6 @@
 # Makefile
 
-.PHONY: build alloc env small australian svmguide1 letter
+.PHONY: build alloc small australian svmguide1 letter
 
 export SLATE_INSTALL := $(shell cd ~/slate/_install && pwd) # Change slate directory as necessary
 export mpi := cray
@@ -43,6 +43,9 @@ svmguide1:
 
 letter:
 	srun -N 4 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 16 ./build/device_wrapper ./build/main data/letter 15000 5000 26
+
+rand:
+	srun -N 1 --ntasks-per-node 1 --cpus-per-task 32 --cpu-bind cores -G 1 ./build/device_wrapper ./build/main data/rand 102000 64 128
 
 profile:
 	srun -N 1 --ntasks-per-node 1 --cpus-per-task 32 --cpu-bind cores -G 1 \

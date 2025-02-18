@@ -8,7 +8,7 @@
 #SBATCH --output=s2
 
 export DVS_MAXNODES=1__
-export EXE_PATH="$PWD/../build/main"
+export EXE_PATH="$PWD/../build/device_wrapper $PWD/../build/main"
 export DATA="$PWD/../data/rand 46000 64"
 export CLUSTERS=128
 
@@ -17,7 +17,7 @@ echo ""
 
 for i in {1..5}; do
   echo "Trial $i"
-  srun --nodes=1 --ntasks=2 --cpus-per-task=32 --cpu-bind=cores --gpus=2 --gpu-bind=single:1 $EXE_PATH $DATA $CLUSTERS
+  srun -N 1 --ntasks-per-node 2 --cpus-per-task 32 --cpu-bind cores -G 2 $EXE_PATH $DATA $CLUSTERS
   echo ""
 done
 
