@@ -170,9 +170,11 @@ float* compute_kernel_matrix(slate::Matrix<float>& PT) {
     free(recvcounts);
     free(displs);
     free(recvbuf);
-    free(_remainder);
     free(_values);
     free(tmp);
+  }
+  if (rank + size < K.nt()) {
+    free(_remainder);
   }
 
   // Create cuSPARSE dense matrix descriptors
