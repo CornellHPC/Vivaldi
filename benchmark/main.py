@@ -66,15 +66,19 @@ plt.savefig("strong_speedup.png")
 plt.clf()
 
 plt.title("Strong Scaling Performance Breakdown")
-x = np.arange(len(C))
-plt.xticks(x, C)
-c_width = 0.5
-bar_width = 0.1
-shift = (bar_width*(len(C)-1)) / 2
-for i,p in enumerate(P):
-    plt.bar(x+bar_width*i-shift, savgs[p][1:], width=bar_width, label=f"p={p}")
-plt.yscale("log", base=2)
-plt.xlabel("Operation")
+x = np.arange(len(P))
+plt.xticks(x, P)
+bars = []
+for i,c in enumerate(C):
+    heights = [savgs[p][i+1] for p in P]
+    bars.append(plt.bar(x, heights, label=c, width=0.5, edgecolor="black"))
+for p in range(len(bars[0].patches)):
+    patches = [bars[i].patches[p] for i in range(len(bars))]
+    patches.sort(key=lambda x: -x.get_height())
+    for i, patch in enumerate(patches):
+        patch.set_zorder(i)
+plt.yscale("log")
+plt.xlabel("Ranks")
 plt.ylabel("Runtime (ms)")
 plt.legend()
 plt.savefig("strong_breakdown.png")
