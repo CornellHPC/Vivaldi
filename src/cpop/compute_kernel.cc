@@ -19,7 +19,8 @@ slate::Matrix<float> load_matrix(const char* fname, int64_t rows, int64_t cols,
   MPI_File_read_all(fh, buf, cols * rows, MPI_FLOAT, MPI_STATUS_IGNORE);
 
   // Create empty SLATE matrix object of size equal to data
-  auto M = slate::Matrix<float>(cols, rows, cols, rows / size, 1, size, comm);
+  int t = rows / size + (rows > size * size && rows % size > 0);
+  auto M = slate::Matrix<float>(cols, rows, cols, t, 1, size, comm);
   M.insertLocalTiles(slate::Target::Devices);
 
   // Fill data
@@ -92,6 +93,14 @@ float* compute_kernel_matrix(slate::Matrix<float>& PT) {
   // Copy tiles in local column to buffer
   float* values;
   int64_t count = extract_kernel_tiles(&values, K, rank);
+
+  // Return early if there is no remainder
+  if (K.tileNb(0) * size >= K.n())
+    return values;
+
+  // Warn on remainder
+  std::cout << "WARNING: The tiles could not be distributed without remainder."
+            << std::endl;
 
   // Copy tiles in remainder column to buffer
   float* _remainder;

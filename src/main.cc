@@ -43,10 +43,13 @@ int cluster(char* path, int m, int n, int k, MPI_Comm comm) {
   auto start = hrc::now();
 
   /** COMPUTE TILE SIZES */
-  int t = rank == size - 1 ? m / size + m % size : m / size;
+  int t = m / size + (m > size * size && m % size > 0);
   int* t_sizes = (int*)calloc(size, sizeof(int));
-  for (int i = 0; i < size; ++i)
-    t_sizes[i] = i == size - 1 ? m / size + m % size : m / size;
+  for (int i = 0; i < size - 1; ++i) {
+    t_sizes[i] = t;
+  }
+  t_sizes[size - 1] = m - (size - 1) * t;
+  t = t_sizes[rank];
 
   /** COMPUTE K */
   auto k_start = hrc::now();
