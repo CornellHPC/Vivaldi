@@ -3,28 +3,27 @@ Running strong scaling test on 4 ranks!
 Trial 1
 Number of GPUs per node: 1
 Waking the GPUs... DONE!
-4318
-3664
-8
+785
+158
+3
 556
 0
-41
-3
+38
+2
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 
 Trial 2
-srun: Step created for StepId=35974312.1
 Number of GPUs per node: 1
 Waking the GPUs... DONE!
-4025
-3457
-8
-507
+694
+144
+5
+508
 0
-3
+4
 4
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
@@ -32,48 +31,45 @@ Waking the GPUs... DONE!
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 
 Trial 3
-srun: Step created for StepId=35974312.2
 Number of GPUs per node: 1
 Waking the GPUs... DONE!
-4105
-3541
-8
-507
+690
+137
+5
+508
 0
-3
-2
+4
+4
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 
 Trial 4
-srun: Step created for StepId=35974312.3
 Number of GPUs per node: 1
 Waking the GPUs... DONE!
-4046
-3481
-8
-507
+690
+138
+4
+508
 0
-3
-2
+4
+5
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 
 Trial 5
-srun: Step created for StepId=35974312.4
 Number of GPUs per node: 1
 Waking the GPUs... DONE!
-4199
-3635
-8
-506
+694
+144
+4
+508
 0
-3
-2
+4
+4
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
