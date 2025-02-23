@@ -37,15 +37,26 @@ endif()
 file(GLOB SOURCES "src/main.cc" "src/**/*.cu" "src/**/*.cc" "src/cpop/**/*.cu" "src/cpop/**/*.cc")
 add_executable(main ${SOURCES})
 
+# Test
+enable_testing()
+file(GLOB SOURCES "src/test.cc" "src/**/*.cu" "src/**/*.cc" "src/cpop/**/*.cu" "src/cpop/**/*.cc")
+add_executable(test_exe ${SOURCES})
+add_test(cluster_test test_exe)
+
 # Sanitizers
 if (SANITIZE)
   target_compile_options(main PRIVATE -fsanitize=address,leak -fno-omit-frame-pointer)
   target_link_options(main PRIVATE -fsanitize=address,leak -fno-omit-frame-pointer)
+  target_compile_options(test_exe PRIVATE -fsanitize=address,leak -fno-omit-frame-pointer)
+  target_link_options(test_exe PRIVATE -fsanitize=address,leak -fno-omit-frame-pointer)
 endif()
 
 # Includes
 target_include_directories(main PRIVATE "${SLATE_INSTALL}/include")
+target_include_directories(test_exe PRIVATE "${SLATE_INSTALL}/include")
 
 # Libraries
 target_link_directories(main PRIVATE "${SLATE_INSTALL}/lib")
 target_link_libraries(main gomp cusparse cusolver blaspp lapackpp slate)
+target_link_directories(test_exe PRIVATE "${SLATE_INSTALL}/lib")
+target_link_libraries(test_exe gomp cusparse cusolver blaspp lapackpp slate)

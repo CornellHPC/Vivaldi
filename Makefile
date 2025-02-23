@@ -27,6 +27,10 @@ build:
 	echo "Build finished!" && \
 	cd ..
 
+test:
+	cd build && \
+	srun -N 1 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 4 device_wrapper ctest --verbose --output-on-failure test_exe
+
 alloc:
 	@if [ -z "$$SLURM_JOB_ID" ]; then\
 		salloc -N 4 -q interactive -t 03:00:00 -C gpu -G 16 -A m4341;\
