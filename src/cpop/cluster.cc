@@ -11,39 +11,6 @@
 #include "gpu_kernels.cuh"
 #include "utils.hh"
 
-void print_cu_vec(int64_t* vec, int64_t size) {
-  int64_t* h_vec = (int64_t*)malloc(size * sizeof(int64_t));
-  cudaMemcpy(h_vec, vec, size * sizeof(int64_t), cudaMemcpyDeviceToHost);
-  std::cout << "Size " << size << "vector [ ";
-  for (int i = 0; i < size; ++i) {
-    std::cout << h_vec[i] << " ";
-  }
-  std::cout << "]" << std::endl;
-  free(h_vec);
-}
-
-void print_cu_vec(int* vec, int64_t size) {
-  int* h_vec = (int*)malloc(size * sizeof(int));
-  cudaMemcpy(h_vec, vec, size * sizeof(int), cudaMemcpyDeviceToHost);
-  std::cout << "Size " << size << "vector [ ";
-  for (int i = 0; i < size; ++i) {
-    std::cout << h_vec[i] << " ";
-  }
-  std::cout << "]" << std::endl;
-  free(h_vec);
-}
-
-void print_cu_vec(float* vec, int64_t size) {
-  float* h_vec = (float*)malloc(size * sizeof(float));
-  cudaMemcpy(h_vec, vec, size * sizeof(float), cudaMemcpyDeviceToHost);
-  std::cout << "Size " << size << "vector [ ";
-  for (int i = 0; i < size; ++i) {
-    std::cout << h_vec[i] << " ";
-  }
-  std::cout << "]" << std::endl;
-  free(h_vec);
-}
-
 namespace cpop {
 
 V_t::V_t(int64_t m, int64_t t, int64_t k, int* t_sizes, MPI_Comm comm) {
@@ -139,17 +106,17 @@ void V_t::print() {
   std::cout << "Printing V from rank " << rank << std::endl;
   std::cout << "Local displacement is " << displs[rank] << std::endl;
   std::cout << "Global device vectors:" << std::endl;
-  print_cu_vec(global_assignments, m_);
-  print_cu_vec(global_csc_col_offsets, m_ + 1);
-  print_cu_vec(values, m_);
+  print_device_buffer(global_assignments, m_);
+  print_device_buffer(global_csc_col_offsets, m_ + 1);
+  print_device_buffer(values, m_);
   std::cout << "Local device vectors:" << std::endl;
-  print_cu_vec(local_ptr_to_assignments, t_);
-  print_cu_vec(local_csc_col_offsets, t_ + 1);
-  print_cu_vec(local_ptr_to_values, t_);
+  print_device_buffer(local_ptr_to_assignments, t_);
+  print_device_buffer(local_csc_col_offsets, t_ + 1);
+  print_device_buffer(local_ptr_to_values, t_);
   std::cout << "Working vectors:" << std::endl;
-  print_cu_vec(global_cluster_sizes, k_);
-  print_cu_vec(local_assignments, t_);
-  print_cu_vec(local_cluster_sizes, k_);
+  print_device_buffer(global_cluster_sizes, k_);
+  print_device_buffer(local_assignments, t_);
+  print_device_buffer(local_cluster_sizes, k_);
   std::cout << "-------------------" << std::endl;
 }
 
@@ -185,18 +152,7 @@ DnMat_t::DnMat_t(int64_t h, int64_t w, float* dM_) {
 }
 
 int DnMat_t::print() {
-  float* m = (float*)malloc(h_ * w_ * sizeof(float));
-  CHECK_CUDA(
-      cudaMemcpy(m, dM, h_ * w_ * sizeof(float), cudaMemcpyDeviceToHost));
-
-  for (int i = 0; i < h_; ++i) {
-    for (int j = 0; j < w_; ++j) {
-      std::cout << m[i * w_ + j] << " ";
-    }
-    std::cout << std::endl;
-  }
-
-  free(m);
+  print_device_matrix(dM, h_, w_);
   return EXIT_SUCCESS;
 }
 
@@ -212,15 +168,7 @@ DnVec_t::DnVec_t(int t) {
 }
 
 int DnVec_t::print() {
-  float* v = (float*)malloc(size * sizeof(float));
-  CHECK_CUDA(cudaMemcpy(v, dz, size * sizeof(float), cudaMemcpyDeviceToHost));
-
-  for (int i = 0; i < size; ++i) {
-    std::cout << v[i] << " ";
-  }
-  std::cout << std::endl;
-
-  free(v);
+  print_device_buffer(dz, size);
   return EXIT_SUCCESS;
 }
 

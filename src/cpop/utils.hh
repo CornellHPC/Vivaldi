@@ -54,9 +54,32 @@ void print_device_buffer(T* buf, size_t count) {
   T* temp = (T*)malloc(count * sizeof(T));
   cudaMemcpy(temp, buf, count * sizeof(T), cudaMemcpyDeviceToHost);
 
-  for (int i = 0; i < count; i++)
+  for (int i = 0; i < count; ++i)
     std::cout << temp[i] << " ";
   std::cout << std::endl;
+
+  free(temp);
+}
+
+/**
+ * @brief Print matrix on device
+ *
+ * @param mat The device pointer to the matrix
+ * @param h The height of the matrix
+ * @param w The width of the matrix
+ */
+template <typename T>
+void print_device_matrix(T* mat, size_t h, size_t w) {
+  T* temp = (T*)malloc(h * w * sizeof(T));
+  cudaMemcpy(temp, mat, h * w * sizeof(T), cudaMemcpyDeviceToHost);
+
+  for (int i = 0; i < h; ++i) {
+    for (int j = 0; i < w; ++j) {
+      std::cout << temp[i * w + j] << " ";
+    }
+    std::cout << "\n";
+  }
+  std::cout << std::flush;
 
   free(temp);
 }
