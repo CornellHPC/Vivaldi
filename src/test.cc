@@ -285,6 +285,114 @@ void check_v1(V_t& V) {
   free(v);
 }
 
+void check_e2(DnMat_t& E, int rank) {
+  int64_t count = E.h_ * E.w_;
+  float* m = (float*)malloc(count * sizeof(float));
+  cudaMemcpy(m, E.dM, count * sizeof(float), cudaMemcpyDeviceToHost);
+
+  if (rank == 0) {
+    float buffer[18] = {20098.71388374, 16584.07109689, 13167.1425938,
+                        19625.07103607, 14693.85684898, 17526.21393519,
+                        18664.35676957, 18548.64248617, 16301.78538825,
+                        21432.00042864, 18605.26353,    15625.68452304,
+                        18346.15826166, 15005.10556326, 18369.68457792,
+                        18590.10563496, 18822.26353434, 16435.0003287};
+    assert_buffer_equal(buffer, m, count);
+  } else if (rank == 1) {
+    float buffer[18] = {20119.9995976,  20197.49959605, 19365.64246983,
+                        14722.1425627,  21021.92815099, 15428.49969143,
+                        15793.92825555, 17978.64249757, 13845.99972308,
+                        21060.10568436, 20302.84251132, 22741.00045482,
+                        18327.68457708, 23244.68467542, 15367.68451788,
+                        17959.00035918, 17068.421394,   16466.21085564};
+    assert_buffer_equal(buffer, m, count);
+  } else if (rank == 2) {
+    float buffer[18] = {20640.21387291, 19587.21389397, 19097.57104662,
+                        14722.1425627,  14062.1425759,  9742.07123373,
+                        18176.07106505, 18681.21391209, 11808.85690668,
+                        19685.63197266, 22067.78991504, 19318.21091268,
+                        17045.94770934, 13755.0002751,  12944.78973258,
+                        20584.10567484, 22388.21097408, 11627.3686536};
+    assert_buffer_equal(buffer, m, count);
+  } else if (rank == 3) {
+    float buffer[12] = {17236.78536955, 17888.28535652, 17441.57107974,
+                        17327.07108203, 17212.07108433, 16679.14252356,
+                        22146.5793903,  19604.94776052, 22703.57940144,
+                        15603.89504892, 17630.42140524, 18586.68458226};
+    assert_buffer_equal(buffer, m, count);
+  } else {
+    assert(false && "Unexpected rank.");
+  }
+
+  free(m);
+}
+
+void check_z2(DnVec_t& z, int rank) {
+  int64_t count = z.size;
+  float* m = (float*)malloc(count * sizeof(float));
+  cudaMemcpy(m, z.dz, count * sizeof(float), cudaMemcpyDeviceToHost);
+
+  if (rank == 0) {
+    float buffer[9] = {21432.00042864, 18605.26353,    15625.68452304,
+                       19625.07103607, 14693.85684898, 18369.68457792,
+                       18664.35676957, 18548.64248617, 16301.78538825};
+    assert_buffer_equal(buffer, m, count);
+  } else if (rank == 1) {
+    float buffer[9] = {21060.10568436, 20197.49959605, 22741.00045482,
+                       18327.68457708, 23244.68467542, 15428.49969143,
+                       17959.00035918, 17978.64249757, 16466.21085564};
+    assert_buffer_equal(buffer, m, count);
+  } else if (rank == 2) {
+    float buffer[9] = {20640.21387291, 22067.78991504, 19097.57104662,
+                       17045.94770934, 14062.1425759,  12944.78973258,
+                       20584.10567484, 22388.21097408, 11808.85690668};
+    assert_buffer_equal(buffer, m, count);
+  } else if (rank == 3) {
+    float buffer[6] = {22146.5793903,  19604.94776052, 22703.57940144,
+                       17327.07108203, 17212.07108433, 18586.68458226};
+    assert_buffer_equal(buffer, m, count);
+  } else {
+    assert(false && "Unexpected rank.");
+  }
+
+  free(m);
+}
+
+void check_c2(DnVec_t& c) {
+  float* m = (float*)malloc(2 * sizeof(float));
+  cudaMemcpy(m, c.dz, 2 * sizeof(float), cudaMemcpyDeviceToHost);
+
+  float buffer[2] = {17256.16257506, 19573.89274971};
+  assert_buffer_equal(buffer, m, 2);
+
+  free(m);
+}
+
+void check_v2(V_t& V) {
+  int64_t count = 33;
+  int64_t* a = (int64_t*)malloc(count * sizeof(int64_t));
+  cudaMemcpy(a, V.global_assignments, count * sizeof(int64_t),
+             cudaMemcpyDeviceToHost);
+
+  int64_t buffer[33] = {1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 0,
+                        1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1};
+  assert_buffer_equal(buffer, a, count);
+
+  float* v = (float*)malloc(count * sizeof(float));
+  cudaMemcpy(v, V.values, count * sizeof(float), cudaMemcpyDeviceToHost);
+  float values[33] = {
+      0.05882353, 0.05882353, 0.05882353, 0.0625,     0.0625,     0.0625,
+      0.0625,     0.0625,     0.0625,     0.0625,     0.0625,     0.05882353,
+      0.05882353, 0.05882353, 0.0625,     0.05882353, 0.0625,     0.05882353,
+      0.0625,     0.05882353, 0.0625,     0.05882353, 0.0625,     0.05882353,
+      0.05882353, 0.05882353, 0.0625,     0.05882353, 0.05882353, 0.05882353,
+      0.0625,     0.0625,     0.05882353};
+  assert_buffer_equal(values, v, count);
+
+  free(a);
+  free(v);
+}
+
 int main(int argc, char* argv[]) {
   MPI_Init(&argc, &argv);
   MPI_Comm comm = MPI_COMM_WORLD;
@@ -334,6 +442,19 @@ int main(int argc, char* argv[]) {
 
   reinit_V(E, c, V);
   check_v1(V);
+
+  spmm(handle, V, K, E);
+  check_e2(E, rank);
+
+  compute_z(V, E, z);
+  check_z2(z, rank);
+
+  spmv(handle, V, z, c);
+  sum_vec(c, comm);
+  check_c2(c);
+
+  reinit_V(E, c, V);
+  check_v2(V);
 
   cusparseDestroy(handle);
   MPI_Finalize();

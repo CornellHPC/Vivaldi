@@ -2,7 +2,7 @@
 
 .PHONY: build alloc small australian svmguide1 letter
 
-export SLATE_INSTALL := $(shell cd ~/slate/_install && pwd) # Change slate directory as necessary
+export SLATE_INSTALL := $(shell cd ~/cpp/slate/_install && pwd) # Change slate directory as necessary
 export mpi := cray
 export blas := libsci
 export CXX := CC
@@ -29,7 +29,7 @@ build:
 
 test:
 	cd build && \
-	srun -N 1 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 4 device_wrapper ctest --verbose --output-on-failure test_exe
+	srun -N 1 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 4 device_wrapper ctest --output-on-failure -O /tmp/output test_exe
 
 alloc:
 	@if [ -z "$$SLURM_JOB_ID" ]; then\

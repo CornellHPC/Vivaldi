@@ -4,3 +4,5 @@ slate
 CombBLAS
 .vscode
 venv
+data/*_out
+results/*_py
