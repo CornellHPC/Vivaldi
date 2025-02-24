@@ -21,9 +21,6 @@ if (NOT CUDA_FOUND)
   message(FATAL_ERROR "Could not find CUDA.")
 endif()
 
-# GPU Support
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCUDA")
-
 # SLATE
 option(SLATE_INSTALL "Path to SLATE installation directory.")
 if (NOT SLATE_INSTALL)
@@ -42,6 +39,9 @@ enable_testing()
 file(GLOB SOURCES "src/test.cc" "src/**/*.cu" "src/**/*.cc" "src/cpop/**/*.cu" "src/cpop/**/*.cc")
 add_executable(test_exe ${SOURCES})
 add_test(cluster_test test_exe)
+
+# Compiler options
+target_compile_options(test_exe PRIVATE -g -O0 $<$<COMPILE_LANGUAGE:CUDA>:-G>)
 
 # Sanitizers
 if (SANITIZE)
