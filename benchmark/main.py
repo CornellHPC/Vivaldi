@@ -77,7 +77,6 @@ for p in range(len(bars[0].patches)):
     patches.sort(key=lambda x: -x.get_height())
     for i, patch in enumerate(patches):
         patch.set_zorder(i)
-plt.yscale("log")
 plt.xlabel("Ranks")
 plt.ylabel("Runtime (ms)")
 plt.legend()
