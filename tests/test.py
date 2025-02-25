@@ -127,4 +127,4 @@ if __name__ == "__main__":
 
     clusters = clusters.astype(np.int64)
     print(clusters)
-    clusters.tofile("../results/" + fname + "_py")
+    clusters.tofile("../data/" + fname + "_py")

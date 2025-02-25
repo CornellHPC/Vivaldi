@@ -1,6 +1,6 @@
 # Makefile
 
-.PHONY: build alloc small australian svmguide1 letter
+.PHONY: build alloc small australian svmguide1 letter compare
 
 export SLATE_INSTALL := $(shell cd ~/slate/_install && pwd) # Change slate directory as necessary
 export mpi := cray
@@ -58,3 +58,10 @@ profile:
 		nsys profile --stats=true --cuda-memory-usage=true --trace=cuda,cublas,cusparse --output=/tmp/report \
 		build/device_wrapper build/main data/rand 46000 64 128
 
+compare:
+	@if [ -z "$(file)" ]; then \
+		echo "Error: file variable not set. Usage: make compare file=<filename>"; exit 1; \
+	fi
+	@if ! cmp -l data/$(file)_py data/$(file)_out > data/$(file)_diffs.txt; then \
+		echo "Comparison failed: Differences found between data/$(file)_py and data/$(file)_out. See data/$(file)_diffs.txt for details."; \
+	fi

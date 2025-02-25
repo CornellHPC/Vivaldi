@@ -5,4 +5,5 @@ CombBLAS
 .vscode
 venv
 data/*_out
-results/*_py
+data/*_py
+data/*_diffs.txt
