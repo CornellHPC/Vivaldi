@@ -14,8 +14,6 @@ export OMP_PLACES := threads
 export OMP_PROC_BIND := spread
 
 build:
-	rm -rf build && \
-	mkdir build && \
 	cd build && \
 	cmake -DSLATE_INSTALL=$$SLATE_INSTALL .. && \
 	cmake --build . && \
