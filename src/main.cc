@@ -76,7 +76,7 @@ int cluster(char* path, int m, int n, int k, MPI_Comm comm) {
   int64_t vr_elapsed = 0;
 
   /** K MEANS CLUSTERING LOOP */
-  int niter = 2;
+  int niter = 100;
   for (int i = 0; i < niter; ++i) {
     auto e_start = hrc::now();
     spmm(handle, V, K, E);  // SpMM: ET = VK using global V
