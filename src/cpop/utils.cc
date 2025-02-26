@@ -20,7 +20,9 @@ ArgParse::ArgParse(int argc, char* argv[]) {
       "r", po::value<float>()->default_value(1.0f),
       "r parameter for the polynomial kernel")(
       "output,o", po::value<std::string>(),
-      "output path for cluster assignments")(
+      "output path for cluster assignments, default to \"[path]_out\"")(
+      "benchmark,b", po::value<std::string>(),
+      "path for benchmarked times, default to \"[path]_time\"")(
       "niter", po::value<int>()->default_value(100), "number of iterations")(
       "convergence",
       "if set, the algorithm will check for convergence (but still stop before "
@@ -53,6 +55,10 @@ ArgParse::ArgParse(int argc, char* argv[]) {
     output = vm["output"].as<std::string>();
   else
     output = path + "_out";
+  if (vm.count("benchmark"))
+    benchmark = vm["benchmark"].as<std::string>();
+  else
+    benchmark = path + "_time";
   gamma = vm["gamma"].as<float>();
   c = vm["c"].as<float>();
   r = vm["r"].as<float>();

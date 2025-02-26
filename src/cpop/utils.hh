@@ -33,10 +33,11 @@ struct ArgParse {
   int m, n, k;
   float gamma, c, r;
   std::string output;
+  std::string benchmark;
   int niter;
   bool convergence;
 
-  ArgParse(int argc, char* argv[]); 
+  ArgParse(int argc, char* argv[]);
 };
 
 /**
