@@ -1,0 +1,216 @@
+Running weak scaling test on 4 ranks!
+
+Trial 1
+-------------------
+Elapsed time: 2584 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w4_1
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 2
+-------------------
+Elapsed time: 2349 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w4_2
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 3
+-------------------
+Elapsed time: 2389 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w4_3
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 4
+srun: Step created for StepId=36276700.3
+-------------------
+Elapsed time: 2356 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w4_4
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 5
+srun: Step created for StepId=36276700.4
+-------------------
+Elapsed time: 2443 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w4_5
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 6
+srun: Step created for StepId=36276700.5
+-------------------
+Elapsed time: 2373 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w4_6
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 7
+srun: Step created for StepId=36276700.6
+-------------------
+Elapsed time: 2372 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w4_7
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 8
+srun: Step created for StepId=36276700.7
+-------------------
+Elapsed time: 2365 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w4_8
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 9
+srun: Step created for StepId=36276700.8
+-------------------
+Elapsed time: 2352 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w4_9
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 10
+srun: Step created for StepId=36276700.9
+-------------------
+Elapsed time: 2369 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w4_10
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 11
+-------------------
+Elapsed time: 2371 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w4_11
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 12
+srun: Step created for StepId=36276700.11
+-------------------
+Elapsed time: 2392 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w4_12
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 13
+srun: Step created for StepId=36276700.12
+-------------------
+Elapsed time: 2552 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w4_13
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 14
+srun: Step created for StepId=36276700.13
+-------------------
+Elapsed time: 2346 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w4_14
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 15
+-------------------
+Elapsed time: 2377 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w4_15
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 16
+-------------------
+Elapsed time: 2346 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w4_16
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 17
+srun: Step created for StepId=36276700.16
+-------------------
+Elapsed time: 2403 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w4_17
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 18
+-------------------
+Elapsed time: 2343 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w4_18
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 19
+srun: Step created for StepId=36276700.18
+-------------------
+Elapsed time: 2350 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w4_19
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 20
+srun: Step created for StepId=36276700.19
+-------------------
+Elapsed time: 2377 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w4_20
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Done!

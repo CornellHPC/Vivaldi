@@ -1,0 +1,143 @@
+Running weak scaling test on 1 rank!
+
+Trial 1
+-------------------
+Elapsed time: 5816 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w1_1
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 2
+-------------------
+Elapsed time: 5690 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w1_2
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 3
+-------------------
+Elapsed time: 5615 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w1_3
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 4
+-------------------
+Elapsed time: 6592 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w1_4
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 5
+-------------------
+Elapsed time: 5439 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w1_5
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 6
+-------------------
+Elapsed time: 6299 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w1_6
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 7
+-------------------
+Elapsed time: 5596 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w1_7
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 8
+-------------------
+Elapsed time: 5891 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w1_8
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 9
+-------------------
+Elapsed time: 5448 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w1_9
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 10
+-------------------
+Elapsed time: 5631 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w1_10
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 11
+-------------------
+Elapsed time: 5662 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w1_11
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 12
+-------------------
+Elapsed time: 5866 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w1_12
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 13
+-------------------
+Elapsed time: 6038 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w1_13
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 14
+-------------------
+Elapsed time: 6044 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w1_14
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 15
+-------------------
+Elapsed time: 5434 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w1_15
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 16
+-------------------
+Elapsed time: 5461 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w1_16
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 17
+-------------------
+Elapsed time: 6580 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w1_17
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 18
+-------------------
+Elapsed time: 5292 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w1_18
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 19
+-------------------
+Elapsed time: 5692 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w1_19
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 20
+-------------------
+Elapsed time: 5384 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w1_20
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Done!

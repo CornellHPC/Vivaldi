@@ -5,19 +5,19 @@
 #SBATCH --constraint=gpu
 #SBATCH --qos=regular
 #SBATCH --account=m4341
-#SBATCH --output=w16
+#SBATCH --output=sl_out/w16
 
 export DVS_MAXNODES=1__
 export EXE_PATH="$PWD/../build/device_wrapper $PWD/../build/main"
-export DATA="$PWD/../data/rand 280000 64"
-export CLUSTERS=128
+export DATA="-i $PWD/../data/rand -m 280000 -n 64 --niter 100 -o $PWD/assignments/w16"
+export CLUSTERS="-k 128"
 
 echo "Running weak scaling test on 16 ranks!"
 echo ""
 
-for i in {1..5}; do
+for i in {1..20}; do
   echo "Trial $i"
-  srun -N 4 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 16 $EXE_PATH $DATA $CLUSTERS
+  srun -N 4 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 16 $EXE_PATH $DATA $CLUSTERS --basic --benchmark $PWD/basic_time/w16_$i
   echo ""
 done
 

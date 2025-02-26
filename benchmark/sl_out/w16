@@ -1,0 +1,898 @@
+Running weak scaling test on 16 ranks!
+
+Trial 1
+-------------------
+Elapsed time: 6041 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w16_1
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 2
+srun: Step created for StepId=36276703.1
+-------------------
+Elapsed time: 6971 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w16_2
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 3
+-------------------
+Elapsed time: 6433 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w16_3
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 4
+-------------------
+Elapsed time: 6422 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w16_4
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 5
+srun: Step created for StepId=36276703.4
+-------------------
+Elapsed time: 6129 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w16_5
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 6
+srun: Step created for StepId=36276703.5
+-------------------
+Elapsed time: 6697 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w16_6
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 7
+-------------------
+Elapsed time: 6063 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w16_7
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 8
+srun: Step created for StepId=36276703.7
+-------------------
+Elapsed time: 6195 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w16_8
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 9
+srun: Step created for StepId=36276703.8
+-------------------
+Elapsed time: 6818 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w16_9
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 10
+srun: Step created for StepId=36276703.9
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+cxil_map: write error
+MPICH ERROR [Rank 4] [job id 36276703.9] [Wed Feb 26 14:18:58 2025] [nid002812] - Abort(404336143) (rank 4 in comm 0): Fatal error in PMPI_Irecv: Other MPI error, error stack:
+PMPI_Irecv(166)........: MPI_Irecv(buf=0x7fbb0dfe3010, count=229376, MPI_BYTE, src=8, tag=3412, comm=0x84000005, request=0x1a6b5a8) failed
+MPID_Irecv(529)........: 
+MPIDI_irecv_unsafe(163): 
+MPIDI_OFI_do_irecv(356): OFI tagged recv failed (ofi_recv.h:356:MPIDI_OFI_do_irecv:Bad address)
+
+aborting job:
+Fatal error in PMPI_Irecv: Other MPI error, error stack:
+PMPI_Irecv(166)........: MPI_Irecv(buf=0x7fbb0dfe3010, count=229376, MPI_BYTE, src=8, tag=3412, comm=0x84000005, request=0x1a6b5a8) failed
+MPID_Irecv(529)........: 
+MPIDI_irecv_unsafe(163): 
+MPIDI_OFI_do_irecv(356): OFI tagged recv failed (ofi_recv.h:356:MPIDI_OFI_do_irecv:Bad address)
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+srun: error: nid002812: task 4: Exited with exit code 255
+srun: Terminating StepId=36276703.9
+slurmstepd: error: *** STEP 36276703.9 ON nid001768 CANCELLED AT 2025-02-26T22:18:59 ***
+srun: error: nid002812: task 7: Terminated
+srun: error: nid001768: task 0: Terminated
+srun: error: nid003156: task 10: Terminated
+srun: error: nid003209: task 12: Terminated
+srun: error: nid002812: task 5: Terminated
+srun: error: nid003209: task 15: Terminated
+srun: error: nid003156: task 9: Terminated
+srun: error: nid001768: task 3: Terminated
+srun: error: nid002812: task 6: Terminated
+srun: error: nid001768: task 2: Terminated
+srun: error: nid003156: task 11: Terminated
+srun: error: nid003209: task 14: Terminated
+srun: error: nid003156: task 8: Terminated
+srun: error: nid001768: task 1: Terminated
+srun: error: nid003209: task 13: Terminated
+srun: Force Terminated StepId=36276703.9
+
+Trial 11
+srun: Step created for StepId=36276703.10
+-------------------
+Elapsed time: 6165 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w16_11
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 12
+-------------------
+Elapsed time: 6320 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w16_12
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 13
+-------------------
+Elapsed time: 6658 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w16_13
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 14
+srun: Step created for StepId=36276703.13
+-------------------
+Elapsed time: 6602 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w16_14
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 15
+-------------------
+Elapsed time: 6055 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w16_15
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 16
+-------------------
+Elapsed time: 6723 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w16_16
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 17
+srun: Step created for StepId=36276703.16
+-------------------
+Elapsed time: 6602 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w16_17
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 18
+srun: Step created for StepId=36276703.17
+-------------------
+Elapsed time: 6321 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w16_18
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 19
+srun: Step created for StepId=36276703.18
+-------------------
+Elapsed time: 6080 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w16_19
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Trial 20
+srun: Step created for StepId=36276703.19
+-------------------
+Elapsed time: 6820 ms
+Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/w16_20
+-------------------
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+
+Done!
