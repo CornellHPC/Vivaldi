@@ -128,7 +128,7 @@ int spmm(cusparseHandle_t& handle, V_t& V, DnMat_t& K, DnMat_t& E);
 int compute_z(V_t& V, DnMat_t& E, DnVec_t& z);
 
 /**
- * @brief Computes the c norm vector by SpMV
+ * @brief Computes the local c norm vector by SpMV. Used in ``compute_c``.
  *
  * @param handle The cuSPARSE handle
  * @param V The V matrix
@@ -139,13 +139,56 @@ int compute_z(V_t& V, DnMat_t& E, DnVec_t& z);
 int spmv(cusparseHandle_t& handle, V_t& V, DnVec_t& z, DnVec_t& c);
 
 /**
- * @brief Sums the vector across the communicator
+ * @brief Sums the vector across the communicator. Used in ``compute_c``.
  *
  * @param c The vector to sum
  * @param comm The communicator over which to sum
  * @return int
  */
 int sum_vec(DnVec_t& c, MPI_Comm comm);
+
+/**
+ * @brief Computes the c norm vector by SpMV and sums it across the communicator row
+ * 
+ * @param handle The cuSPARSE handle
+ * @param V The V matrix
+ * @param z The local z vector
+ * @param c The local c vector
+ * @param comm The communicator over which to sum
+ * @return int 
+ */
+int compute_c(cusparseHandle_t& handle, V_t& V, DnVec_t& z, DnVec_t& c,
+              MPI_Comm comm);
+
+/**
+ * @brief Launches the argmin kernel. Used in ``reinit_V``.
+ * 
+ * @param E The E matrix
+ * @param c The c norm vector
+ * @param V The V matrix
+ * @return int
+ */
+int argmin(DnMat_t& E, DnVec_t& c, V_t& V);
+
+/**
+ * @brief Gathers assignments and clusters. Used in ``reinit_V``.
+ * 
+ * @param E The E matrix
+ * @param c The c norm vector
+ * @param V The V matrix
+ * @return int
+ */
+int gather_assignments(DnMat_t& E, DnVec_t& c, V_t& V);
+
+/**
+ * @brief Launches the reinit kernel. Used in ``reinit_V``.
+ * 
+ * @param E The E matrix
+ * @param c The c norm vector
+ * @param V The V matrix
+ * @return int
+ */
+int set_V_from_assignments(DnMat_t& E, DnVec_t& c, V_t& V);
 
 /**
  * @brief Reinitializes V based on the distances matrix (computed from E and c)

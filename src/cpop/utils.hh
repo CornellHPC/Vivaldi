@@ -36,8 +36,55 @@ struct ArgParse {
   std::string benchmark;
   int niter;
   bool convergence;
+  bool basic;
 
   ArgParse(int argc, char* argv[]);
+};
+
+/// @brief Timer struct
+struct Timer {
+  // Non-IO overall elapsed time (basic mode)
+  int64_t elapsed = 0;
+
+  // IO
+  int64_t io = 0;
+
+  // K
+  int64_t k_elapsed = 0;
+
+  // Vi
+  int64_t vi_elapsed = 0;
+
+  // todo: allgather average over ranks
+  // E
+  int64_t e_elapsed = 0;
+
+  // Z
+  int64_t z_elapsed = 0;
+
+  // C
+  int64_t c_elapsed = 0;
+  int64_t c_mpi = 0;
+  int64_t c_computation = 0;
+
+  // Vr
+  int64_t vr_elapsed = 0;
+  int64_t vr_mpi = 0;
+  int64_t vr_computation = 0;
+
+  /**
+   * @brief Save only the elapsed time as a single value to a file.
+   * 
+   * @param path filename
+   */
+  void save_elapsed(const char* path);
+
+  /**
+   * @brief Save all benchmarked values to file.
+   * 
+   * @param path filename
+   */
+  void save_all(const char* path);
 };
 
 /**

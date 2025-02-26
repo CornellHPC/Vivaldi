@@ -241,20 +241,37 @@ int sum_vec(DnVec_t& c, MPI_Comm comm) {
   return EXIT_SUCCESS;
 }
 
-int reinit_V(DnMat_t& E, DnVec_t& c, V_t& V) {
-  // compute argmin
+int compute_c(cusparseHandle_t& handle, V_t& V, DnVec_t& z, DnVec_t& c,
+              MPI_Comm comm) {
+  spmv(handle, V, z, c);  // SpMV: c = Vz using local V
+  sum_vec(c, comm);       // Calculate global c by summing across ranks
+  return EXIT_SUCCESS;
+}
+
+int argmin(DnMat_t& E, DnVec_t& c, V_t& V) {
   launch_argmin_kernel(V.k_, V.t_, E.dM, c.dz, V.local_assignments,
                        V.local_cluster_sizes);
+  return EXIT_SUCCESS;
+}
 
-  // reduce over nprocs
+int gather_assignments(DnMat_t& E, DnVec_t& c, V_t& V) {
   MPI_Allreduce(V.local_cluster_sizes, V.global_cluster_sizes, V.k_, MPI_INT,
                 MPI_SUM, MPI_COMM_WORLD);
   MPI_Allgatherv(V.local_assignments, V.t_, MPI_INT64_T, V.global_assignments,
                  V.t_sizes_, V.displs, MPI_INT64_T, MPI_COMM_WORLD);
+  return EXIT_SUCCESS;
+}
 
-  // reinitialize
+int set_V_from_assignments(DnMat_t& E, DnVec_t& c, V_t& V) {
   launch_reinit_kernel(V.values, V.global_assignments, V.global_cluster_sizes,
                        V.m_);
+  return EXIT_SUCCESS;
+}
+
+int reinit_V(DnMat_t& E, DnVec_t& c, V_t& V) {
+  argmin(E, c, V);                  // Launch argmin kernel
+  gather_assignments(E, c, V);      // Gather assignments and cluster sizes
+  set_V_from_assignments(E, c, V);  // Launch reinit kernel
   return EXIT_SUCCESS;
 }
 

@@ -23,12 +23,12 @@ slate::Matrix<float> load_matrix(const char* fname, int64_t rows, int64_t cols,
  * Extracts tiles from the kernel matrix.
  * This returns the number of elements in the tiles buffer.
  *
- * @param files is a pointer that will output the tile data (on device)
+ * @param tiles is a pointer that will output the tile data (on device)
  * @param K is the distributed kernel matrix
  * @param col is the grid column of the distributed kernel matrix
  * @return the number of elements in the tiles.
  */
-int64_t extract_kernel_tiles(float** files, slate::Matrix<float>* K, int col);
+int64_t extract_kernel_tiles(float** tiles, slate::Matrix<float>& K, int col);
 
 /**
  * Generates kernel matrix K
