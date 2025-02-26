@@ -1,8 +1,67 @@
+#include <boost/program_options.hpp>
 #include <iostream>
 
 #include "utils.hh"
 
 namespace cpop {
+
+ArgParse::ArgParse(int argc, char* argv[]) {
+  namespace po = boost::program_options;
+  po::options_description desc("Allowed options");
+  desc.add_options()("help", "produce help message")(
+      "path,i", po::value<std::string>(), "path to the input dataset")(
+      "npoints,m", po::value<int>(), "number of points in the dataset")(
+      "nfeatures,n", po::value<int>(), "number of features")(
+      "nclusters,k", po::value<int>(), "number of clusters to form")(
+      "gamma", po::value<float>()->default_value(1.0f),
+      "gamma parameter for the polynomial kernel")(
+      "c", po::value<float>()->default_value(1.0f),
+      "c parameter for the polynomial kernel")(
+      "r", po::value<float>()->default_value(1.0f),
+      "r parameter for the polynomial kernel")(
+      "output,o", po::value<std::string>(),
+      "output path for cluster assignments")(
+      "niter", po::value<int>()->default_value(100), "number of iterations")(
+      "convergence",
+      "if set, the algorithm will check for convergence (but still stop before "
+      "\"--niter\" iterations)");
+
+  // Parse command line arguments
+  po::variables_map vm;
+  po::store(po::parse_command_line(argc, argv, desc), vm);
+  po::notify(vm);
+
+  if (vm.count("help")) {
+    std::cout << desc << "\n";
+    exit(EXIT_SUCCESS);
+  }
+
+  if (vm.count("path") && vm.count("npoints") && vm.count("nfeatures") &&
+      vm.count("nclusters")) {
+    // mandatory arguments
+    path = vm["path"].as<std::string>();
+    m = vm["npoints"].as<int>();
+    n = vm["nfeatures"].as<int>();
+    k = vm["nclusters"].as<int>();
+  } else {
+    std::cerr << "Error: Missing mandatory arguments (\"--path/-i\", \"-m\", "
+                 "\"-n\", \"-k\")\n"
+              << std::endl;
+    exit(EXIT_FAILURE);
+  }
+  if (vm.count("output"))
+    output = vm["output"].as<std::string>();
+  else
+    output = path + "_out";
+  gamma = vm["gamma"].as<float>();
+  c = vm["c"].as<float>();
+  r = vm["r"].as<float>();
+
+  if (vm.count("convergence"))
+    convergence = true;
+  else
+    convergence = false;
+}
 
 void wake_gpus(int rank) {
   int ndevices;

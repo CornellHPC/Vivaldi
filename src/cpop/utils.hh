@@ -28,6 +28,17 @@
 
 namespace cpop {
 
+struct ArgParse {
+  std::string path;
+  int m, n, k;
+  float gamma, c, r;
+  std::string output;
+  int niter;
+  bool convergence;
+
+  ArgParse(int argc, char* argv[]); 
+};
+
 /**
  * @brief Setup GPUs
  * 

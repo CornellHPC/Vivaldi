@@ -419,7 +419,7 @@ int main(int argc, char* argv[]) {
     t_sizes[i] = (i == size - 1) ? 6 : 9;
   }
 
-  DnMat_t K(m, t, compute_kernel_matrix(PT));
+  DnMat_t K(m, t, compute_kernel_matrix(PT, 1.0f, 1.0f, 1.0f));
   PT.releaseWorkspace();
   check_k(K, rank);
 

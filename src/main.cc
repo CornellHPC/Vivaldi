@@ -19,12 +19,11 @@ using ms = std::chrono::milliseconds;
 /**
  * The distributed popcorn kernel k-means clustering algorithm.
  *
- * @param path path to the dataset
- * @param m number of samples in the dataset
- * @param n number of features
- * @param k number of clusters to form
+ * @param args argument parser
+ * @param comm MPI communicator
+ * @return EXIT_SUCCESS on success
  */
-int cluster(char* path, int m, int n, int k, MPI_Comm comm) {
+int cluster(ArgParse args, MPI_Comm comm) {
   /** GET MPI INFO */
   int rank, size;
   MPI_Comm_rank(comm, &rank);
@@ -37,37 +36,37 @@ int cluster(char* path, int m, int n, int k, MPI_Comm comm) {
   cusparseCreate(&handle);
 
   /** LOAD DATA */
-  auto PT = load_matrix(path, m, n, comm);
+  auto PT = load_matrix(args.path.c_str(), args.m, args.n, comm);
 
   /** START THE TIMER (after dataset IO) */
   auto start = hrc::now();
 
   /** COMPUTE TILE SIZES */
-  int t = m / size + (m > size * size && m % size > 0);
+  int t = args.m / size + (args.m > size * size && args.m % size > 0);
   int* t_sizes = (int*)calloc(size, sizeof(int));
   for (int i = 0; i < size - 1; ++i) {
     t_sizes[i] = t;
   }
-  t_sizes[size - 1] = m - (size - 1) * t;
+  t_sizes[size - 1] = args.m - (size - 1) * t;
   t = t_sizes[rank];
 
   /** COMPUTE K */
   auto k_start = hrc::now();
-  DnMat_t K(m, t, compute_kernel_matrix(PT));
+  DnMat_t K(args.m, t, compute_kernel_matrix(PT, args.gamma, args.c, args.r));
   PT.releaseWorkspace();
   MPI_Barrier(comm);
   auto k_elapsed = get_time_elapsed(k_start);
 
   /** INITIALIZE V */
   auto vi_start = hrc::now();
-  V_t V(m, t, k, t_sizes, comm);
+  V_t V(args.m, t, args.k, t_sizes, comm);
   MPI_Barrier(comm);
   auto vi_elapsed = get_time_elapsed(vi_start);
 
   /** ALLOCATE VARIABLES */
-  DnMat_t E(k, t);
+  DnMat_t E(args.k, t);
   DnVec_t z(t);
-  DnVec_t c(k);
+  DnVec_t c(args.k);
 
   /** CREATE BENCHMARK VARIABLES */
   int64_t e_elapsed = 0;
@@ -76,8 +75,7 @@ int cluster(char* path, int m, int n, int k, MPI_Comm comm) {
   int64_t vr_elapsed = 0;
 
   /** K MEANS CLUSTERING LOOP */
-  int niter = 100;
-  for (int i = 0; i < niter; ++i) {
+  for (int i = 0; i < args.niter; ++i) {
     auto e_start = hrc::now();
     spmm(handle, V, K, E);  // SpMM: ET = VK using global V
     e_elapsed += get_time_elapsed(e_start);
@@ -109,8 +107,7 @@ int cluster(char* path, int m, int n, int k, MPI_Comm comm) {
   }
 
   /** SAVE ASSIGNMENTS */
-  std::string path_out = std::string(path) + "_out";
-  V.save(path_out.c_str());
+  V.save(args.output.c_str());
 
   /** EXIT */
   free(t_sizes);
@@ -120,29 +117,20 @@ int cluster(char* path, int m, int n, int k, MPI_Comm comm) {
 
 /**
  * Runs the distributed popcorn kernel k-means clustering algorithm.
- * Usage: srun cpop [path] [m] [n] [k]
- *
- * @param path path to the dataset
- * @param m number of samples in the dataset
- * @param n number of features
- * @param k number of clusters to form
+ * For help, run ``srun cpop --help``
  */
 int main(int argc, char* argv[]) {
-  /** INITIALIZE MPI */
+  /** Initialize MPI */
   MPI_Init(&argc, &argv);
   MPI_Comm comm = MPI_COMM_WORLD;
 
-  /** PARSE ARGUMENTS */
-  assert(argc == 5 && "Invalid args. Must provide params [path] [m] [n] [k]");
-  char* path = argv[1];
-  int m = std::atoi(argv[2]);
-  int n = std::atoi(argv[3]);
-  int k = std::atoi(argv[4]);
+  /** Argument Parsing */
+  ArgParse args(argc, argv);
 
-  /** CLUSTER POINTS */
-  cluster(path, m, n, k, comm);
+  /** Cluster */
+  cluster(args, comm);
 
-  /** EXIT */
+  /** Exit */
   MPI_Finalize();
   return 0;
 }

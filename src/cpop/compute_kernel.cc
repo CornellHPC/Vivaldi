@@ -64,7 +64,8 @@ int64_t extract_kernel_tiles(float** tiles, slate::Matrix<float>& K, int col) {
   return elems;
 }
 
-float* compute_kernel_matrix(slate::Matrix<float>& PT) {
+float* compute_kernel_matrix(slate::Matrix<float>& PT, float gamma, float c,
+                             float r) {
   int rank, size;
   MPI_Comm_rank(PT.mpiComm(), &rank);
   MPI_Comm_size(PT.mpiComm(), &size);
@@ -82,7 +83,7 @@ float* compute_kernel_matrix(slate::Matrix<float>& PT) {
       if (K.tileIsLocal(i, j)) {
         slate::Tile<float> tile = K.at(i, j, K.tileDevice(i, j));
         float* data = tile.data();
-        launch_polynomial_kernel(tile.mb(), tile.nb(), data, 1.0f, 1.0f, 1.0f);
+        launch_polynomial_kernel(tile.mb(), tile.nb(), data, gamma, c, r);
       }
     }
   }

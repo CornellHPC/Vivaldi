@@ -34,9 +34,13 @@ int64_t extract_kernel_tiles(float** files, slate::Matrix<float>* K, int col);
  * Generates kernel matrix K
  *
  * @param PT transposed points matrix
+ * @param gamma is the gamma parameter for the polynomial kernel
+ * @param r is the r parameter for the polynomial kernel
+ * @param c is the c parameter for the polynomial kernel
  * @return the transposed dense slate matrix on the device
  */
-float* compute_kernel_matrix(slate::Matrix<float>& PT);
+float* compute_kernel_matrix(slate::Matrix<float>& PT, float gamma, float c,
+                             float r);
 
 }  // namespace cpop
 

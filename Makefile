@@ -42,19 +42,19 @@ alloc:
 	fi
 
 small:
-	srun -N 1 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 4 ./build/device_wrapper ./build/main data/small 11 8 2
+	srun -N 1 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 4 ./build/device_wrapper ./build/main -i data/small -m 11 -n 8 -k 2
 
 australian:
-	srun -N 1 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 4 ./build/device_wrapper ./build/main data/australian 690 14 2
+	srun -N 1 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 4 ./build/device_wrapper ./build/main -i data/australian -m 690 -n 14 -k 2
 
 svmguide1:
-	srun -N 4 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 16 ./build/device_wrapper ./build/main data/svmguide1 3089 4 2
+	srun -N 4 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 16 ./build/device_wrapper ./build/main -i data/svmguide1 -m 3089 -n 4 -k 2
 
 letter:
-	srun -N 4 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 16 ./build/device_wrapper ./build/main data/letter 15000 5000 26
+	srun -N 4 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 16 ./build/device_wrapper ./build/main -i data/letter -m 15000 -n 5000 -k 26
 
 rand:
-	srun -N 1 --ntasks-per-node 1 --cpus-per-task 32 --cpu-bind cores -G 1 ./build/device_wrapper ./build/main data/rand 70000 64 128
+	srun -N 1 --ntasks-per-node 1 --cpus-per-task 32 --cpu-bind cores -G 1 ./build/device_wrapper ./build/main -i data/rand -m 70000 -n 64 -k 128
 
 profile:
 	srun -N 1 --ntasks-per-node 1 --cpus-per-task 32 --cpu-bind cores -G 1 \
