@@ -22,6 +22,7 @@ V_t::V_t(int64_t m, int64_t t, int64_t k, int* t_sizes, MPI_Comm comm) {
   CHECK_CUDA(cudaMalloc(&values, m * sizeof(int64_t)));
   CHECK_CUDA(cudaMalloc(&global_csc_col_offsets, (m + 1) * sizeof(int64_t)));
   CHECK_CUDA(cudaMalloc(&local_csc_col_offsets, (t + 1) * sizeof(int64_t)));
+  previous_global_assignments = nullptr;
 
   // MPI initializations
   MPI_Comm_rank(comm, &rank);
@@ -120,6 +121,29 @@ void V_t::print() {
   std::cout << "-------------------" << std::endl;
 }
 
+bool V_t::test_convergence() {
+  // Copy the global assignments to the host
+  int64_t* global_assignments_ = (int64_t*)malloc(m_ * sizeof(int64_t));
+  cudaMemcpy(global_assignments_, global_assignments, m_ * sizeof(int64_t),
+             cudaMemcpyDeviceToHost);
+
+  // Check if the previous global assignments are the same as the current ones
+  if (previous_global_assignments &&
+      std::equal(previous_global_assignments, previous_global_assignments + m_,
+                 global_assignments_)) {
+    // Free everything and return true because we have converged
+    free(previous_global_assignments);
+    free(global_assignments_);
+    previous_global_assignments = nullptr;
+    return true;  // Converged
+  }
+  // Set previous_global_assignments to global_assignments_
+  if (previous_global_assignments)
+    free(previous_global_assignments);
+  previous_global_assignments = global_assignments_;
+  return false;
+}
+
 V_t::~V_t() {
   CHECK_CUDA(cudaFree(global_assignments));
   CHECK_CUDA(cudaFree(global_cluster_sizes));
@@ -131,6 +155,8 @@ V_t::~V_t() {
   CHECK_CUSPARSE(cusparseDestroySpMat(gV));
   CHECK_CUSPARSE(cusparseDestroySpMat(lV));
   free(displs);
+  if (previous_global_assignments)
+    free(previous_global_assignments);
 }
 
 DnMat_t::DnMat_t(int64_t h, int64_t w) {

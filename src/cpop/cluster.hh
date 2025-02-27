@@ -78,6 +78,9 @@ struct V_t {
   int* displs;
   MPI_Comm comm;
 
+  // Host vector used in convergence checking
+  int64_t* previous_global_assignments;
+
   /**
    * @brief Constructor
    * 
@@ -95,6 +98,14 @@ struct V_t {
    * @param path The path to the output file
    */
   int save(const char* path);
+
+  /**
+   * @brief Checks if the cluster assignments have converged on CPU
+   * 
+   * @return true if converged
+   * @return false if not converged
+   */
+  bool test_convergence();
 
   /**
    * @brief Prints the CSC vectors for V

@@ -19,8 +19,8 @@ using ms = std::chrono::milliseconds;
 /**
  * @brief Cluster the data using the popcorn kernel k-means algorithm.
  * This is a fastest version of the algorithm that does not need any 
- * fine-grained timing or barriers. It is used for testing the scaling 
- * of the algorithm.
+ * fine-grained timing or barriers and does not support convergence testing. 
+ * It is used for testing the scaling of the algorithm.
  * 
  * @param args argument parser
  * @param comm MPI communicator
@@ -159,6 +159,19 @@ int cluster_full(ArgParse args, MPI_Comm comm) {
     set_V_from_assignments(E, c, V);  // Reinitialize V based on D matrix
     timer.vr_computation += get_time_elapsed(vr_computation_start);
     timer.vr_elapsed += get_time_elapsed(vr_start);
+
+    if (args.convergence) {
+      // Rank 1 tests convergence on CPU
+      bool converged = false;
+      if (rank == 0 && V.test_convergence()) {
+        converged = true;
+        std::cout << "Converged at iteration " << i << std::endl;
+      }
+      // Broadcast convergence to all ranks
+      MPI_Bcast(&converged, 1, MPI_C_BOOL, 0, comm);
+      if (converged)
+        break;  // All ranks exit the loop when converged
+    }
   }
 
   /** Save benchmarking */

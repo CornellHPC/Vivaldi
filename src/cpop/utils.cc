@@ -77,6 +77,12 @@ ArgParse::ArgParse(int argc, char* argv[]) {
     benchmark = path + "_basic_time";
   else
     benchmark = path + "_time";
+  if (basic && convergence) {
+    std::cerr
+        << "Error: Basic mode and convergence testing cannot be used together\n"
+        << std::endl;
+    exit(EXIT_FAILURE);
+  }
 }
 
 void Timer::save_elapsed(const char* path) {
