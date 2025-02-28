@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <algorithm>
 #include <cassert>
-#include <cub/cub.cuh>
 
 #include "gpu_kernels.cuh"
 
@@ -90,42 +89,6 @@ __global__ void reinit_kernel(float* V_global_values,
   }
 }
 
-// TODO: this doesnt work cause I misunderstood how shared memory works
-// __global__ void d_kernel(int64_t k, int64_t t, float* dE, float* dc,
-//                          int64_t* a) {
-//   int64_t i = blockIdx.x * blockDim.x + threadIdx.x;  // rows of E
-//   if (i < k) {
-//     __shared__ float shared_min[blockDim.y];
-//     __shared__ long long int shared_min_idx[blockDim.y];
-
-//     for (int64_t j = blockIdx.y * blockDim.y + threadIdx.y; j < t;
-//          j += blockDim.y * gridDim.y) {  // cols of E
-//       float value = dc[i] - 2 * dE[i * t + j];
-//       dE[i * t + j] = value;
-
-//       if (i == 0) {
-//         shared_min[j] = FLT_MAX;
-//         shared_min_idx[j] = INT_MAX;
-//       }
-
-//       __syncthreads();
-//       atomicMinFloat(&shared_min[j], value);
-//       __syncthreads();
-//       if (shared_min[j] == value) {
-//         // Taking the minimum here for stability. If two values of E in the same column are
-//         // exactly the same (unlikely in floating point), then take the smallest row by index
-//         // value to be the argmin.
-//         atomicMin(&shared_min_idx[j], i);
-//       }
-//       __syncthreads();
-
-//       if (i == 0) {
-//         a[j] = shared_min_idx[j];
-//       }
-//     }
-//   }
-// }
-
 namespace cpop {
 
 void launch_polynomial_kernel(int64_t m, int64_t n, float* B, float gamma,
@@ -179,41 +142,6 @@ void launch_reinit_kernel(float* V_global_values, int64_t* global_assignments,
   int nblocks = std::min(int64_t(1048576), (m + nthreads - 1) / nthreads);
   reinit_kernel<<<nblocks, nthreads>>>(V_global_values, global_assignments,
                                        global_cluster_sizes, m);
-}
-
-// void launch_d_kernel(int64_t k, int64_t t, float* dE, float* dc, int64_t* a) {
-//   // 1024 max threads for current CUDA compute capability (<= 7.5)
-//   // 16x16 blocks, with upwards round for more coverage
-//   // block cap is set to prevent overflow
-//   int clusters_tsize = 16;
-//   int points_tsize = 16;
-//   dim3 nthreads(clusters_tsize, points_tsize);
-
-//   // t may be very large so it may span across multiple grids
-//   // k is assumed to be smaller than INT_MAX. If it's not, this would greatly
-//   // complicate the argmin kernel, so we assume that this is not the case
-//   assert(k < INT_MAX && "k is too large");
-//   // long long int test_a = 7;  // TODO: rm
-//   // int64_t test_b = 7;
-//   // assert(sizeof(test_a) == sizeof(test_b) &&
-//   //        "The system does not equate long long int with int64_t");
-//   dim3 nblocks(
-//       (k + clusters_tsize - 1) / clusters_tsize,
-//       std::min(int64_t(1048576), (t + points_tsize - 1) / points_tsize));
-
-//   // d_kernel<<<nblocks, nthreads>>>(k, t, dE, dc, a);
-// }
-
-void scan(int64_t* d_in, int64_t* d_out, int64_t k) {
-  void* d_temp_storage = nullptr;
-  size_t temp_storage_bytes = 0;
-  cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, d_in, d_out,
-                                k + 1);
-  // Allocate temporary storage
-  cudaMalloc(&d_temp_storage, temp_storage_bytes);
-  // Run exclusive prefix sum
-  cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, d_in, d_out,
-                                k + 1);
 }
 
 }  // namespace cpop
