@@ -1,6 +1,6 @@
 # Makefile
 
-.PHONY: build alloc small australian svmguide1 letter compare
+.PHONY: build alloc test small australian svmguide1 letter compare
 
 export SLATE_INSTALL := $(shell cd ~/slate/_install && pwd) # Change slate directory as necessary
 export mpi := cray
@@ -15,6 +15,9 @@ export OMP_PLACES := threads
 export OMP_PROC_BIND := spread
 
 build:
+	source /opt/cray/pe/lmod/lmod/init/bash && \
+	module load cudatoolkit/12.2 && \
+	module load gcc-native/12.3 && \
 	rm -rf build && \
 	mkdir build && \
 	cd build && \
@@ -28,38 +31,69 @@ build:
 	echo "Build finished!" && \
 	cd ..
 
-test:
-	cd build && \
-	srun -N 1 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 4 device_wrapper ctest --output-on-failure -O /tmp/output test_exe
-
-debug:
-	cd build && \
-	srun -N 1 --ntasks-per-node 1 --cpus-per-task 32 --cpu-bind cores -G 1 device_wrapper cuda-gdb test_exe
-
 alloc:
 	@if [ -z "$$SLURM_JOB_ID" ]; then\
 		salloc -N 4 -q interactive -t 03:00:00 -C gpu -G 16 -A m4341;\
 	fi
 
+test:
+	source /opt/cray/pe/lmod/lmod/init/bash && \
+	module load cudatoolkit/12.2 && \
+	cd build && \
+	salloc -N 1 -q interactive -t 00:01:00 -C gpu -G 4 -A m4341 \
+	srun -N 1 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 4 \
+	device_wrapper ctest --output-on-failure -O /tmp/output test_exe
+
+debug:
+	source /opt/cray/pe/lmod/lmod/init/bash && \
+	module load cudatoolkit/12.2 && \
+	cd build && \
+	salloc -N 1 -q interactive -t 01:00:00 -C gpu -G 4 -A m4341 \
+	srun -N 1 --ntasks-per-node 1 --cpus-per-task 32 --cpu-bind cores -G 1 \
+	device_wrapper cuda-gdb test_exe
+
 small:
-	srun -N 1 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 4 ./build/device_wrapper ./build/main -i data/small -m 11 -n 8 -k 2
+	source /opt/cray/pe/lmod/lmod/init/bash && \
+	module load cudatoolkit/12.2 && \
+	salloc -N 1 -q interactive -t 00:01:00 -C gpu -G 4 -A m4341 \
+	srun -N 1 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 4 \
+	build/device_wrapper build/main -i data/small -m 11 -n 8 -k 2
 
 australian:
-	srun -N 1 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 4 ./build/device_wrapper ./build/main -i data/australian -m 690 -n 14 -k 2
+	source /opt/cray/pe/lmod/lmod/init/bash && \
+	module load cudatoolkit/12.2 && \
+	salloc -N 1 -q interactive -t 00:01:00 -C gpu -G 4 -A m4341 \
+	srun -N 1 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 4 \
+	build/device_wrapper build/main -i data/australian -m 690 -n 14 -k 2
 
 svmguide1:
-	srun -N 4 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 16 ./build/device_wrapper ./build/main -i data/svmguide1 -m 3089 -n 4 -k 2
+	source /opt/cray/pe/lmod/lmod/init/bash && \
+	module load cudatoolkit/12.2 && \
+	salloc -N 4 -q interactive -t 00:01:00 -C gpu -G 16 -A m4341 \
+	srun -N 4 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 16 \
+	build/device_wrapper build/main -i data/svmguide1 -m 3089 -n 4 -k 2
 
 letter:
-	srun -N 4 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 16 ./build/device_wrapper ./build/main -i data/letter -m 15000 -n 5000 -k 26
+	source /opt/cray/pe/lmod/lmod/init/bash && \
+	module load cudatoolkit/12.2 && \
+	salloc -N 4 -q interactive -t 00:01:00 -C gpu -G 16 -A m4341 \
+	srun -N 4 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 16 \
+	build/device_wrapper build/main -i data/letter -m 15000 -n 5000 -k 26
 
 rand:
-	srun -N 1 --ntasks-per-node 1 --cpus-per-task 32 --cpu-bind cores -G 1 ./build/device_wrapper ./build/main -i data/rand -m 70000 -n 64 -k 128
+	source /opt/cray/pe/lmod/lmod/init/bash && \
+	module load cudatoolkit/12.2 && \
+	salloc -N 1 -q interactive -t 00:01:00 -C gpu -G 4 -A m4341 \
+	srun -N 1 --ntasks-per-node 1 --cpus-per-task 32 --cpu-bind cores -G 1 \
+	build/device_wrapper build/main -i data/rand -m 70000 -n 64 -k 128
 
 profile:
+	source /opt/cray/pe/lmod/lmod/init/bash && \
+	module load cudatoolkit/12.2 && \
+	salloc -N 1 -q interactive -t 00:01:00 -C gpu -G 4 -A m4341 \
 	srun -N 1 --ntasks-per-node 1 --cpus-per-task 32 --cpu-bind cores -G 1 \
-		nsys profile --stats=true --cuda-memory-usage=true --trace=cuda,cublas,cusparse --output=/tmp/report \
-		build/device_wrapper build/main data/rand 46000 64 128
+	nsys profile --stats=true --cuda-memory-usage=true --trace=cuda,cublas,cusparse --output=/tmp/report \
+	build/device_wrapper build/main -i data/rand -m 70000 -n 64 -k 128
 
 compare:
 	@if [ -z "$(file)" ]; then \
@@ -68,3 +102,4 @@ compare:
 	@if ! cmp -l data/$(file)_py data/$(file)_out > data/$(file)_diffs.txt; then \
 		echo "Comparison failed: Differences found between data/$(file)_py and data/$(file)_out. See data/$(file)_diffs.txt for details."; \
 	fi
+
