@@ -2,8 +2,8 @@ Running strong scaling test on 4 ranks!
 
 Basic trial 1
 -------------------
-Elapsed time: 838 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/s4_1
+Elapsed time: 749 ms
+Results saved to: /global/homes/m/mrrubino/cpp/distributed-popcorn/experiments/basic_time/s4_1
 -------------------
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
@@ -12,8 +12,8 @@ Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/
 
 Basic trial 2
 -------------------
-Elapsed time: 731 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/s4_2
+Elapsed time: 649 ms
+Results saved to: /global/homes/m/mrrubino/cpp/distributed-popcorn/experiments/basic_time/s4_2
 -------------------
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
@@ -21,9 +21,10 @@ Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 
 Basic trial 3
+srun: Step created for StepId=36391934.2
 -------------------
-Elapsed time: 702 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/s4_3
+Elapsed time: 663 ms
+Results saved to: /global/homes/m/mrrubino/cpp/distributed-popcorn/experiments/basic_time/s4_3
 -------------------
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
@@ -32,8 +33,8 @@ Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/
 
 Basic trial 4
 -------------------
-Elapsed time: 711 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/s4_4
+Elapsed time: 662 ms
+Results saved to: /global/homes/m/mrrubino/cpp/distributed-popcorn/experiments/basic_time/s4_4
 -------------------
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
@@ -42,163 +43,8 @@ Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/
 
 Basic trial 5
 -------------------
-Elapsed time: 699 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/s4_5
--------------------
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-
-Basic trial 6
--------------------
-Elapsed time: 696 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/s4_6
--------------------
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-
-Basic trial 7
-srun: Step created for StepId=36276630.6
--------------------
-Elapsed time: 900 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/s4_7
--------------------
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-
-Basic trial 8
--------------------
-Elapsed time: 902 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/s4_8
--------------------
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-
-Basic trial 9
--------------------
-Elapsed time: 735 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/s4_9
--------------------
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-
-Basic trial 10
--------------------
-Elapsed time: 1098 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/s4_10
--------------------
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-
-Basic trial 11
-srun: Step created for StepId=36276630.10
--------------------
-Elapsed time: 724 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/s4_11
--------------------
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-
-Basic trial 12
-srun: Step created for StepId=36276630.11
--------------------
-Elapsed time: 722 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/s4_12
--------------------
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-
-Basic trial 13
--------------------
-Elapsed time: 699 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/s4_13
--------------------
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-
-Basic trial 14
--------------------
-Elapsed time: 706 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/s4_14
--------------------
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-
-Basic trial 15
--------------------
-Elapsed time: 955 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/s4_15
--------------------
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-
-Basic trial 16
--------------------
-Elapsed time: 734 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/s4_16
--------------------
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-
-Basic trial 17
-srun: Step created for StepId=36276630.16
--------------------
-Elapsed time: 736 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/s4_17
--------------------
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-
-Basic trial 18
--------------------
-Elapsed time: 701 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/s4_18
--------------------
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-
-Basic trial 19
-srun: Step created for StepId=36276630.18
--------------------
-Elapsed time: 760 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/s4_19
--------------------
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-
-Basic trial 20
--------------------
-Elapsed time: 693 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/s4_20
+Elapsed time: 685 ms
+Results saved to: /global/homes/m/mrrubino/cpp/distributed-popcorn/experiments/basic_time/s4_5
 -------------------
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
@@ -206,22 +52,23 @@ Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/basic_time/
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 
 Full trial 1
+srun: Step created for StepId=36391934.5
 Number of GPUs per node: 1
 Waking the GPUs... DONE!
 -------------------
-IO: 553 ms
-K: 143 ms
+IO: 216 ms
+K: 94 ms
 VI: 3 ms
-E: 505 ms
+E: 508 ms
 Z: 0 ms
 C: 5 ms
 C MPI: 1 ms
-C Computation: 4 ms
+C Computation: 3 ms
 VR: 2 ms
 VR MPI: 2 ms
 VR Computation: 0 ms
-Elapsed: 687 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/breakdown_time/s4_1
+Elapsed: 645 ms
+Results saved to: /global/homes/m/mrrubino/cpp/distributed-popcorn/experiments/breakdown_time/s4_1
 -------------------
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
@@ -232,19 +79,19 @@ Full trial 2
 Number of GPUs per node: 1
 Waking the GPUs... DONE!
 -------------------
-IO: 326 ms
-K: 145 ms
+IO: 205 ms
+K: 98 ms
 VI: 3 ms
-E: 504 ms
+E: 508 ms
 Z: 0 ms
 C: 4 ms
 C MPI: 0 ms
-C Computation: 4 ms
+C Computation: 3 ms
 VR: 2 ms
 VR MPI: 2 ms
 VR Computation: 0 ms
-Elapsed: 687 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/breakdown_time/s4_2
+Elapsed: 648 ms
+Results saved to: /global/homes/m/mrrubino/cpp/distributed-popcorn/experiments/breakdown_time/s4_2
 -------------------
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
@@ -252,22 +99,23 @@ Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/breakdown_t
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 
 Full trial 3
+srun: Step created for StepId=36391934.7
 Number of GPUs per node: 1
 Waking the GPUs... DONE!
 -------------------
-IO: 460 ms
-K: 164 ms
+IO: 196 ms
+K: 92 ms
 VI: 3 ms
-E: 505 ms
+E: 507 ms
 Z: 0 ms
-C: 4 ms
-C MPI: 0 ms
-C Computation: 4 ms
-VR: 2 ms
-VR MPI: 2 ms
+C: 5 ms
+C MPI: 1 ms
+C Computation: 3 ms
+VR: 3 ms
+VR MPI: 3 ms
 VR Computation: 0 ms
-Elapsed: 707 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/breakdown_time/s4_3
+Elapsed: 646 ms
+Results saved to: /global/homes/m/mrrubino/cpp/distributed-popcorn/experiments/breakdown_time/s4_3
 -------------------
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
@@ -275,23 +123,22 @@ Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/breakdown_t
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 
 Full trial 4
-srun: Step created for StepId=36276630.23
 Number of GPUs per node: 1
 Waking the GPUs... DONE!
 -------------------
-IO: 769 ms
-K: 155 ms
-VI: 2 ms
-E: 505 ms
+IO: 204 ms
+K: 96 ms
+VI: 3 ms
+E: 508 ms
 Z: 0 ms
 C: 4 ms
 C MPI: 0 ms
-C Computation: 4 ms
-VR: 2 ms
-VR MPI: 2 ms
+C Computation: 3 ms
+VR: 4 ms
+VR MPI: 4 ms
 VR Computation: 0 ms
-Elapsed: 697 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/breakdown_time/s4_4
+Elapsed: 648 ms
+Results saved to: /global/homes/m/mrrubino/cpp/distributed-popcorn/experiments/breakdown_time/s4_4
 -------------------
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
@@ -302,366 +149,19 @@ Full trial 5
 Number of GPUs per node: 1
 Waking the GPUs... DONE!
 -------------------
-IO: 345 ms
-K: 154 ms
-VI: 3 ms
-E: 505 ms
-Z: 0 ms
-C: 4 ms
-C MPI: 0 ms
-C Computation: 4 ms
-VR: 2 ms
-VR MPI: 2 ms
-VR Computation: 0 ms
-Elapsed: 696 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/breakdown_time/s4_5
--------------------
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-
-Full trial 6
-Number of GPUs per node: 1
-Waking the GPUs... DONE!
--------------------
-IO: 801 ms
-K: 138 ms
-VI: 3 ms
-E: 509 ms
-Z: 0 ms
-C: 5 ms
-C MPI: 1 ms
-C Computation: 4 ms
-VR: 2 ms
-VR MPI: 2 ms
-VR Computation: 0 ms
-Elapsed: 682 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/breakdown_time/s4_6
--------------------
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-
-Full trial 7
-Number of GPUs per node: 1
-Waking the GPUs... DONE!
--------------------
-IO: 295 ms
-K: 151 ms
-VI: 3 ms
-E: 510 ms
-Z: 0 ms
-C: 4 ms
-C MPI: 0 ms
-C Computation: 4 ms
-VR: 2 ms
-VR MPI: 2 ms
-VR Computation: 0 ms
-Elapsed: 694 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/breakdown_time/s4_7
--------------------
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-
-Full trial 8
-Number of GPUs per node: 1
-Waking the GPUs... DONE!
--------------------
-IO: 491 ms
-K: 139 ms
+IO: 200 ms
+K: 97 ms
 VI: 4 ms
-E: 505 ms
+E: 507 ms
 Z: 0 ms
-C: 4 ms
+C: 3 ms
 C MPI: 0 ms
-C Computation: 4 ms
-VR: 2 ms
-VR MPI: 2 ms
+C Computation: 3 ms
+VR: 4 ms
+VR MPI: 4 ms
 VR Computation: 0 ms
-Elapsed: 683 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/breakdown_time/s4_8
--------------------
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-
-Full trial 9
-Number of GPUs per node: 1
-Waking the GPUs... DONE!
--------------------
-IO: 330 ms
-K: 153 ms
-VI: 3 ms
-E: 503 ms
-Z: 0 ms
-C: 4 ms
-C MPI: 0 ms
-C Computation: 4 ms
-VR: 2 ms
-VR MPI: 2 ms
-VR Computation: 0 ms
-Elapsed: 695 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/breakdown_time/s4_9
--------------------
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-
-Full trial 10
-srun: Step created for StepId=36276630.29
-Number of GPUs per node: 1
-Waking the GPUs... DONE!
--------------------
-IO: 253 ms
-K: 128 ms
-VI: 3 ms
-E: 508 ms
-Z: 0 ms
-C: 4 ms
-C MPI: 0 ms
-C Computation: 4 ms
-VR: 2 ms
-VR MPI: 2 ms
-VR Computation: 0 ms
-Elapsed: 670 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/breakdown_time/s4_10
--------------------
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-
-Full trial 11
-Number of GPUs per node: 1
-Waking the GPUs... DONE!
--------------------
-IO: 275 ms
-K: 149 ms
-VI: 3 ms
-E: 506 ms
-Z: 0 ms
-C: 4 ms
-C MPI: 0 ms
-C Computation: 4 ms
-VR: 2 ms
-VR MPI: 2 ms
-VR Computation: 0 ms
-Elapsed: 691 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/breakdown_time/s4_11
--------------------
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-
-Full trial 12
-Number of GPUs per node: 1
-Waking the GPUs... DONE!
--------------------
-IO: 338 ms
-K: 141 ms
-VI: 3 ms
-E: 505 ms
-Z: 0 ms
-C: 4 ms
-C MPI: 0 ms
-C Computation: 4 ms
-VR: 2 ms
-VR MPI: 2 ms
-VR Computation: 0 ms
-Elapsed: 684 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/breakdown_time/s4_12
--------------------
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-
-Full trial 13
-Number of GPUs per node: 1
-Waking the GPUs... DONE!
--------------------
-IO: 209 ms
-K: 139 ms
-VI: 3 ms
-E: 509 ms
-Z: 0 ms
-C: 4 ms
-C MPI: 0 ms
-C Computation: 4 ms
-VR: 2 ms
-VR MPI: 2 ms
-VR Computation: 0 ms
-Elapsed: 682 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/breakdown_time/s4_13
--------------------
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-
-Full trial 14
-Number of GPUs per node: 1
-Waking the GPUs... DONE!
--------------------
-IO: 296 ms
-K: 164 ms
-VI: 3 ms
-E: 509 ms
-Z: 0 ms
-C: 5 ms
-C MPI: 1 ms
-C Computation: 4 ms
-VR: 2 ms
-VR MPI: 2 ms
-VR Computation: 0 ms
-Elapsed: 707 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/breakdown_time/s4_14
--------------------
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-
-Full trial 15
-Number of GPUs per node: 1
-Waking the GPUs... DONE!
--------------------
-IO: 205 ms
-K: 137 ms
-VI: 2 ms
-E: 505 ms
-Z: 0 ms
-C: 4 ms
-C MPI: 0 ms
-C Computation: 4 ms
-VR: 2 ms
-VR MPI: 2 ms
-VR Computation: 0 ms
-Elapsed: 679 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/breakdown_time/s4_15
--------------------
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-
-Full trial 16
-Number of GPUs per node: 1
-Waking the GPUs... DONE!
--------------------
-IO: 262 ms
-K: 357 ms
-VI: 7 ms
-E: 508 ms
-Z: 0 ms
-C: 5 ms
-C MPI: 1 ms
-C Computation: 4 ms
-VR: 2 ms
-VR MPI: 2 ms
-VR Computation: 0 ms
-Elapsed: 924 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/breakdown_time/s4_16
--------------------
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-
-Full trial 17
-Number of GPUs per node: 1
-Waking the GPUs... DONE!
--------------------
-IO: 187 ms
-K: 157 ms
-VI: 2 ms
-E: 504 ms
-Z: 0 ms
-C: 4 ms
-C MPI: 0 ms
-C Computation: 4 ms
-VR: 2 ms
-VR MPI: 2 ms
-VR Computation: 0 ms
-Elapsed: 699 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/breakdown_time/s4_17
--------------------
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-
-Full trial 18
-Number of GPUs per node: 1
-Waking the GPUs... DONE!
--------------------
-IO: 363 ms
-K: 144 ms
-VI: 3 ms
-E: 505 ms
-Z: 0 ms
-C: 4 ms
-C MPI: 0 ms
-C Computation: 4 ms
-VR: 2 ms
-VR MPI: 2 ms
-VR Computation: 0 ms
-Elapsed: 686 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/breakdown_time/s4_18
--------------------
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-
-Full trial 19
-Number of GPUs per node: 1
-Waking the GPUs... DONE!
--------------------
-IO: 262 ms
-K: 150 ms
-VI: 3 ms
-E: 504 ms
-Z: 0 ms
-C: 4 ms
-C MPI: 0 ms
-C Computation: 4 ms
-VR: 2 ms
-VR MPI: 2 ms
-VR Computation: 0 ms
-Elapsed: 692 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/breakdown_time/s4_19
--------------------
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
-
-Full trial 20
-srun: Step created for StepId=36276630.39
-Number of GPUs per node: 1
-Waking the GPUs... DONE!
--------------------
-IO: 284 ms
-K: 153 ms
-VI: 3 ms
-E: 505 ms
-Z: 0 ms
-C: 4 ms
-C MPI: 0 ms
-C Computation: 4 ms
-VR: 2 ms
-VR MPI: 2 ms
-VR Computation: 0 ms
-Elapsed: 696 ms
-Results saved to: /global/homes/n/npi2/distributed-popcorn/benchmark/breakdown_time/s4_20
+Elapsed: 651 ms
+Results saved to: /global/homes/m/mrrubino/cpp/distributed-popcorn/experiments/breakdown_time/s4_5
 -------------------
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
 [CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries

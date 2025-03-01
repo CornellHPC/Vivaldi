@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --nodes=2
 #SBATCH --gpus=8
-#SBATCH --time=00:10:00
+#SBATCH --time=00:20:00
 #SBATCH --constraint=gpu
 #SBATCH --qos=regular
 #SBATCH --account=m4341
@@ -11,17 +11,20 @@ export DVS_MAXNODES=1__
 export EXE_PATH="$PWD/../build/device_wrapper $PWD/../build/main"
 export DATA="-i $PWD/../data/rand -m 70000 -n 64 --niter 100 -o $PWD/assignments/s8"
 export CLUSTERS="-k 128"
+export TRIALS=5
+
+module load cudatoolkit/12.2
 
 echo "Running strong scaling test on 8 ranks!"
 echo ""
 
-for i in {1..20}; do
+for i in $(seq 1 $TRIALS); do
   echo "Basic trial $i"
   srun -N 2 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 8 $EXE_PATH $DATA $CLUSTERS --basic --benchmark $PWD/basic_time/s8_$i
   echo ""
 done
 
-for i in {1..20}; do
+for i in $(seq 1 $TRIALS); do
   echo "Full trial $i"
   srun -N 2 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 8 $EXE_PATH $DATA $CLUSTERS --benchmark $PWD/breakdown_time/s8_$i
   echo ""

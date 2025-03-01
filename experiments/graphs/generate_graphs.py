@@ -7,12 +7,12 @@ import numpy as np
 
 # Constants
 SCALING_HIGHEST_POWER = 6
-N_TRIALS = 20
+N_TRIALS = 5
 
 
 # Constant definitions
-P = [2**i for i in range(SCALING_HIGHEST_POWER)]
-C = ["IO", "K", "VI", "E", "Z", "C MPI", "C Computation", "VR MPI", "VR Computation"]
+P = [2**i for i in range(SCALING_HIGHEST_POWER+1)]
+C = ["K", "VI", "E", "Z", "C MPI", "C Computation", "VR MPI", "VR Computation"]
 
 
 def get_scaling_data(scaling_type):
@@ -189,9 +189,52 @@ def create_strong_breakdown():
     plt.clf()
 
 
+# Create strong scaling breakdown graph
+def create_weak_breakdown():
+    median_over_trials, averages_over_trials = get_breakdown_data("w")
+    plt.title(f"Weak Scaling Breakdown (Average Runtime Over {N_TRIALS} Trials)")
+    x = np.arange(len(P))
+    plt.xticks(x, P)
+    bars = []
+    for i, c in enumerate(C):
+        heights = averages_over_trials[:, i]
+        bars.append(plt.bar(x, heights, label=c, width=0.5, edgecolor="black"))
+    for p in range(len(bars[0].patches)):
+        patches = [bars[i].patches[p] for i in range(len(bars))]
+        patches.sort(key=lambda x: -x.get_height())
+        for i, patch in enumerate(patches):
+            patch.set_zorder(i)
+    plt.xlabel("GPU count")
+    plt.ylabel("Runtime (ms)")
+    plt.legend()
+    plt.savefig("weak_avg_breakdown.png")
+    print("Generate weak_avg_breakdown.png")
+    plt.clf()
+
+    plt.title(f"Weak Scaling Breakdown (Median Runtime Over {N_TRIALS} Trials)")
+    x = np.arange(len(P))
+    plt.xticks(x, P)
+    bars = []
+    for i, c in enumerate(C):
+        heights = median_over_trials[:, i]
+        bars.append(plt.bar(x, heights, label=c, width=0.5, edgecolor="black"))
+    for p in range(len(bars[0].patches)):
+        patches = [bars[i].patches[p] for i in range(len(bars))]
+        patches.sort(key=lambda x: -x.get_height())
+        for i, patch in enumerate(patches):
+            patch.set_zorder(i)
+    plt.xlabel("GPU count")
+    plt.ylabel("Runtime (ms)")
+    plt.legend()
+    plt.savefig("weak_med_breakdown.png")
+    print("Generate weak_med_breakdown.png")
+    plt.clf()
+
+
 if __name__ == "__main__":
     create_strong_runtime()
     create_strong_speedup()
-    create_weak_runtime()
     create_strong_breakdown()
+    create_weak_runtime()
+    create_weak_breakdown()
     print("Graphs generated successfully")

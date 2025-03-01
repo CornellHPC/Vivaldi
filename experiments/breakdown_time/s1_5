@@ -1,12 +1,12 @@
-IO: 626
-K: 205
-VI: 3
-E: 5865
+IO: 450
+K: 209
+VI: 8
+E: 1961
 Z: 0
-C: 4
+C: 3
 C MPI: 0
-C Computation: 4
-VR: 1
-VR MPI: 1
+C Computation: 3
+VR: 3
+VR MPI: 3
 VR Computation: 0
-Elapsed: 6141
+Elapsed: 2253
