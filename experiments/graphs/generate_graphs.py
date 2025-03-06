@@ -63,10 +63,10 @@ def get_breakdown_data(scaling_type):
 # Create basic strong scaling graph
 def create_strong_runtime():
     median_over_trials, averages_over_trials = get_scaling_data("s")
-    theoretical_scaling = averages_over_trials[0] / P
+    theoretical_scaling = averages_over_trials[0] / P * P[0]
     plt.title(f"Strong Scaling Average Runtime Over {N_TRIALS} Trials")
-    plt.plot(P, averages_over_trials, label="Actual")
-    plt.plot(P, theoretical_scaling, label="Theoretical")
+    plt.plot(P, averages_over_trials, label="Actual", marker="o")
+    plt.plot(P, theoretical_scaling, label="Theoretical", marker="o")
     plt.xscale("log", base=2)
     plt.yscale("log", base=2)
     plt.xlabel("GPU count")
@@ -76,10 +76,10 @@ def create_strong_runtime():
     print("Generate strong_avg_runtime.png")
     plt.clf()
 
-    theoretical_scaling = median_over_trials[0] / P
+    theoretical_scaling = median_over_trials[0] / P * P[0]
     plt.title(f"Strong Scaling Median Runtime Over {N_TRIALS} Trials")
-    plt.plot(P, median_over_trials, label="Actual")
-    plt.plot(P, theoretical_scaling, label="Theoretical")
+    plt.plot(P, median_over_trials, label="Actual", marker="o")
+    plt.plot(P, theoretical_scaling, label="Theoretical", marker="o")
     plt.xscale("log", base=2)
     plt.yscale("log", base=2)
     plt.xlabel("GPU count")
@@ -93,10 +93,12 @@ def create_strong_runtime():
 def create_strong_speedup():
     median_over_trials, averages_over_trials = get_scaling_data("s")
     actual_strong_speedup = averages_over_trials[0] / averages_over_trials
-    theoretical_speedup = P
+    theoretical_speedup = [p / P[0] for p in P]
     plt.title(f"Strong Scaling Average Speedup Over {N_TRIALS} Trials")
-    plt.plot(P, actual_strong_speedup, label="Actual")
-    plt.plot(P, theoretical_speedup, label="Theoretical")
+    plt.plot(P, actual_strong_speedup, label="Actual", marker="o")
+    plt.plot(P, theoretical_speedup, label="Theoretical", marker="o")
+    plt.xscale("log", base=2)
+    plt.yscale("log", base=2)
     plt.xlabel("GPU count")
     plt.ylabel("Speedup")
     plt.legend()
@@ -106,8 +108,10 @@ def create_strong_speedup():
 
     actual_strong_speedup = median_over_trials[0] / median_over_trials
     plt.title(f"Strong Scaling Median Speedup Over {N_TRIALS} Trials")
-    plt.plot(P, actual_strong_speedup, label="Actual")
-    plt.plot(P, theoretical_speedup, label="Theoretical")
+    plt.plot(P, actual_strong_speedup, label="Actual", marker="o")
+    plt.plot(P, theoretical_speedup, label="Theoretical", marker="o")
+    plt.xscale("log", base=2)
+    plt.yscale("log", base=2)
     plt.xlabel("GPU count")
     plt.ylabel("Speedup")
     plt.legend
@@ -120,8 +124,8 @@ def create_weak_runtime():
     median_over_trials, averages_over_trials = get_scaling_data("w")
     theoretical_scaling = np.array([averages_over_trials[0] for _ in P])
     plt.title(f"Weak Scaling Average Runtime Over {N_TRIALS} Trials")
-    plt.plot(P, averages_over_trials, label="Actual")
-    plt.plot(P, theoretical_scaling, label="Theoretical")
+    plt.plot(P, averages_over_trials, label="Actual", marker="o")
+    plt.plot(P, theoretical_scaling, label="Theoretical", marker="o")
     plt.xscale("log", base=2)
     plt.yscale("log", base=2)
     plt.xlabel("GPU count")
@@ -134,8 +138,8 @@ def create_weak_runtime():
 
     theoretical_scaling = np.array([median_over_trials[0] for _ in P])
     plt.title(f"Weak Scaling Median Runtime Over {N_TRIALS} Trials")
-    plt.plot(P, median_over_trials, label="Actual")
-    plt.plot(P, theoretical_scaling, label="Theoretical")
+    plt.plot(P, median_over_trials, label="Actual", marker="o")
+    plt.plot(P, theoretical_scaling, label="Theoretical", marker="o")
     plt.xscale("log", base=2)
     plt.yscale("log", base=2)
     plt.xlabel("GPU count")
