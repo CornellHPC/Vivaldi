@@ -14,6 +14,7 @@ ArgParse::ArgParse(int argc, char* argv[]) {
       "npoints,m", po::value<int>(), "number of points in the dataset")(
       "nfeatures,n", po::value<int>(), "number of features")(
       "nclusters,k", po::value<int>(), "number of clusters to form")(
+      "sparse,s", po::value<bool>()->default_value(true), "use sparse v")(
       "gamma", po::value<float>()->default_value(1.0f),
       "gamma parameter for the polynomial kernel")(
       "c", po::value<float>()->default_value(1.0f),
@@ -58,6 +59,7 @@ ArgParse::ArgParse(int argc, char* argv[]) {
     output = vm["output"].as<std::string>();
   else
     output = path + "_out";
+  s = vm["sparse"].as<bool>();
   gamma = vm["gamma"].as<float>();
   c = vm["c"].as<float>();
   r = vm["r"].as<float>();

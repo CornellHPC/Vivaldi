@@ -4,6 +4,8 @@
 #include "cusparse.h"
 #include "mpi.h"
 
+#include "utils.hh"
+
 namespace cpop {
 
 struct DnMat_t {
@@ -52,6 +54,7 @@ struct DnVec_t {
 };
 
 struct V_t {
+  bool sparse;
   cusparseSpMatDescr_t gV, lV;
 
   // GPU pointers to the components of the global CSC V matrix
@@ -88,9 +91,11 @@ struct V_t {
    * @param t The local number of points
    * @param k The number of clusters
    * @param t_sizes n_procs-size array of tile widths for each process
+   * @param sparse Flag indicating whether or not V is sparse
    * @param comm The MPI communicator used to distribute assignments
    */
-  V_t(int64_t m, int64_t t, int64_t k, int* t_sizes, MPI_Comm comm);
+  V_t(int64_t m, int64_t t, int64_t k, int* t_sizes, bool sparse,
+      MPI_Comm comm);
 
   /**
    * @brief Saves the cluster assignments to disk
@@ -120,13 +125,13 @@ struct V_t {
 /**
  * @brief Computes E by SpMM routine
  * 
- * @param handle The cuSPARSE handle
+ * @param handle The handle
  * @param V The V matrix
  * @param K The K matrix
  * @param E The E matrix
  * @return int 
  */
-int spmm(cusparseHandle_t& handle, V_t& V, DnMat_t& K, DnMat_t& E);
+int spmm(Handle& handle, V_t& V, DnMat_t& K, DnMat_t& E);
 
 /**
  * @brief Computes z based on the local V matrix and E (i.e. using the masking strategy)
@@ -141,13 +146,13 @@ int compute_z(V_t& V, DnMat_t& E, DnVec_t& z);
 /**
  * @brief Computes the local c norm vector by SpMV. Used in ``compute_c``.
  *
- * @param handle The cuSPARSE handle
+ * @param handle The handle
  * @param V The V matrix
  * @param z The local z vector
  * @param c The local c vector
  * @return int
  */
-int spmv(cusparseHandle_t& handle, V_t& V, DnVec_t& z, DnVec_t& c);
+int spmv(Handle& handle, V_t& V, DnVec_t& z, DnVec_t& c);
 
 /**
  * @brief Sums the vector across the communicator. Used in ``compute_c``.
@@ -161,15 +166,14 @@ int sum_vec(DnVec_t& c, MPI_Comm comm);
 /**
  * @brief Computes the c norm vector by SpMV and sums it across the communicator row
  * 
- * @param handle The cuSPARSE handle
+ * @param handle The handle
  * @param V The V matrix
  * @param z The local z vector
  * @param c The local c vector
  * @param comm The communicator over which to sum
  * @return int 
  */
-int compute_c(cusparseHandle_t& handle, V_t& V, DnVec_t& z, DnVec_t& c,
-              MPI_Comm comm);
+int compute_c(Handle& handle, V_t& V, DnVec_t& z, DnVec_t& c, MPI_Comm comm);
 
 /**
  * @brief Launches the argmin kernel. Used in ``reinit_V``.

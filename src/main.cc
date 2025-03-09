@@ -32,11 +32,12 @@ int cluster_basic(ArgParse args, MPI_Comm comm) {
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
 
+  wake_gpus(rank);
   slate::gpu_aware_mpi(true);
-  auto PT = load_matrix(args.path.c_str(), args.m, args.n, comm);
 
-  cusparseHandle_t handle;
-  cusparseCreate(&handle);
+  Handle handle(args.s);
+
+  auto PT = load_matrix(args.path.c_str(), args.m, args.n, comm);
 
   int t = args.m / size + (args.m > size * size && args.m % size > 0);
   int* t_sizes = (int*)calloc(size, sizeof(int));
@@ -49,7 +50,7 @@ int cluster_basic(ArgParse args, MPI_Comm comm) {
   auto start = hrc::now();
   DnMat_t K(args.m, t, compute_kernel_matrix(PT, args.gamma, args.c, args.r));
   PT.releaseWorkspace();
-  V_t V(args.m, t, args.k, t_sizes, comm);
+  V_t V(args.m, t, args.k, t_sizes, args.s, comm);
   DnMat_t E(args.k, t);
   DnVec_t z(t);
   DnVec_t c(args.k);
@@ -64,7 +65,6 @@ int cluster_basic(ArgParse args, MPI_Comm comm) {
   timer.save_elapsed(args.benchmark.c_str());
   V.save(args.output.c_str());
   free(t_sizes);
-  cusparseDestroy(handle);
   return EXIT_SUCCESS;
 }
 
@@ -89,8 +89,9 @@ int cluster_full(ArgParse args, MPI_Comm comm) {
   /** Initialize GPU */
   wake_gpus(rank);
   slate::gpu_aware_mpi(true);
-  cusparseHandle_t handle;
-  cusparseCreate(&handle);
+
+  /** Create handle */
+  Handle handle(args.s);
 
   /** Load Data (IO) */
   auto io_start = hrc::now();
@@ -119,7 +120,7 @@ int cluster_full(ArgParse args, MPI_Comm comm) {
 
   /** Initialize V */
   auto vi_start = hrc::now();
-  V_t V(args.m, t, args.k, t_sizes, comm);
+  V_t V(args.m, t, args.k, t_sizes, args.s, comm);
   timer.vi_elapsed = get_time_elapsed(vi_start);
 
   /** Allocations */
@@ -184,7 +185,6 @@ int cluster_full(ArgParse args, MPI_Comm comm) {
 
   /** Exit */
   free(t_sizes);
-  cusparseDestroy(handle);
   return EXIT_SUCCESS;
 }
 

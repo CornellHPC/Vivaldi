@@ -23,7 +23,9 @@
 #include <cmath>
 #include <iostream>
 
+#include <cublas_v2.h>
 #include <cuda_runtime.h>
+#include <cusparse_v2.h>
 #include <mpi.h>
 
 namespace cpop {
@@ -31,6 +33,7 @@ namespace cpop {
 struct ArgParse {
   std::string path;
   int m, n, k;
+  bool s;
   float gamma, c, r;
   std::string output;
   std::string benchmark;
@@ -85,6 +88,36 @@ struct Timer {
    * @param path filename
    */
   void save_all(const char* path);
+};
+
+class Handle {
+  bool sparse;
+  cusparseHandle_t s_handle;
+  cublasHandle_t d_handle;
+
+ public:
+  Handle(bool sparse) {
+    this->sparse = sparse;
+    if (sparse) {
+      cusparseCreate(&s_handle);
+    } else {
+      cublasCreate_v2(&d_handle);
+    }
+  }
+
+  ~Handle() {
+    if (sparse) {
+      cusparseDestroy(s_handle);
+    } else {
+      cublasDestroy_v2(d_handle);
+    }
+  }
+
+  bool isSparse() { return sparse; }
+
+  cusparseHandle_t sh() { return s_handle; }
+
+  cublasHandle_t dh() { return d_handle; }
 };
 
 /**

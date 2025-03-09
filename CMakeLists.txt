@@ -58,6 +58,6 @@ target_include_directories(test_exe PRIVATE "${SLATE_INSTALL}/include")
 
 # Libraries
 target_link_directories(main PRIVATE "${SLATE_INSTALL}/lib")
-target_link_libraries(main gomp cusparse cusolver blaspp lapackpp slate)
+target_link_libraries(main gomp cublas cusparse cusolver blaspp lapackpp slate)
 target_link_directories(test_exe PRIVATE "${SLATE_INSTALL}/lib")
-target_link_libraries(test_exe gomp cusparse cusolver blaspp lapackpp slate)
+target_link_libraries(test_exe gomp cublas cusparse cusolver blaspp lapackpp slate)
