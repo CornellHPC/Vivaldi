@@ -421,12 +421,10 @@ int main(int argc, char* argv[]) {
     t_sizes[i] = (i == size - 1) ? 6 : 9;
   }
 
-  std::cout << "before k" << std::endl;
   DnMat_t K(m, t, compute_kernel_matrix(PT, 1.0f, 1.0f, 1.0f));
   PT.releaseWorkspace();
   check_k(K, rank);
 
-  std::cout << "before v" << std::endl;
   V_t V(m, t, k, t_sizes, s, comm);
   check_v0(V);
 
@@ -434,24 +432,18 @@ int main(int argc, char* argv[]) {
   DnVec_t z(t);
   DnVec_t c(k);
 
-  std::cout << "before e" << std::endl;
   spmm(handle, V, K, E);
   check_e1(E, rank);
 
-  std::cout << "before z" << std::endl;
   compute_z(V, E, z);
   check_z1(z, rank);
 
-  std::cout << "before c" << std::endl;
   spmv(handle, V, z, c);
   sum_vec(c, comm);
   check_c1(c);
 
-  std::cout << "before v reinit" << std::endl;
   reinit_V(E, c, V);
   check_v1(V);
-
-  std::cout << "first pass good" << std::endl;
 
   spmm(handle, V, K, E);
   check_e2(E, rank);
