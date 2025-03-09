@@ -87,7 +87,18 @@ V_t::V_t(int64_t m, int64_t t, int64_t k, int* t_sizes, bool sparse,
         local_ptr_to_values, CUSPARSE_INDEX_64I, CUSPARSE_INDEX_64I,
         CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));
   } else {
-    // TODO: Dense matrix initialization
+    // round robin initialization (TODO: gpu)
+    float* values = (float*)calloc(k * m, sizeof(float));
+    for (int64_t cluster = 0; cluster < k; ++cluster) {
+      for (int64_t point = cluster; point < m; point += k) {
+        int64_t total = m / k + ((cluster < m % k) ? 1 : 0);
+        values[cluster * m + point] = 1.0f / total;
+      }
+    }
+    CHECK_CUDA(cudaMalloc(&this->values, k * m * sizeof(float)));
+    CHECK_CUDA(cudaMemcpy(this->values, values, k * m * sizeof(float),
+                          cudaMemcpyHostToDevice));
+    free(values);
   }
 }
 
@@ -113,19 +124,25 @@ int V_t::save(const char* path) {
 
 void V_t::print() {
   std::cout << "Printing V from rank " << rank << std::endl;
-  std::cout << "Local displacement is " << displs[rank] << std::endl;
-  std::cout << "Global device vectors:" << std::endl;
-  print_device_buffer(global_assignments, m_);
-  print_device_buffer(global_csc_col_offsets, m_ + 1);
-  print_device_buffer(values, m_);
-  std::cout << "Local device vectors:" << std::endl;
-  print_device_buffer(local_ptr_to_assignments, t_);
-  print_device_buffer(local_csc_col_offsets, t_ + 1);
-  print_device_buffer(local_ptr_to_values, t_);
-  std::cout << "Working vectors:" << std::endl;
-  print_device_buffer(global_cluster_sizes, k_);
-  print_device_buffer(local_assignments, t_);
-  print_device_buffer(local_cluster_sizes, k_);
+
+  if (sparse) {
+    std::cout << "Local displacement is " << displs[rank] << std::endl;
+    std::cout << "Global device vectors:" << std::endl;
+    print_device_buffer(global_assignments, m_);
+    print_device_buffer(global_csc_col_offsets, m_ + 1);
+    print_device_buffer(values, m_);
+    std::cout << "Local device vectors:" << std::endl;
+    print_device_buffer(local_ptr_to_assignments, t_);
+    print_device_buffer(local_csc_col_offsets, t_ + 1);
+    print_device_buffer(local_ptr_to_values, t_);
+    std::cout << "Working vectors:" << std::endl;
+    print_device_buffer(global_cluster_sizes, k_);
+    print_device_buffer(local_assignments, t_);
+    print_device_buffer(local_cluster_sizes, k_);
+  } else {
+    print_device_matrix(values, k_, m_);
+  }
+
   std::cout << "-------------------" << std::endl;
 }
 
@@ -153,18 +170,22 @@ bool V_t::test_convergence() {
 }
 
 V_t::~V_t() {
-  CHECK_CUDA(cudaFree(global_assignments));
-  CHECK_CUDA(cudaFree(global_cluster_sizes));
-  CHECK_CUDA(cudaFree(local_assignments));
-  CHECK_CUDA(cudaFree(local_cluster_sizes));
-  CHECK_CUDA(cudaFree(values));
-  CHECK_CUDA(cudaFree(global_csc_col_offsets));
-  CHECK_CUDA(cudaFree(local_csc_col_offsets));
-  CHECK_CUSPARSE(cusparseDestroySpMat(gV));
-  CHECK_CUSPARSE(cusparseDestroySpMat(lV));
-  free(displs);
-  if (previous_global_assignments)
-    free(previous_global_assignments);
+  if (sparse) {
+    CHECK_CUDA(cudaFree(global_assignments));
+    CHECK_CUDA(cudaFree(global_cluster_sizes));
+    CHECK_CUDA(cudaFree(local_assignments));
+    CHECK_CUDA(cudaFree(local_cluster_sizes));
+    CHECK_CUDA(cudaFree(values));
+    CHECK_CUDA(cudaFree(global_csc_col_offsets));
+    CHECK_CUDA(cudaFree(local_csc_col_offsets));
+    CHECK_CUSPARSE(cusparseDestroySpMat(gV));
+    CHECK_CUSPARSE(cusparseDestroySpMat(lV));
+    free(displs);
+    if (previous_global_assignments)
+      free(previous_global_assignments);
+  } else {
+    CHECK_CUDA(cudaFree(values));
+  }
 }
 
 DnMat_t::DnMat_t(int64_t h, int64_t w) {
@@ -212,11 +233,11 @@ DnVec_t::~DnVec_t() {
 }
 
 int spmm(Handle& handle, V_t& V, DnMat_t& K, DnMat_t& E) {
-  if (handle.isSparse()) {
-    // Define constants
-    float alpha = 1.0f;
-    float beta = 0.0f;
+  // Define constants
+  float alpha = 1.0f;
+  float beta = 0.0f;
 
+  if (handle.isSparse()) {
     // Allocate workspace buffer
     size_t buffer_size;
     void* buffer;
@@ -235,7 +256,10 @@ int spmm(Handle& handle, V_t& V, DnMat_t& K, DnMat_t& E) {
     // Clean up
     CHECK_CUDA(cudaFree(buffer));
   } else {
-    // TODO: Implement dense matrix matrix product
+    int64_t m = V.m_;
+    int64_t k = V.k_;
+    cublasSgemm(handle.dh(), CUBLAS_OP_N, CUBLAS_OP_N, k, m, m, &alpha,
+                V.values, m, K.dM, m, &beta, E.dM, m);
   }
 
   return EXIT_SUCCESS;

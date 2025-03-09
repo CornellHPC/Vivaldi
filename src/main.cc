@@ -4,7 +4,6 @@
 #include <cstdlib>
 #include <iostream>
 
-#include "cusparse.h"
 #include "mpi.h"
 
 #include "cpop/cluster.hh"

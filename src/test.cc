@@ -163,18 +163,32 @@ void check_k(DnMat_t& K, int rank) {
 }
 
 void check_v0(V_t& V) {
-  int64_t count = 33;
-  int64_t* a = (int64_t*)malloc(count * sizeof(int64_t));
-  cudaMemcpy(a, V.global_assignments, count * sizeof(int64_t),
-             cudaMemcpyDeviceToHost);
+  if (V.sparse) {
+    int64_t count = 33;
+    int64_t* a = (int64_t*)malloc(count * sizeof(int64_t));
+    cudaMemcpy(a, V.global_assignments, count * sizeof(int64_t),
+               cudaMemcpyDeviceToHost);
 
-  int64_t buffer[33] = {0};
-  for (int i = 1; i < 33; i += 2) {
-    buffer[i] = 1;
+    int64_t buffer[33] = {0};
+    for (int i = 1; i < 33; i += 2) {
+      buffer[i] = 1;
+    }
+    assert_buffer_equal(buffer, a, count);
+
+    free(a);
+  } else {
+    float* v = (float*)calloc(V.k_ * V.m_, sizeof(float));
+    cudaMemcpy(v, V.values, V.k_ * V.m_ * sizeof(float),
+               cudaMemcpyDeviceToHost);
+
+    float buffer[66] = {0};
+    for (int i = 0; i < 33; ++i) {
+      buffer[V.m_ * (i % 2) + i] = 1.0f / (17 - i % 2);
+    }
+    assert_buffer_equal(buffer, v, 66);
+
+    free(v);
   }
-  assert_buffer_equal(buffer, a, count);
-
-  free(a);
 }
 
 void check_e1(DnMat_t& E, int rank) {
