@@ -271,8 +271,8 @@ int spmm(Handle& handle, V_t& V, DnMat_t& K, DnMat_t& E) {
     int64_t t = V.t_;
     int64_t m = V.m_;
     int64_t k = V.k_;
-    cublasSgemm(handle.dh(), CUBLAS_OP_N, CUBLAS_OP_N, t, k, m, &alpha, K.dM, t,
-                V.values, m, &beta, E.dM, t);
+    CHECK_CUBLAS(cublasSgemm(handle.dh(), CUBLAS_OP_N, CUBLAS_OP_N, t, k, m,
+                             &alpha, K.dM, t, V.values, m, &beta, E.dM, t));
   }
 
   return EXIT_SUCCESS;
@@ -309,8 +309,9 @@ int spmv(Handle& handle, V_t& V, DnVec_t& z, DnVec_t& c) {
     int64_t t = V.t_;
     int64_t k = V.k_;
     int64_t m = V.m_;
-    cublasSgemv(handle.dh(), CUBLAS_OP_T, t, k, &alpha, V.local_ptr_to_values,
-                m, z.dz, 1, &beta, c.dz, 1);
+    CHECK_CUBLAS(cublasSgemv(handle.dh(), CUBLAS_OP_T, t, k, &alpha,
+                             V.local_ptr_to_values, m, z.dz, 1, &beta, c.dz,
+                             1));
   }
 
   return EXIT_SUCCESS;

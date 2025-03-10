@@ -19,6 +19,15 @@
     }                                                                          \
   }
 
+#define CHECK_CUBLAS(func)                                                   \
+  {                                                                          \
+    cublasStatus_t status = (func);                                          \
+    if (status != CUBLAS_STATUS_SUCCESS) {                                   \
+      printf("CUBLAS API failed at line %d with error: %s (%d)\n", __LINE__, \
+             cublasGetErrorString(status), status);                          \
+    }                                                                        \
+  }
+
 #include <chrono>
 #include <cmath>
 #include <iostream>
@@ -29,6 +38,8 @@
 #include <mpi.h>
 
 namespace cpop {
+
+const char* cublasGetErrorString(cublasStatus_t status);
 
 struct ArgParse {
   std::string path;
