@@ -22,24 +22,44 @@ V_t::V_t(int64_t m, int64_t t, int64_t k, int* t_sizes, bool sparse,
   this->sparse = sparse;
   this->comm = comm;
 
+  // MPI initializations
+  MPI_Comm_rank(comm, &rank);
+  MPI_Comm_size(comm, &n_procs);
+  t_sizes_ = t_sizes;
+
+  displs = (int*)calloc(n_procs, sizeof(int));
+  for (int i = 1; i < n_procs; ++i)
+    displs[i] = displs[i - 1] + t_sizes_[i - 1];  // MPI displacements
+
   // Struct data initialization
+  CHECK_CUDA(cudaMalloc(&global_assignments, m * sizeof(int64_t)));
+  CHECK_CUDA(cudaMalloc(&global_cluster_sizes, k * sizeof(int64_t)));
+
+  // round robin initialization (todo: GPU)
+  int* init_global_cluster_sizes = (int*)calloc(k, sizeof(int));
+  for (int64_t i = 0; i < k; ++i)
+    init_global_cluster_sizes[i] = (m / k) + ((i < m % k) ? 1 : 0);
+  CHECK_CUDA(cudaMemcpy(global_cluster_sizes, init_global_cluster_sizes,
+                        k * sizeof(int), cudaMemcpyHostToDevice));
+
+  // round robin initialization (todo: GPU)
+  int64_t* init_assignments = (int64_t*)calloc(m, sizeof(int64_t));
+  for (int64_t i = 0; i < m; ++i)
+    init_assignments[i] = i % k;
+  CHECK_CUDA(cudaMemcpy(global_assignments, init_assignments,
+                        m * sizeof(int64_t), cudaMemcpyHostToDevice));
+
+  // set local assignment pointer
+  local_ptr_to_assignments = global_assignments + displs[rank];
+
+  // Implementation-specific initialization
   if (sparse) {
-    CHECK_CUDA(cudaMalloc(&global_assignments, m * sizeof(int64_t)));
-    CHECK_CUDA(cudaMalloc(&global_cluster_sizes, k * sizeof(int64_t)));
     CHECK_CUDA(cudaMalloc(&local_assignments, t * sizeof(int64_t)));
     CHECK_CUDA(cudaMalloc(&local_cluster_sizes, k * sizeof(int64_t)));
     CHECK_CUDA(cudaMalloc(&values, m * sizeof(int64_t)));
     CHECK_CUDA(cudaMalloc(&global_csc_col_offsets, (m + 1) * sizeof(int64_t)));
     CHECK_CUDA(cudaMalloc(&local_csc_col_offsets, (t + 1) * sizeof(int64_t)));
     previous_global_assignments = nullptr;
-
-    // MPI initializations
-    MPI_Comm_rank(comm, &rank);
-    MPI_Comm_size(comm, &n_procs);
-    t_sizes_ = t_sizes;
-    displs = (int*)calloc(n_procs, sizeof(int));
-    for (int i = 1; i < n_procs; ++i)
-      displs[i] = displs[i - 1] + t_sizes_[i - 1];  // MPI displacements
 
     // basic CSC initializations (todo: GPU)
     int64_t* global_csc_col_offsets_ = (int64_t*)calloc(m + 1, sizeof(int64_t));
@@ -52,23 +72,11 @@ V_t::V_t(int64_t m, int64_t t, int64_t k, int* t_sizes, bool sparse,
     free(global_csc_col_offsets_);
 
     // round robin initialization (todo: GPU)
-    int* init_global_cluster_sizes = (int*)calloc(k, sizeof(int));
-    int64_t* init_assignments = (int64_t*)calloc(m, sizeof(int64_t));
     float* init_values = (float*)calloc(m, sizeof(float));
-    for (int64_t i = 0; i < k; ++i)
-      init_global_cluster_sizes[i] = (m / k) + ((i < m % k) ? 1 : 0);
-    CHECK_CUDA(cudaMemcpy(global_cluster_sizes, init_global_cluster_sizes,
-                          k * sizeof(int), cudaMemcpyHostToDevice));
-    for (int64_t i = 0; i < m; ++i) {
-      init_assignments[i] = i % k;
+    for (int64_t i = 0; i < m; ++i)
       init_values[i] = 1.0f / init_global_cluster_sizes[i % k];
-    }
-    CHECK_CUDA(cudaMemcpy(global_assignments, init_assignments,
-                          m * sizeof(int64_t), cudaMemcpyHostToDevice));
     CHECK_CUDA(cudaMemcpy(values, init_values, m * sizeof(float),
                           cudaMemcpyHostToDevice));
-    free(init_global_cluster_sizes);
-    free(init_assignments);
     free(init_values);
 
     // cusparse initializations
@@ -80,7 +88,6 @@ V_t::V_t(int64_t m, int64_t t, int64_t k, int* t_sizes, bool sparse,
     // the local partition of V in CSC is found by slicing the global partition at [displs[rank]:displs[rank] + t]
     // (since displs[rank] is the displacement of this rank's first point)
     // this is done with simple pointer arithmetic
-    local_ptr_to_assignments = global_assignments + displs[rank];
     local_ptr_to_values = values + displs[rank];
     CHECK_CUSPARSE(cusparseCreateCsc(
         &lV, k, t, t, local_csc_col_offsets, local_ptr_to_assignments,
@@ -100,6 +107,10 @@ V_t::V_t(int64_t m, int64_t t, int64_t k, int* t_sizes, bool sparse,
                           cudaMemcpyHostToDevice));
     free(values);
   }
+
+  // Clean up
+  free(init_global_cluster_sizes);
+  free(init_assignments);
 }
 
 int V_t::save(const char* path) {
@@ -274,10 +285,10 @@ int compute_z(V_t& V, DnMat_t& E, DnVec_t& z) {
 }
 
 int spmv(Handle& handle, V_t& V, DnVec_t& z, DnVec_t& c) {
-  if (handle.isSparse()) {
-    float alpha = 1.0f;
-    float beta = 0.0f;
+  float alpha = 1.0f;
+  float beta = 0.0f;
 
+  if (handle.isSparse()) {
     // allocate an external buffer if needed
     void* dBuffer = NULL;
     size_t bufferSize = 0;
@@ -294,7 +305,12 @@ int spmv(Handle& handle, V_t& V, DnVec_t& z, DnVec_t& c) {
     // cleanup
     CHECK_CUDA(cudaFree(dBuffer));
   } else {
-    // TODO: Implement dense matrix vector product
+    int64_t t = V.t_;
+    int64_t k = V.k_;
+    int64_t m = V.m_;
+    float* values = V.values + V.displs[V.rank];
+    cublasSgemv(handle.dh(), CUBLAS_OP_T, t, k, &alpha, values, m, z.dz, 1,
+                &beta, c.dz, 1);
   }
 
   return EXIT_SUCCESS;
