@@ -49,8 +49,9 @@ V_t::V_t(int64_t m, int64_t t, int64_t k, int* t_sizes, bool sparse,
   CHECK_CUDA(cudaMemcpy(global_assignments, init_assignments,
                         m * sizeof(int64_t), cudaMemcpyHostToDevice));
 
-  // set local assignment pointer
+  // set assignment pointers
   local_ptr_to_assignments = global_assignments + displs[rank];
+  previous_global_assignments = nullptr;
 
   // Implementation-specific initialization
   if (sparse) {
@@ -59,7 +60,6 @@ V_t::V_t(int64_t m, int64_t t, int64_t k, int* t_sizes, bool sparse,
     CHECK_CUDA(cudaMalloc(&values, m * sizeof(int64_t)));
     CHECK_CUDA(cudaMalloc(&global_csc_col_offsets, (m + 1) * sizeof(int64_t)));
     CHECK_CUDA(cudaMalloc(&local_csc_col_offsets, (t + 1) * sizeof(int64_t)));
-    previous_global_assignments = nullptr;
 
     // basic CSC initializations (todo: GPU)
     int64_t* global_csc_col_offsets_ = (int64_t*)calloc(m + 1, sizeof(int64_t));
