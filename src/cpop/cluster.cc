@@ -256,10 +256,11 @@ int spmm(Handle& handle, V_t& V, DnMat_t& K, DnMat_t& E) {
     // Clean up
     CHECK_CUDA(cudaFree(buffer));
   } else {
+    int64_t t = V.t_;
     int64_t m = V.m_;
     int64_t k = V.k_;
-    cublasSgemm(handle.dh(), CUBLAS_OP_N, CUBLAS_OP_N, k, m, m, &alpha,
-                V.values, m, K.dM, m, &beta, E.dM, m);
+    cublasSgemm(handle.dh(), CUBLAS_OP_N, CUBLAS_OP_N, t, k, m, &alpha, K.dM, t,
+                V.values, m, &beta, E.dM, t);
   }
 
   return EXIT_SUCCESS;
