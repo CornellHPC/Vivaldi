@@ -284,8 +284,6 @@ void check_v1(V_t& V) {
                         1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1};
   assert_buffer_equal(buffer, a, count);
 
-  float* v = (float*)malloc(count * sizeof(float));
-  cudaMemcpy(v, V.values, count * sizeof(float), cudaMemcpyDeviceToHost);
   float values[33] = {
       0.05263158, 0.05263158, 0.05263158, 0.07142857, 0.07142857, 0.05263158,
       0.07142857, 0.07142857, 0.07142857, 0.05263158, 0.07142857, 0.05263158,
@@ -293,10 +291,24 @@ void check_v1(V_t& V) {
       0.07142857, 0.05263158, 0.07142857, 0.05263158, 0.07142857, 0.05263158,
       0.05263158, 0.05263158, 0.07142857, 0.05263158, 0.05263158, 0.05263158,
       0.07142857, 0.07142857, 0.05263158};
-  assert_buffer_equal(values, v, count);
+
+  if (V.sparse) {
+    float* v = (float*)malloc(count * sizeof(float));
+    cudaMemcpy(v, V.values, count * sizeof(float), cudaMemcpyDeviceToHost);
+    assert_buffer_equal(values, v, count);
+    free(v);
+  } else {
+    float* v = (float*)malloc(count * 2 * sizeof(float));
+    cudaMemcpy(v, V.values, count * 2 * sizeof(float), cudaMemcpyDeviceToHost);
+    float full_values[66] = {0};
+    for (int i = 0; i < 33; ++i) {
+      full_values[33 * buffer[i] + i] = values[i];
+    }
+    assert_buffer_equal(full_values, v, count);
+    free(v);
+  }
 
   free(a);
-  free(v);
 }
 
 void check_e2(DnMat_t& E, int rank) {
@@ -392,8 +404,6 @@ void check_v2(V_t& V) {
                         1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1};
   assert_buffer_equal(buffer, a, count);
 
-  float* v = (float*)malloc(count * sizeof(float));
-  cudaMemcpy(v, V.values, count * sizeof(float), cudaMemcpyDeviceToHost);
   float values[33] = {
       0.05882353, 0.05882353, 0.05882353, 0.0625,     0.0625,     0.0625,
       0.0625,     0.0625,     0.0625,     0.0625,     0.0625,     0.05882353,
@@ -401,10 +411,24 @@ void check_v2(V_t& V) {
       0.0625,     0.05882353, 0.0625,     0.05882353, 0.0625,     0.05882353,
       0.05882353, 0.05882353, 0.0625,     0.05882353, 0.05882353, 0.05882353,
       0.0625,     0.0625,     0.05882353};
-  assert_buffer_equal(values, v, count);
+
+  if (V.sparse) {
+    float* v = (float*)malloc(count * sizeof(float));
+    cudaMemcpy(v, V.values, count * sizeof(float), cudaMemcpyDeviceToHost);
+    assert_buffer_equal(values, v, count);
+    free(v);
+  } else {
+    float* v = (float*)malloc(count * 2 * sizeof(float));
+    cudaMemcpy(v, V.values, count * 2 * sizeof(float), cudaMemcpyDeviceToHost);
+    float full_values[66] = {0};
+    for (int i = 0; i < 33; ++i) {
+      full_values[33 * buffer[i] + i] = values[i];
+    }
+    assert_buffer_equal(full_values, v, count);
+    free(v);
+  }
 
   free(a);
-  free(v);
 }
 
 int main(int argc, char* argv[]) {

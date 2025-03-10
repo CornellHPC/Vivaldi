@@ -79,13 +79,27 @@ __global__ void argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
 
 __global__ void reinit_kernel(float* V_global_values,
                               int64_t* global_assignments,
-                              int* global_cluster_sizes, int64_t m) {
-  for (int64_t i = blockIdx.x * blockDim.x + threadIdx.x; i < m;
-       i += blockDim.x * gridDim.x) {
-    // this for loop runs once unless the matrix is extraordinarily large
+                              int* global_cluster_sizes, int64_t k, int64_t m,
+                              bool sparse) {
+  if (sparse) {
+    for (int64_t i = blockIdx.x * blockDim.x + threadIdx.x; i < m;
+         i += blockDim.x * gridDim.x) {
+      // this for loop runs once unless the matrix is extraordinarily large
 
-    // todo: the global_assignments[i] call is coalesced, but the global_cluster_sizes[...] call is not!
-    V_global_values[i] = 1.0f / global_cluster_sizes[global_assignments[i]];
+      // todo: the global_assignments[i] call is coalesced, but the global_cluster_sizes[...] call is not!
+      V_global_values[i] = 1.0f / global_cluster_sizes[global_assignments[i]];
+    }
+  } else {
+    for (int64_t i = blockIdx.x * blockDim.x + threadIdx.x; i < k * m;
+         i += blockDim.x * gridDim.x) {
+      int64_t point = i % m;
+      int64_t cluster = i / m;
+
+      V_global_values[i] = 0.0f;
+      if (global_assignments[point] == cluster) {
+        V_global_values[i] = 1.0f / global_cluster_sizes[cluster];
+      }
+    }
   }
 }
 
@@ -131,8 +145,9 @@ void launch_argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
 }
 
 void launch_reinit_kernel(float* V_global_values, int64_t* global_assignments,
-                          int* global_cluster_sizes, int64_t m) {
-  if (m == 0)
+                          int* global_cluster_sizes, int64_t k, int64_t m,
+                          bool sparse) {
+  if (k == 0 || m == 0)
     return;
 
   // 1024 max threads for current CUDA compute capability (<= 7.5)
@@ -141,7 +156,7 @@ void launch_reinit_kernel(float* V_global_values, int64_t* global_assignments,
   int nthreads = 256;
   int nblocks = std::min(int64_t(1048576), (m + nthreads - 1) / nthreads);
   reinit_kernel<<<nblocks, nthreads>>>(V_global_values, global_assignments,
-                                       global_cluster_sizes, m);
+                                       global_cluster_sizes, k, m, sparse);
 }
 
 }  // namespace cpop

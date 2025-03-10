@@ -46,10 +46,13 @@ void launch_argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
  * @param V_global_values Full m-length vector of V values
  * @param global_assignments Full m-length vector of point-to-cluster assignments
  * @param global_cluster_sizes K-length vector of global cluster sizes
+ * @param k Number of clusters
  * @param m Number of points
+ * @param sparse Whether or not V has sparse representation
  */
 void launch_reinit_kernel(float* V_global_values, int64_t* global_assignments,
-                          int* global_cluster_sizes, int64_t m);
+                          int* global_cluster_sizes, int64_t k, int64_t m,
+                          bool sparse);
 
 // /**
 //  * @brief Launches the D kernel, which computes D = -2E + c, takes the argmin

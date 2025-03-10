@@ -34,6 +34,8 @@ V_t::V_t(int64_t m, int64_t t, int64_t k, int* t_sizes, bool sparse,
   // Struct data initialization
   CHECK_CUDA(cudaMalloc(&global_assignments, m * sizeof(int64_t)));
   CHECK_CUDA(cudaMalloc(&global_cluster_sizes, k * sizeof(int64_t)));
+  CHECK_CUDA(cudaMalloc(&local_assignments, t * sizeof(int64_t)));
+  CHECK_CUDA(cudaMalloc(&local_cluster_sizes, k * sizeof(int64_t)));
 
   // round robin initialization (todo: GPU)
   int* init_global_cluster_sizes = (int*)calloc(k, sizeof(int));
@@ -55,8 +57,6 @@ V_t::V_t(int64_t m, int64_t t, int64_t k, int* t_sizes, bool sparse,
 
   // Implementation-specific initialization
   if (sparse) {
-    CHECK_CUDA(cudaMalloc(&local_assignments, t * sizeof(int64_t)));
-    CHECK_CUDA(cudaMalloc(&local_cluster_sizes, k * sizeof(int64_t)));
     CHECK_CUDA(cudaMalloc(&values, m * sizeof(int64_t)));
     CHECK_CUDA(cudaMalloc(&global_csc_col_offsets, (m + 1) * sizeof(int64_t)));
     CHECK_CUDA(cudaMalloc(&local_csc_col_offsets, (t + 1) * sizeof(int64_t)));
@@ -105,6 +105,7 @@ V_t::V_t(int64_t m, int64_t t, int64_t k, int* t_sizes, bool sparse,
     CHECK_CUDA(cudaMalloc(&this->values, k * m * sizeof(float)));
     CHECK_CUDA(cudaMemcpy(this->values, values, k * m * sizeof(float),
                           cudaMemcpyHostToDevice));
+    local_ptr_to_values = this->values + displs[rank];
     free(values);
   }
 
@@ -308,9 +309,8 @@ int spmv(Handle& handle, V_t& V, DnVec_t& z, DnVec_t& c) {
     int64_t t = V.t_;
     int64_t k = V.k_;
     int64_t m = V.m_;
-    float* values = V.values + V.displs[V.rank];
-    cublasSgemv(handle.dh(), CUBLAS_OP_T, t, k, &alpha, values, m, z.dz, 1,
-                &beta, c.dz, 1);
+    cublasSgemv(handle.dh(), CUBLAS_OP_T, t, k, &alpha, V.local_ptr_to_values,
+                m, z.dz, 1, &beta, c.dz, 1);
   }
 
   return EXIT_SUCCESS;
@@ -343,7 +343,7 @@ int gather_assignments(DnMat_t& E, DnVec_t& c, V_t& V) {
 
 int set_V_from_assignments(DnMat_t& E, DnVec_t& c, V_t& V) {
   launch_reinit_kernel(V.values, V.global_assignments, V.global_cluster_sizes,
-                       V.m_);
+                       V.k_, V.m_, V.sparse);
   return EXIT_SUCCESS;
 }
 
