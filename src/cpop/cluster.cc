@@ -275,6 +275,7 @@ int spmm(Handle& handle, V_t& V, DnMat_t& K, DnMat_t& E) {
                              &alpha, K.dM, t, V.values, m, &beta, E.dM, t));
   }
 
+  cudaDeviceSynchronize();
   return EXIT_SUCCESS;
 }
 
@@ -282,6 +283,7 @@ int compute_z(V_t& V, DnMat_t& E, DnVec_t& z) {
   // Because we're using CSC, the cluster assignments vector is exactly the
   // CSC row indices vector of V
   launch_z_kernel(z.size, z.dz, V.local_ptr_to_assignments, E.dM);
+  cudaDeviceSynchronize();
   return EXIT_SUCCESS;
 }
 
@@ -314,6 +316,7 @@ int spmv(Handle& handle, V_t& V, DnVec_t& z, DnVec_t& c) {
                              1));
   }
 
+  cudaDeviceSynchronize();
   return EXIT_SUCCESS;
 }
 
@@ -331,6 +334,7 @@ int compute_c(Handle& handle, V_t& V, DnVec_t& z, DnVec_t& c, MPI_Comm comm) {
 int argmin(DnMat_t& E, DnVec_t& c, V_t& V) {
   launch_argmin_kernel(V.k_, V.t_, E.dM, c.dz, V.local_assignments,
                        V.local_cluster_sizes);
+  cudaDeviceSynchronize();
   return EXIT_SUCCESS;
 }
 
@@ -345,6 +349,7 @@ int gather_assignments(DnMat_t& E, DnVec_t& c, V_t& V) {
 int set_V_from_assignments(DnMat_t& E, DnVec_t& c, V_t& V) {
   launch_reinit_kernel(V.values, V.global_assignments, V.global_cluster_sizes,
                        V.k_, V.m_, V.sparse);
+  cudaDeviceSynchronize();
   return EXIT_SUCCESS;
 }
 
