@@ -54,26 +54,16 @@ void launch_reinit_kernel(float* V_global_values, int64_t* global_assignments,
                           int* global_cluster_sizes, int64_t k, int64_t m,
                           bool sparse);
 
-// /**
-//  * @brief Launches the D kernel, which computes D = -2E + c, takes the argmin
-//  * over columns, and stores the result in a.
-//  *
-//  * @param k The number of clusters, i.e. the height of E
-//  * @param t The number of points in this tile, i.e. the width of E
-//  * @param dE The local E matrix of size k-by-t
-//  * @param dc The local c vector of size k
-//  * @param a The local cluster assignments vector of size t
-//  */
-// void launch_d_kernel(int64_t k, int64_t t, float* dE, float* dc, float* a);
-
 /**
- * @brief Performs an exclusive scan using CUB, which is used in the reinit of V (CSR)
+ * @brief Compares two assignments vectors for exact equality
  * 
- * @param d_in device vector of size (k-1)
- * @param d_out device vector buffer of size k
- * @param k size
+ * @param assignments Assignments vector to compare
+ * @param prev_assignments Previous assignments vector to compare
+ * @param t Assignments vector length
+ * @return true if the vectors are equal, false otherwise
  */
-void scan(int64_t* d_in, int64_t* d_out, int64_t k);
+bool test_convergence_equality(int64_t* assignments, int64_t* prev_assignments,
+                               int64_t t);
 
 }  // namespace cpop
 

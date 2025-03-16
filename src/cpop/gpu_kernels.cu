@@ -1,5 +1,8 @@
 #include <float.h>
 #include <stdio.h>
+#include <thrust/device_ptr.h>
+#include <thrust/equal.h>
+#include <thrust/execution_policy.h>
 #include <algorithm>
 #include <cassert>
 
@@ -157,6 +160,31 @@ void launch_reinit_kernel(float* V_global_values, int64_t* global_assignments,
   int nblocks = std::min(int64_t(1048576), (m + nthreads - 1) / nthreads);
   reinit_kernel<<<nblocks, nthreads>>>(V_global_values, global_assignments,
                                        global_cluster_sizes, k, m, sparse);
+}
+
+bool test_convergence_equality(int64_t* assignments, int64_t* prev_assignments,
+                               int64_t t) {
+  std::cout << "testing convergence between two vectors" << std::endl;
+  int64_t* h_assignments = new int64_t[t];
+  gpuErrchk(cudaMemcpy(h_assignments, assignments, t * sizeof(int64_t), cudaMemcpyDeviceToHost));
+  for (int64_t i = 0; i < t; ++i) {
+    std::cout << h_assignments[i] << " ";
+  }
+  std::cout << std::endl;
+  delete[] h_assignments;
+  int64_t* h_prev_assignments = new int64_t[t];
+  gpuErrchk(cudaMemcpy(h_prev_assignments, prev_assignments, t * sizeof(int64_t), cudaMemcpyDeviceToHost));
+  for (int64_t i = 0; i < t; ++i) {
+    std::cout << h_prev_assignments[i] << " ";
+  }
+  std::cout << std::endl;
+  delete[] h_prev_assignments;
+
+  thrust::device_ptr<int64_t> t_assignments =
+      thrust::device_pointer_cast(assignments);
+  thrust::device_ptr<int64_t> t_prev_assignments =
+      thrust::device_pointer_cast(prev_assignments);
+  return thrust::equal(t_assignments, t_assignments + t, t_prev_assignments);
 }
 
 }  // namespace cpop

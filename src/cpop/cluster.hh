@@ -81,7 +81,7 @@ struct V_t {
   int* displs;
   MPI_Comm comm;
 
-  // Host vector used in convergence checking
+  // Vector used in convergence checking
   int64_t* previous_global_assignments;
 
   /**

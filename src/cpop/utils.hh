@@ -86,6 +86,9 @@ struct Timer {
   int64_t vr_mpi = 0;
   int64_t vr_computation = 0;
 
+  // Number of iterations before convergence
+  int64_t niter = 0;
+
   /**
    * @brief Save only the elapsed time as a single value to a file.
    * 

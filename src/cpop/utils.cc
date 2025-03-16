@@ -158,6 +158,7 @@ void Timer::save_all(const char* path) {
   file << "VR MPI: " << vr_mpi << std::endl;
   file << "VR Computation: " << vr_computation << std::endl;
   file << "Elapsed: " << elapsed << std::endl;
+  file << "Iterations before convergence: " << niter << std::endl;
   file.close();  // Close the file
   std::cout << "-------------------" << std::endl;
   std::cout << "IO: " << io << " ms" << std::endl;
@@ -172,6 +173,7 @@ void Timer::save_all(const char* path) {
   std::cout << "VR MPI: " << vr_mpi << " ms" << std::endl;
   std::cout << "VR Computation: " << vr_computation << " ms" << std::endl;
   std::cout << "Elapsed: " << elapsed << " ms" << std::endl;
+  std::cout << "Iterations before convergence: " << niter << std::endl;
   std::cout << "Results saved to: " << path << std::endl;
   std::cout << "-------------------" << std::endl;
 }
