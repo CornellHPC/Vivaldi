@@ -159,26 +159,21 @@ void V_t::print() {
 }
 
 bool V_t::test_convergence() {
-  // Copy the global assignments to the host
-  int64_t* global_assignments_ = (int64_t*)malloc(m_ * sizeof(int64_t));
-  cudaMemcpy(global_assignments_, global_assignments, m_ * sizeof(int64_t),
-             cudaMemcpyDeviceToHost);
-
-  // Check if the previous global assignments are the same as the current ones
   if (previous_global_assignments &&
-      std::equal(previous_global_assignments, previous_global_assignments + m_,
-                 global_assignments_)) {
+      test_convergence_equality(global_assignments, previous_global_assignments,
+                                m_)) {
     // Free everything and return true because we have converged
-    free(previous_global_assignments);
-    free(global_assignments_);
+    CHECK_CUDA(cudaFree(previous_global_assignments));
     previous_global_assignments = nullptr;
     return true;  // Converged
+  } else if (!previous_global_assignments) {
+    // First iteration, so we need to allocate previous_global_assignments
+    CHECK_CUDA(cudaMalloc(&previous_global_assignments, m_ * sizeof(int64_t)));
   }
-  // Set previous_global_assignments to global_assignments_
-  if (previous_global_assignments)
-    free(previous_global_assignments);
-  previous_global_assignments = global_assignments_;
-  return false;
+  // Set previous_global_assignments to current global_assignments
+  cudaMemcpy(previous_global_assignments, global_assignments,
+             m_ * sizeof(int64_t), cudaMemcpyDeviceToDevice);
+  return false;  // Not converged
 }
 
 V_t::~V_t() {
@@ -194,7 +189,7 @@ V_t::~V_t() {
     CHECK_CUSPARSE(cusparseDestroySpMat(lV));
     free(displs);
     if (previous_global_assignments)
-      free(previous_global_assignments);
+      CHECK_CUDA(cudaFree(previous_global_assignments));
   } else {
     CHECK_CUDA(cudaFree(values));
   }

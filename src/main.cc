@@ -160,12 +160,13 @@ int cluster_full(ArgParse args, MPI_Comm comm) {
     timer.vr_computation += get_time_elapsed(vr_computation_start);
     timer.vr_elapsed += get_time_elapsed(vr_start);
 
+    timer.niter += 1;
+
     if (args.convergence) {
-      // Rank 1 tests convergence on CPU
+      // Rank 1 tests convergence
       bool converged = false;
       if (rank == 0 && V.test_convergence()) {
         converged = true;
-        std::cout << "Converged at iteration " << i << std::endl;
       }
       // Broadcast convergence to all ranks
       MPI_Bcast(&converged, 1, MPI_C_BOOL, 0, comm);
