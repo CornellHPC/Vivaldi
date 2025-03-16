@@ -9,7 +9,7 @@
 
 export DVS_MAXNODES=1__
 export EXE_PATH="$PWD/../build/device_wrapper $PWD/../build/main"
-export DATA="-i $PWD/../data/rand -m 460000 -n 64 --niter 100 -o $PWD/assignments/w64"
+export DATA="-i $PWD/../data/rand -m 560000 -n 64 --niter 100 -o $PWD/assignments/w64"
 export CLUSTERS="-k 128"
 export TRIALS=5
 
