@@ -81,8 +81,10 @@ struct V_t {
   int* displs;
   MPI_Comm comm;
 
-  // Vector used in convergence checking
+  // Device vectors used in convergence checking
   int64_t* previous_global_assignments;
+  bool* converged;
+  int dead_process_count = 0;
 
   /**
    * @brief Constructor
@@ -181,9 +183,18 @@ int compute_c(Handle& handle, V_t& V, DnVec_t& z, DnVec_t& c, MPI_Comm comm);
  * @param E The E matrix
  * @param c The c norm vector
  * @param V The V matrix
- * @return int
+ * @return true if locally converged
  */
-int argmin(DnMat_t& E, DnVec_t& c, V_t& V);
+bool argmin(DnMat_t& E, DnVec_t& c, V_t& V);
+
+/**
+ * @brief Prepare allgather for excluding dead processes
+ * 
+ * @param V 
+ * @param locally_converged 
+ * @return int 
+ */
+int exclude_processes_from_all_gather(V_t& V, bool locally_converged);
 
 /**
  * @brief Gathers assignments and clusters. Used in ``reinit_V``.
@@ -191,9 +202,10 @@ int argmin(DnMat_t& E, DnVec_t& c, V_t& V);
  * @param E The E matrix
  * @param c The c norm vector
  * @param V The V matrix
+ * @param locally_converged true if the process has locally converged
  * @return int
  */
-int gather_assignments(DnMat_t& E, DnVec_t& c, V_t& V);
+int gather_assignments(DnMat_t& E, DnVec_t& c, V_t& V, bool locally_converged);
 
 /**
  * @brief Launches the reinit kernel. Used in ``reinit_V``.
