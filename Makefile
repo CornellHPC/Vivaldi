@@ -14,6 +14,22 @@ export OMP_NUM_THREADS := 1
 export OMP_PLACES := threads
 export OMP_PROC_BIND := spread
 
+# CMake arguments
+CMAKE_ARGS :=
+
+# Check for convergence
+ifeq ($(CONVERGENCE), 1)
+    CMAKE_ARGS += -DCONVERGENCE=1
+endif
+
+# Run in basic mode (no convergence check or fine-grained timing)
+ifeq ($(BASIC), 1)
+    CMAKE_ARGS += -DBASIC=1
+endif
+
+# Library for SLATE linkage
+CMAKE_ARGS += -DSLATE_INSTALL=$$SLATE_INSTALL
+
 build:
 	source /opt/cray/pe/lmod/lmod/init/bash && \
 	module load cudatoolkit/12.2 && \
@@ -21,7 +37,7 @@ build:
 	rm -rf build && \
 	mkdir build && \
 	cd build && \
-	cmake -DSLATE_INSTALL=$$SLATE_INSTALL .. && \
+	cmake $(CMAKE_ARGS) .. && \
 	cmake --build . && \
 	touch device_wrapper && \
 	chmod +x device_wrapper && \
@@ -30,6 +46,9 @@ build:
 	echo 'exec $$*' >> device_wrapper && \
 	echo "Build finished!" && \
 	cd ..
+
+ceecee:
+	echo $(CMAKE_ARGS)
 
 alloc:
 	@if [ -z "$$SLURM_JOB_ID" ]; then\

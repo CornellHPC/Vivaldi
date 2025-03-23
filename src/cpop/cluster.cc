@@ -328,11 +328,21 @@ int compute_c(Handle& handle, V_t& V, DnVec_t& z, DnVec_t& c, MPI_Comm comm) {
   return EXIT_SUCCESS;
 }
 
-bool argmin(DnMat_t& E, DnVec_t& c, V_t& V) {
+int argmin(DnMat_t& E, DnVec_t& c, V_t& V) {
   bool t = true;
   cudaMemcpy(V.converged, &t, sizeof(bool), cudaMemcpyHostToDevice);
   launch_argmin_kernel(V.k_, V.t_, E.dM, c.dz, V.local_assignments,
                        V.local_cluster_sizes, V.converged);
+  cudaDeviceSynchronize();
+  return EXIT_SUCCESS;
+}
+
+bool gather_assignments(DnMat_t& E, DnVec_t& c, V_t& V) {
+  int send_count = V.t_;
+  int64_t* send_buffer = V.local_assignments;
+  int* recv_sizes = V.t_sizes_;
+
+  // testing
   int64_t* assignments = (int64_t*)malloc(V.t_ * sizeof(int64_t));
   cudaMemcpy(assignments, V.local_assignments, V.t_ * sizeof(int64_t),
              cudaMemcpyDeviceToHost);
@@ -342,42 +352,50 @@ bool argmin(DnMat_t& E, DnVec_t& c, V_t& V) {
   }
   std::cout << std::endl;
   free(assignments);
-  cudaDeviceSynchronize();
-  cudaMemcpy(&t, V.converged, sizeof(bool), cudaMemcpyDeviceToHost);
-  return t;
-}
+  // end testing
 
-/* todo (nakul): this should be part of the V class? */
-int exclude_processes_from_all_gather(V_t& V, bool locally_converged) {
+#ifdef CONVERGENCE
+  int dead_process_count = 0;
+  recv_sizes = (int*)malloc(V.n_procs * sizeof(int));
+
+  bool locally_converged;
+  cudaMemcpy(&locally_converged, V.converged, sizeof(bool),
+             cudaMemcpyDeviceToHost);
+  if (locally_converged) {
+    // this process has locally converged, so it can be removed from allgather
+    send_count = 0;
+    send_buffer = nullptr;
+    std::cout << "Rank " << V.rank << " is dead!" << std::endl;
+  }
+
   bool local_convergence_ptr[V.n_procs];
   MPI_Allgather(&locally_converged, 1, MPI_C_BOOL, local_convergence_ptr, 1,
                 MPI_C_BOOL, V.comm);
   for (int i = 0; i < V.n_procs; ++i) {
     // exclude relevant processes from allgather
-    if (local_convergence_ptr[i] && V.t_sizes_[i] > 0) {
-      V.t_sizes_[i] = 0;
-      V.dead_process_count++;
+    if (local_convergence_ptr[i]) {
+      recv_sizes[i] = 0;
+      dead_process_count++;
+    } else {
+      recv_sizes[i] = V.t_sizes_[i];
     }
   }
-  return EXIT_SUCCESS;
-}
+  if (dead_process_count == V.n_procs)
+    return true;  // all processes are dead, quit
+#endif
 
-int gather_assignments(DnMat_t& E, DnVec_t& c, V_t& V, bool locally_converged) {
-  int send_count = V.t_;
-  int64_t* send_buffer = V.local_assignments;
-  if (locally_converged) {
-    // this process has locally converged, so it can be removed from allgather
-    send_count = 0;
-    send_buffer = nullptr;
-  }
   // this one always utilizes all processes, but only passes k-size vector
   MPI_Allreduce(V.local_cluster_sizes, V.global_cluster_sizes, V.k_, MPI_INT,
                 MPI_SUM, MPI_COMM_WORLD);
   // this one will be reduced to the relevant processes as it allgathers a large
-  // dense vector of points (if args.convergence is set)
+  // dense vector of points (if built with CONVERGENCE)
   MPI_Allgatherv(send_buffer, send_count, MPI_INT64_T, V.global_assignments,
-                 V.t_sizes_, V.displs, MPI_INT64_T, MPI_COMM_WORLD);
-  return EXIT_SUCCESS;
+                 recv_sizes, V.displs, MPI_INT64_T, MPI_COMM_WORLD);
+
+#ifdef CONVERGENCE
+  free(recv_sizes);
+#endif
+  return false;
 }
 
 int set_V_from_assignments(DnMat_t& E, DnVec_t& c, V_t& V) {
@@ -389,7 +407,7 @@ int set_V_from_assignments(DnMat_t& E, DnVec_t& c, V_t& V) {
 
 int reinit_V(DnMat_t& E, DnVec_t& c, V_t& V) {
   argmin(E, c, V);                  // Launch argmin kernel
-  gather_assignments(E, c, V, false);      // Gather assignments and cluster sizes
+  gather_assignments(E, c, V);      // Gather assignments and cluster sizes
   set_V_from_assignments(E, c, V);  // Launch reinit kernel
   return EXIT_SUCCESS;
 }

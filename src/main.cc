@@ -121,7 +121,6 @@ int cluster_full(ArgParse args, MPI_Comm comm) {
   auto vi_start = hrc::now();
   V_t V(args.m, t, args.k, t_sizes, args.s, comm);
   timer.vi_elapsed = get_time_elapsed(vi_start);
-  bool proc_dead = false;
 
   /** Allocations */
   DnMat_t E(args.k, t);
@@ -130,7 +129,8 @@ int cluster_full(ArgParse args, MPI_Comm comm) {
 
   /** K-Means Loop */
   for (int i = 0; i < args.niter; ++i) {
-    std::cout << "Rank " << rank << " Iteration " << i << "---------------------" << std::endl;
+    std::cout << "Rank " << rank << " Iteration " << i
+              << "---------------------" << std::endl;
     auto e_start = hrc::now();
     spmm(handle, V, K, E);  // SpMM: ET = VK using global V
     timer.e_elapsed += get_time_elapsed(e_start);
@@ -151,17 +151,18 @@ int cluster_full(ArgParse args, MPI_Comm comm) {
 
     auto vr_start = hrc::now();
     auto vr_computation_start = hrc::now();
-    proc_dead = argmin(E, c, V);  // Argmin kernel (compute D matrix)
-    // todo (nakul): use V.converged rather than ret of argmin
-    if (args.convergence) {
-      exclude_processes_from_all_gather(V, proc_dead);
-      std::cout << "Rank " << rank << " is dead: " << proc_dead << std::endl;
-    } else {
-      proc_dead = false;
-    }
+    argmin(E, c, V);  // Argmin kernel (compute D matrix)
     timer.vr_computation += get_time_elapsed(vr_computation_start);
     auto vr_mpi_start = hrc::now();
-    gather_assignments(E, c, V, proc_dead);  // Gather assignments and clusters
+    bool done = gather_assignments(E, c, V);  // Gather assignments and clusters
+#ifdef CONVERGENCE
+    if (done) {
+      // all processes are dead, so quit
+      std::cout << "All ranks are dead on rank: " << rank << std::endl;
+      break;
+    }
+#endif
+
     // MPI_Barrier(comm);
     timer.vr_mpi += get_time_elapsed(vr_mpi_start);
     vr_computation_start = hrc::now();
@@ -170,12 +171,6 @@ int cluster_full(ArgParse args, MPI_Comm comm) {
     timer.vr_elapsed += get_time_elapsed(vr_start);
 
     timer.niter += 1;
-
-    if (args.convergence && V.dead_process_count == size) {
-      // all processes are dead, so quit
-      std::cout << "All ranks are dead on rank: " << rank << std::endl;
-      break;
-    }
   }
 
   /** Save benchmarking */

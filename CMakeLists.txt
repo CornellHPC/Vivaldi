@@ -34,6 +34,20 @@ endif()
 file(GLOB SOURCES "src/main.cc" "src/**/*.cu" "src/**/*.cc" "src/cpop/**/*.cu" "src/cpop/**/*.cc")
 add_executable(main ${SOURCES})
 
+# Compile definitions
+if(CONVERGENCE)
+  message(STATUS "Convergence is defined")
+  target_compile_definitions(main PRIVATE CONVERGENCE)
+else()
+  message(STATUS "Convergence is not defined")
+endif()
+if(BASIC)
+  message(STATUS "Basic is defined")
+  target_compile_definitions(main PRIVATE BASIC)
+else()
+  message(STATUS "Basic is not defined")
+endif()
+
 # Test
 enable_testing()
 file(GLOB SOURCES "src/test.cc" "src/**/*.cu" "src/**/*.cc" "src/cpop/**/*.cu" "src/cpop/**/*.cc")
