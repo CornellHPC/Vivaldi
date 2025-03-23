@@ -52,12 +52,7 @@ ArgParse::ArgParse(int argc, char* argv[]) {
       "output path for cluster assignments, default to \"[path]_out\"")(
       "benchmark,b", po::value<std::string>(),
       "path for benchmarked times, default to \"[path]_time\"")(
-      "niter", po::value<int>()->default_value(100), "number of iterations")(
-      "convergence",
-      "if set, the algorithm will check for convergence (but still stop before "
-      "\"--niter\" iterations)")("basic",
-                                 "if set, the algorithm will run in basic mode "
-                                 "(no finer-grained timing or barriers)");
+      "niter", po::value<int>()->default_value(100), "number of iterations");
 
   // Parse command line arguments
   po::variables_map vm;
@@ -92,25 +87,14 @@ ArgParse::ArgParse(int argc, char* argv[]) {
   r = vm["r"].as<float>();
   niter = vm["niter"].as<int>();
 
-  if (vm.count("convergence"))
-    convergence = true;
-  else
-    convergence = false;
-  if (vm.count("basic"))
-    basic = true;
-  else
-    basic = false;
-  if (vm.count("benchmark"))
+  if (vm.count("benchmark")) {
     benchmark = vm["benchmark"].as<std::string>();
-  else if (basic)
+  } else {
+#ifdef BASIC
     benchmark = path + "_basic_time";
-  else
+#else
     benchmark = path + "_time";
-  if (basic && convergence) {
-    std::cerr
-        << "Error: Basic mode and convergence testing cannot be used together\n"
-        << std::endl;
-    exit(EXIT_FAILURE);
+#endif
   }
 }
 
@@ -198,6 +182,16 @@ int64_t get_time_elapsed(std::chrono::_V2::system_clock::time_point start) {
   return std::chrono::duration_cast<std::chrono::milliseconds>(
              std::chrono::high_resolution_clock::now() - start)
       .count();
+}
+
+int* compute_tile_sizes(int m, int nprocs) {
+  int t = m / nprocs + (m > nprocs * nprocs && m % nprocs > 0);
+  int* t_sizes = (int*)calloc(nprocs, sizeof(int));
+  for (int i = 0; i < nprocs - 1; ++i) {
+    t_sizes[i] = t;
+  }
+  t_sizes[nprocs - 1] = m - (nprocs - 1) * t;
+  return t_sizes;
 }
 
 }  // namespace cpop

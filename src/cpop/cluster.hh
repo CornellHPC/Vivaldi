@@ -75,8 +75,8 @@ struct V_t {
   int* local_cluster_sizes;
 
   // Other basic vars
-  int64_t m_, t_, k_;
-  int* t_sizes_;
+  int64_t m_, t, k_;
+  int* t_sizes;
   int rank, n_procs;
   int* displs;
   MPI_Comm comm;
@@ -89,14 +89,11 @@ struct V_t {
    * @brief Constructor
    * 
    * @param m The global number of points
-   * @param t The local number of points
    * @param k The number of clusters
-   * @param t_sizes n_procs-size array of tile widths for each process
    * @param sparse Flag indicating whether or not V is sparse
    * @param comm The MPI communicator used to distribute assignments
    */
-  V_t(int64_t m, int64_t t, int64_t k, int* t_sizes, bool sparse,
-      MPI_Comm comm);
+  V_t(int64_t m, int64_t k, bool sparse, MPI_Comm comm);
 
   /**
    * @brief Saves the cluster assignments to disk

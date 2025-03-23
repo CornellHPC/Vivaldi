@@ -76,14 +76,14 @@ small:
 	module load cudatoolkit/12.2 && \
 	salloc -N 1 -q interactive -t 00:01:00 -C gpu -G 4 -A m4341 \
 	srun -N 1 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 4 \
-	build/device_wrapper build/main -i data/small -m 11 -n 8 -k 2 --convergence
+	build/device_wrapper build/main -i data/small -m 11 -n 8 -k 2
 
 australian:
 	source /opt/cray/pe/lmod/lmod/init/bash && \
 	module load cudatoolkit/12.2 && \
 	salloc -N 1 -q interactive -t 00:01:00 -C gpu -G 4 -A m4341 \
 	srun -N 1 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 4 \
-	build/device_wrapper build/main -i data/australian -m 690 -n 14 -k 2 --convergence
+	build/device_wrapper build/main -i data/australian -m 690 -n 14 -k 2
 
 svmguide1:
 	source /opt/cray/pe/lmod/lmod/init/bash && \

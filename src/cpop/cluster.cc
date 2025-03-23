@@ -13,11 +13,9 @@
 
 namespace cpop {
 
-V_t::V_t(int64_t m, int64_t t, int64_t k, int* t_sizes, bool sparse,
-         MPI_Comm comm) {
+V_t::V_t(int64_t m, int64_t k, bool sparse, MPI_Comm comm) {
   // Struct member initialization
   m_ = m;
-  t_ = t;
   k_ = k;
   this->sparse = sparse;
   this->comm = comm;
@@ -25,11 +23,12 @@ V_t::V_t(int64_t m, int64_t t, int64_t k, int* t_sizes, bool sparse,
   // MPI initializations
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &n_procs);
-  t_sizes_ = t_sizes;
+  t_sizes = compute_tile_sizes(m, n_procs);
+  t = t_sizes[rank];
 
   displs = (int*)calloc(n_procs, sizeof(int));
   for (int i = 1; i < n_procs; ++i)
-    displs[i] = displs[i - 1] + t_sizes_[i - 1];  // MPI displacements
+    displs[i] = displs[i - 1] + t_sizes[i - 1];  // MPI displacements
 
   // Struct data initialization
   CHECK_CUDA(cudaMalloc(&global_assignments, m * sizeof(int64_t)));
@@ -123,12 +122,12 @@ int V_t::save(const char* path) {
   // Compute offset for rank
   int offset = displs[rank];
 
-  int64_t* assignments = (int64_t*)malloc(t_ * sizeof(int64_t));
+  int64_t* assignments = (int64_t*)malloc(t * sizeof(int64_t));
   CHECK_CUDA(cudaMemcpy(assignments, local_ptr_to_assignments,
-                        t_ * sizeof(int64_t), cudaMemcpyDeviceToHost));
+                        t * sizeof(int64_t), cudaMemcpyDeviceToHost));
 
   // Write the data to disk
-  MPI_File_write_at(fh, offset * sizeof(int64_t), assignments, t_, MPI_INT64_T,
+  MPI_File_write_at(fh, offset * sizeof(int64_t), assignments, t, MPI_INT64_T,
                     MPI_STATUS_IGNORE);
   MPI_File_close(&fh);
   free(assignments);
@@ -145,12 +144,12 @@ void V_t::print() {
     print_device_buffer(global_csc_col_offsets, m_ + 1);
     print_device_buffer(values, m_);
     std::cout << "Local device vectors:" << std::endl;
-    print_device_buffer(local_ptr_to_assignments, t_);
-    print_device_buffer(local_csc_col_offsets, t_ + 1);
-    print_device_buffer(local_ptr_to_values, t_);
+    print_device_buffer(local_ptr_to_assignments, t);
+    print_device_buffer(local_csc_col_offsets, t + 1);
+    print_device_buffer(local_ptr_to_values, t);
     std::cout << "Working vectors:" << std::endl;
     print_device_buffer(global_cluster_sizes, k_);
-    print_device_buffer(local_assignments, t_);
+    print_device_buffer(local_assignments, t);
     print_device_buffer(local_cluster_sizes, k_);
   } else {
     print_device_matrix(values, k_, m_);
@@ -179,6 +178,8 @@ bool V_t::test_convergence() {
 
 V_t::~V_t() {
   CHECK_CUDA(cudaFree(converged));
+  free(t_sizes);
+  free(displs);
   if (sparse) {
     CHECK_CUDA(cudaFree(global_assignments));
     CHECK_CUDA(cudaFree(global_cluster_sizes));
@@ -189,7 +190,6 @@ V_t::~V_t() {
     CHECK_CUDA(cudaFree(local_csc_col_offsets));
     CHECK_CUSPARSE(cusparseDestroySpMat(gV));
     CHECK_CUSPARSE(cusparseDestroySpMat(lV));
-    free(displs);
     if (previous_global_assignments)
       CHECK_CUDA(cudaFree(previous_global_assignments));
   } else {
@@ -265,7 +265,7 @@ int spmm(Handle& handle, V_t& V, DnMat_t& K, DnMat_t& E) {
     // Clean up
     CHECK_CUDA(cudaFree(buffer));
   } else {
-    int64_t t = V.t_;
+    int64_t t = V.t;
     int64_t m = V.m_;
     int64_t k = V.k_;
     CHECK_CUBLAS(cublasSgemm(handle.dh(), CUBLAS_OP_N, CUBLAS_OP_N, t, k, m,
@@ -305,7 +305,7 @@ int spmv(Handle& handle, V_t& V, DnVec_t& z, DnVec_t& c) {
     // cleanup
     CHECK_CUDA(cudaFree(dBuffer));
   } else {
-    int64_t t = V.t_;
+    int64_t t = V.t;
     int64_t k = V.k_;
     int64_t m = V.m_;
     CHECK_CUBLAS(cublasSgemv(handle.dh(), CUBLAS_OP_T, t, k, &alpha,
@@ -331,28 +331,16 @@ int compute_c(Handle& handle, V_t& V, DnVec_t& z, DnVec_t& c, MPI_Comm comm) {
 int argmin(DnMat_t& E, DnVec_t& c, V_t& V) {
   bool t = true;
   cudaMemcpy(V.converged, &t, sizeof(bool), cudaMemcpyHostToDevice);
-  launch_argmin_kernel(V.k_, V.t_, E.dM, c.dz, V.local_assignments,
+  launch_argmin_kernel(V.k_, V.t, E.dM, c.dz, V.local_assignments,
                        V.local_cluster_sizes, V.converged);
   cudaDeviceSynchronize();
   return EXIT_SUCCESS;
 }
 
 bool gather_assignments(DnMat_t& E, DnVec_t& c, V_t& V) {
-  int send_count = V.t_;
+  int send_count = V.t;
   int64_t* send_buffer = V.local_assignments;
-  int* recv_sizes = V.t_sizes_;
-
-  // testing
-  int64_t* assignments = (int64_t*)malloc(V.t_ * sizeof(int64_t));
-  cudaMemcpy(assignments, V.local_assignments, V.t_ * sizeof(int64_t),
-             cudaMemcpyDeviceToHost);
-  std::cout << "Rank " << V.rank << " has assignments: ";
-  for (int i = 0; i < V.t_; ++i) {
-    std::cout << assignments[i] << " ";
-  }
-  std::cout << std::endl;
-  free(assignments);
-  // end testing
+  int* recv_sizes = V.t_sizes;
 
 #ifdef CONVERGENCE
   int dead_process_count = 0;
@@ -365,7 +353,6 @@ bool gather_assignments(DnMat_t& E, DnVec_t& c, V_t& V) {
     // this process has locally converged, so it can be removed from allgather
     send_count = 0;
     send_buffer = nullptr;
-    std::cout << "Rank " << V.rank << " is dead!" << std::endl;
   }
 
   bool local_convergence_ptr[V.n_procs];
@@ -377,7 +364,7 @@ bool gather_assignments(DnMat_t& E, DnVec_t& c, V_t& V) {
       recv_sizes[i] = 0;
       dead_process_count++;
     } else {
-      recv_sizes[i] = V.t_sizes_[i];
+      recv_sizes[i] = V.t_sizes[i];
     }
   }
   if (dead_process_count == V.n_procs)

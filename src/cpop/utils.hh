@@ -49,8 +49,6 @@ struct ArgParse {
   std::string output;
   std::string benchmark;
   int niter;
-  bool convergence;
-  bool basic;
 
   ArgParse(int argc, char* argv[]);
 };
@@ -148,6 +146,11 @@ void wake_gpus(int rank);
  * @return Time elapsed in ms
  */
 int64_t get_time_elapsed(std::chrono::_V2::system_clock::time_point start);
+
+/**
+ * @brief Return a newly-allocated array of tile sizes per process
+ */
+int* compute_tile_sizes(int m, int nprocs);
 
 /**
  * @brief Print buffer on device

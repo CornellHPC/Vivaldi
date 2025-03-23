@@ -52,6 +52,8 @@ sbatch job.sh
 ## Makefile
 - `make alloc`: allocating interactive session on Perlmutter
 - `make build`: building source (run `mkdir build` before if no build directory)
+  - `make build CONVERGENCE=1`: build with convergence detection
+  - `make build BASIC=1`: build without fine-grained timing, e.g. for benchmarking without breakdown
 
 ## Other
 

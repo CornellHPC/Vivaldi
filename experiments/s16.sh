@@ -20,7 +20,7 @@ echo ""
 
 for i in $(seq 1 $TRIALS); do
   echo "Basic trial $i"
-  srun -N 4 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 16 $EXE_PATH $DATA $CLUSTERS --basic --benchmark $PWD/basic_time/s16_$i
+  srun -N 4 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 16 $EXE_PATH $DATA $CLUSTERS --benchmark $PWD/basic_time/s16_$i
   echo ""
 done
 

@@ -12,9 +12,18 @@ float EPSILON = 0.01;
 
 template <typename T>
 void assert_buffer_equal(T* b0, T* b1, int64_t count) {
+  bool all_eq = true;
   for (int i = 0; i < count; ++i) {
-    assert(std::abs(b0[i] - b1[i]) <= EPSILON);
+    if (std::abs(b0[i] - b1[i]) > EPSILON)
+      all_eq = false;
   }
+  if (!all_eq) {
+    std::cout << "Buffer mismatch:" << std::endl;
+    for (int i = 0; i < count; ++i) {
+      std::cout << b0[i] << " " << b1[i] << std::endl;
+    }
+  }
+  assert(all_eq && "Arrays not equal");
 }
 
 void check_k(DnMat_t& K, int rank) {
@@ -189,6 +198,18 @@ void check_v0(V_t& V) {
 
     free(v);
   }
+}
+
+void check_v_tiling(V_t& V, int rank) {
+  int t_sizes[4] = {9, 9, 9, 6};
+  assert_buffer_equal(t_sizes, V.t_sizes, 4);
+  if (rank < 3) {
+    assert(V.t == 9);
+  } else {
+    assert(V.t == 6);
+  }
+  int displs[4] = {0, 9, 18, 27};
+  assert_buffer_equal(displs, V.displs, 4);
 }
 
 void check_e1(DnMat_t& E, int rank) {
@@ -439,32 +460,29 @@ int main(int argc, char* argv[]) {
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
 
+  /** Const */
   bool s = true;
+  int m = 33;
+  int n = 8;
+  int k = 2;
+
+  /** WARNING: Test as of now needs to be run with 4 procs */
+  assert(size == 4 && "This test must be run with 4 processes.");
+  V_t V(m, k, s, comm);
+  check_v0(V);
+  check_v_tiling(V, rank);
+  int t = V.t;  // get this process tile size
 
   wake_gpus(rank);
   slate::gpu_aware_mpi(true);
 
   Handle handle(s);
 
-  int m = 33;
-  int n = 8;
-  int k = 2;
-
   auto PT = load_matrix("../data/randi", m, n, comm);
-
-  /** WARNING: Need to update t computation for different m and p */
-  int t = (rank == size - 1) ? 6 : 9;
-  int* t_sizes = (int*)calloc(size, sizeof(int));
-  for (int i = 0; i < size; ++i) {
-    t_sizes[i] = (i == size - 1) ? 6 : 9;
-  }
 
   DnMat_t K(m, t, compute_kernel_matrix(PT, 1.0f, 1.0f, 1.0f));
   PT.releaseWorkspace();
   check_k(K, rank);
-
-  V_t V(m, t, k, t_sizes, s, comm);
-  check_v0(V);
 
   DnMat_t E(k, t);
   DnVec_t z(t);
