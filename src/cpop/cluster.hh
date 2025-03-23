@@ -81,8 +81,9 @@ struct V_t {
   int* displs;
   MPI_Comm comm;
 
-  // Vector used in convergence checking
+  // Device vectors used in convergence checking
   int64_t* previous_global_assignments;
+  bool* converged;
 
   /**
    * @brief Constructor
@@ -191,9 +192,9 @@ int argmin(DnMat_t& E, DnVec_t& c, V_t& V);
  * @param E The E matrix
  * @param c The c norm vector
  * @param V The V matrix
- * @return int
+ * @return bool true if all processes have converged
  */
-int gather_assignments(DnMat_t& E, DnVec_t& c, V_t& V);
+bool gather_assignments(DnMat_t& E, DnVec_t& c, V_t& V);
 
 /**
  * @brief Launches the reinit kernel. Used in ``reinit_V``.

@@ -129,6 +129,8 @@ int cluster_full(ArgParse args, MPI_Comm comm) {
 
   /** K-Means Loop */
   for (int i = 0; i < args.niter; ++i) {
+    std::cout << "Rank " << rank << " Iteration " << i
+              << "---------------------" << std::endl;
     auto e_start = hrc::now();
     spmm(handle, V, K, E);  // SpMM: ET = VK using global V
     timer.e_elapsed += get_time_elapsed(e_start);
@@ -152,8 +154,16 @@ int cluster_full(ArgParse args, MPI_Comm comm) {
     argmin(E, c, V);  // Argmin kernel (compute D matrix)
     timer.vr_computation += get_time_elapsed(vr_computation_start);
     auto vr_mpi_start = hrc::now();
-    gather_assignments(E, c, V);  // Gather assignments and clusters
-    MPI_Barrier(comm);
+    bool done = gather_assignments(E, c, V);  // Gather assignments and clusters
+#ifdef CONVERGENCE
+    if (done) {
+      // all processes are dead, so quit
+      std::cout << "All ranks are dead on rank: " << rank << std::endl;
+      break;
+    }
+#endif
+
+    // MPI_Barrier(comm);
     timer.vr_mpi += get_time_elapsed(vr_mpi_start);
     vr_computation_start = hrc::now();
     set_V_from_assignments(E, c, V);  // Reinitialize V based on D matrix
@@ -161,18 +171,6 @@ int cluster_full(ArgParse args, MPI_Comm comm) {
     timer.vr_elapsed += get_time_elapsed(vr_start);
 
     timer.niter += 1;
-
-    if (args.convergence) {
-      // Rank 1 tests convergence
-      bool converged = false;
-      if (rank == 0 && V.test_convergence()) {
-        converged = true;
-      }
-      // Broadcast convergence to all ranks
-      MPI_Bcast(&converged, 1, MPI_C_BOOL, 0, comm);
-      if (converged)
-        break;  // All ranks exit the loop when converged
-    }
   }
 
   /** Save benchmarking */

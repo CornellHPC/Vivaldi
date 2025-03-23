@@ -53,7 +53,7 @@ __global__ void z_vector_kernel(int64_t t, float* z, int64_t* assignments,
 
 __global__ void argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
                               int64_t* local_assignments,
-                              int* local_cluster_sizes) {
+                              int* local_cluster_sizes, bool* converged) {
   for (int64_t point = blockIdx.x * blockDim.x + threadIdx.x; point < k;
        point += blockDim.x * gridDim.x) {
     local_cluster_sizes[point] = 0;
@@ -74,6 +74,8 @@ __global__ void argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
       }
     }
     // printf("Min %f idx %lld\n", min, min_cluster);
+    if (min_cluster != local_assignments[point])
+      *converged = false;
     local_assignments[point] = min_cluster;
     atomicAdd(&local_cluster_sizes[min_cluster], 1);
     // printf("Finished argmin kernel\n");
@@ -133,8 +135,8 @@ void launch_z_kernel(int64_t t, float* z, int64_t* assignments, float* ET) {
 }
 
 void launch_argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
-                          int64_t* local_assignments,
-                          int* local_cluster_sizes) {
+                          int64_t* local_assignments, int* local_cluster_sizes,
+                          bool* converged) {
   if (k == 0 || t == 0)
     return;
 
@@ -144,7 +146,7 @@ void launch_argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
   int nthreads = 256;
   int nblocks = std::min(int64_t(1048576), (t + nthreads - 1) / nthreads);
   argmin_kernel<<<nblocks, nthreads>>>(k, t, dE, dc, local_assignments,
-                                       local_cluster_sizes);
+                                       local_cluster_sizes, converged);
 }
 
 void launch_reinit_kernel(float* V_global_values, int64_t* global_assignments,
@@ -164,22 +166,6 @@ void launch_reinit_kernel(float* V_global_values, int64_t* global_assignments,
 
 bool test_convergence_equality(int64_t* assignments, int64_t* prev_assignments,
                                int64_t t) {
-  std::cout << "testing convergence between two vectors" << std::endl;
-  int64_t* h_assignments = new int64_t[t];
-  gpuErrchk(cudaMemcpy(h_assignments, assignments, t * sizeof(int64_t), cudaMemcpyDeviceToHost));
-  for (int64_t i = 0; i < t; ++i) {
-    std::cout << h_assignments[i] << " ";
-  }
-  std::cout << std::endl;
-  delete[] h_assignments;
-  int64_t* h_prev_assignments = new int64_t[t];
-  gpuErrchk(cudaMemcpy(h_prev_assignments, prev_assignments, t * sizeof(int64_t), cudaMemcpyDeviceToHost));
-  for (int64_t i = 0; i < t; ++i) {
-    std::cout << h_prev_assignments[i] << " ";
-  }
-  std::cout << std::endl;
-  delete[] h_prev_assignments;
-
   thrust::device_ptr<int64_t> t_assignments =
       thrust::device_pointer_cast(assignments);
   thrust::device_ptr<int64_t> t_prev_assignments =

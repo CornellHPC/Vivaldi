@@ -36,9 +36,11 @@ void launch_z_kernel(int64_t t, float* z, int64_t* assignments, float* ET);
  * @param dc The local c vector of size k
  * @param local_assignments The local cluster assignments vector of size t
  * @param local_cluster_sizes The local cluster sizes vector of size k
+ * @param converged A boolean flag where the kernel will write false if not converged
  */
 void launch_argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
-                          int64_t* local_assignments, int* local_cluster_sizes);
+                          int64_t* local_assignments, int* local_cluster_sizes,
+                          bool* converged);
 
 /**
  * @brief Launches the reinit kernel, which computes V = 1 / cluster_size
