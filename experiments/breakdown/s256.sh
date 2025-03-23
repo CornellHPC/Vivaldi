@@ -19,12 +19,6 @@ echo "Running strong scaling test on 256 ranks!"
 echo ""
 
 for i in $(seq 1 $TRIALS); do
-  echo "Basic trial $i"
-  srun -N 64 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 256 $EXE_PATH $DATA $CLUSTERS --benchmark $PWD/basic_time/s256_$i
-  echo ""
-done
-
-for i in $(seq 1 $TRIALS); do
   echo "Full trial $i"
   srun -N 64 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 256 $EXE_PATH $DATA $CLUSTERS --benchmark $PWD/breakdown_time/s256_$i
   echo ""

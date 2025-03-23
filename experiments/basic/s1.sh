@@ -24,11 +24,5 @@ for i in $(seq 1 $TRIALS); do
   echo ""
 done
 
-for i in $(seq 1 $TRIALS); do
-  echo "Full trial $i"
-  srun -N 1 --ntasks-per-node 1 --cpus-per-task 32 --cpu-bind cores -G 1 $EXE_PATH $DATA $CLUSTERS --benchmark $PWD/breakdown_time/s1_$i
-  echo ""
-done
-
 echo "Done!"
 
