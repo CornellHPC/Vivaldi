@@ -47,9 +47,6 @@ build:
 	echo "Build finished!" && \
 	cd ..
 
-ceecee:
-	echo $(CMAKE_ARGS)
-
 alloc:
 	@if [ -z "$$SLURM_JOB_ID" ]; then\
 		salloc -N 4 -q interactive -t 03:00:00 -C gpu -G 16 -A m4341;\

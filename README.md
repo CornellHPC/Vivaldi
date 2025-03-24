@@ -1,27 +1,36 @@
 # ClusterPop: Multi-GPU Kernel K-Means with Sparse Linear Algebra
 
 ## File Tree
+
 ```
 ├── CMakeLists.txt - build configs
-├── data - contains test data
-├── job.sh - launching Perlmutter jobs
-├── Makefile
+├── Makefile       - start point for building and testing
 ├── README.md
 ├── run.sh
-├── src
-│   ├── main.cc - main algorithm implementation
-│   └── cpop
-│       ├── compute_kernel.cc - helpers for computing the kernel matrix
-│       ├── compute_sparse.cc - helpers for all things related to sparse math
-│       ├── gpu_kernels.cu - cuda kernels
-│       ├── utils.cc - other useful helpers
-└── tests
+├── data           - contains test data
+├── experiments    - contains experimentation tools, see there for more
+├── tests          - correctness testing tools
+└── src
+    ├── main.cc                  - main algorithm implementation
+    ├── test.cc                  - algorithm unit-testing
+    └── cpop
+        ├── cluster.cc/hh        - clustering methods
+        ├── compute_kernel.cc/hh - computing the kernel matrix
+        ├── gpu_kernels.cu/cuh   - cuda kernels
+        ├── utils.cc             - other useful helpers
 ```
 
-## Installation
+## Relevant Library Requirements
 
-Install [SLATE](https://github.com/icl-utk-edu/slate).
-This will take a while (~30 mins).
+This library has been tested with the following requirements:
+
+* CUDA Toolkit 12.2
+* GCC 12.3
+* [SLATE 2024.10.29](https://github.com/icl-utk-edu/slate/releases/tag/v2024.10.29)
+
+### Installing SLATE
+
+The following can be used to insall [SLATE](https://github.com/icl-utk-edu/slate). SLATE should be installed in the user’s home directory (if not, the line `export SLATE_INSTALL := …` in `Makefile` will need to be amended). This will take a while (\~30 mins):
 
 ```bash
 export mpi=cray
@@ -40,7 +49,7 @@ cd _install
 export SLATE_INSTALL=$(pwd)
 ```
 
-Testing SLATE (Optional)
+Testing SLATE (Optional):
 
 ```bash
 cd slate
@@ -49,24 +58,35 @@ echo "srun --nodes=4 --ntasks=16 --cpus-per-task=8 ./test/tester gemm" > job.sh
 sbatch job.sh
 ```
 
-## Makefile
-- `make alloc`: allocating interactive session on Perlmutter
-- `make build`: building source (run `mkdir build` before if no build directory)
-  - `make build CONVERGENCE=1`: build with convergence detection
-  - `make build BASIC=1`: build without fine-grained timing, e.g. for benchmarking without breakdown
+## Building
 
-## Other
+Build with `make build`. Relevant options are
 
-Launching job
+* `make build CONVERGENCE=1`: build with convergence detection
+* `make build BASIC=1`: build without fine-grained timing, e.g. for benchmarking without breakdown
 
-```bash
-sbatch job.sh
-```
+## Testing
 
-Enable CUDA-aware MPI
+### Unit-Testing
 
-```bash
-export SLATE_GPU_AWARE_MPI=1
-export MPICH_GPU_SUPPORT_ENABLED=1
-```
+Units tests can be run with `make test`.
+
+### Dataset Testing
+
+Naïve dataset testing can be done with
+
+* `make small` (11 points, 8 features, 2 clusters, Sparse V)
+* `make australian` (690 points, 14 features, 2 clusters, Sparse V)
+* `make svmguide1` (3089 points, 4 features, 2 clusters, Sparse V)
+* `make letter` (15k points, 5k features, 26 clusters, Sparse V)
+* `make rand` (70k points, 64 features, 128 clusters, Sparse V)
+* `make profile` (70k points, 64 features, 128 clusters, Sparse V)
+
+
+All of these tests launch their own allocated interactive session. Svmguide1 and Letter request 16 GPUs (4 nodes) while the other tests request 4 GPUs (1 node). More rigorous scaling testing should be done from within the `experiments` folder (for more, see the README there). Rigorous scaling testing must not use the interactive session and or convergence checking.
+
+### Correctness Testing
+
+Correctness testing can be done with `make compare`. Todo
+
 
