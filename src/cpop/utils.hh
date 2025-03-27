@@ -49,6 +49,7 @@ struct ArgParse {
   std::string output;
   std::string benchmark;
   int niter;
+  bool convergence;
 
   ArgParse(int argc, char* argv[]);
 };

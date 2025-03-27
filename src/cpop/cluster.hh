@@ -189,9 +189,10 @@ int argmin(DnMat_t& E, DnVec_t& c, V_t& V);
  * @param E The E matrix
  * @param c The c norm vector
  * @param V The V matrix
+ * @param convergence Flag indicating whether or not to do process-exclusion-based-convergence
  * @return bool true if all processes have converged
  */
-bool gather_assignments(DnMat_t& E, DnVec_t& c, V_t& V);
+bool gather_assignments(DnMat_t& E, DnVec_t& c, V_t& V, bool convergence);
 
 /**
  * @brief Launches the reinit kernel. Used in ``reinit_V``.

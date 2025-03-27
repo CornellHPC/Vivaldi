@@ -62,7 +62,6 @@ sbatch job.sh
 
 Build with `make build`. Relevant options are
 
-* `make build CONVERGENCE=1`: build with convergence detection
 * `make build BASIC=1`: build without fine-grained timing, e.g. for benchmarking without breakdown
 
 ## Testing
@@ -84,6 +83,10 @@ Naïve dataset testing can be done with
 
 
 All of these tests launch their own allocated interactive session. Svmguide1 and Letter request 16 GPUs (4 nodes) while the other tests request 4 GPUs (1 node). More rigorous scaling testing should be done from within the `experiments` folder (for more, see the README there). Rigorous scaling testing must not use the interactive session and or convergence checking.
+
+* use `--convergence=1` in the Makefile to run with convergence
+* use `--sparse=0` in the Makefile to run in dense V mode
+* see `utils.cc` for other runtime arguments
 
 ### Correctness Testing
 

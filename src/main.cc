@@ -111,15 +111,14 @@ int cluster(ArgParse args, MPI_Comm comm) {
     timer.vr_computation += get_time_elapsed(vr_computation_start);
     auto vr_mpi_start = hrc::now();
 #endif
-    bool done = gather_assignments(E, c, V);  // Gather assignments and clusters
+    // Gather assignments and clusters
+    bool done = gather_assignments(E, c, V, args.convergence);
 #ifndef BASIC
     MPI_Barrier(comm);
     timer.vr_mpi += get_time_elapsed(vr_mpi_start);
 #endif
-#ifdef CONVERGENCE
-    if (done)
+    if (args.convergence && done)
       break;  // All processes are dead, so quit
-#endif
 #ifndef BASIC
     vr_computation_start = hrc::now();
 #endif

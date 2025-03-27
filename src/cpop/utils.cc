@@ -52,7 +52,9 @@ ArgParse::ArgParse(int argc, char* argv[]) {
       "output path for cluster assignments, default to \"[path]_out\"")(
       "benchmark,b", po::value<std::string>(),
       "path for benchmarked times, default to \"[path]_time\"")(
-      "niter", po::value<int>()->default_value(100), "number of iterations");
+      "niter", po::value<int>()->default_value(100), "number of iterations")(
+      "convergence", po::value<bool>()->default_value(false),
+      "enable process-exclusion-based-convergence check");
 
   // Parse command line arguments
   po::variables_map vm;
@@ -86,6 +88,12 @@ ArgParse::ArgParse(int argc, char* argv[]) {
   c = vm["c"].as<float>();
   r = vm["r"].as<float>();
   niter = vm["niter"].as<int>();
+
+  if (vm.count("convergence")) {
+    convergence = vm["convergence"].as<bool>();
+  } else {
+    convergence = false;
+  }
 
   if (vm.count("benchmark")) {
     benchmark = vm["benchmark"].as<std::string>();

@@ -17,11 +17,6 @@ export OMP_PROC_BIND := spread
 # CMake arguments
 CMAKE_ARGS :=
 
-# Check for convergence
-ifeq ($(CONVERGENCE), 1)
-    CMAKE_ARGS += -DCONVERGENCE=1
-endif
-
 # Run in basic mode (no convergence check or fine-grained timing)
 ifeq ($(BASIC), 1)
     CMAKE_ARGS += -DBASIC=1

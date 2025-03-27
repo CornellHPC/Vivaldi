@@ -35,12 +35,6 @@ file(GLOB SOURCES "src/main.cc" "src/**/*.cu" "src/**/*.cc" "src/cpop/**/*.cu" "
 add_executable(main ${SOURCES})
 
 # Compile definitions
-if(CONVERGENCE)
-  message(STATUS "Convergence is defined")
-  target_compile_definitions(main PRIVATE CONVERGENCE)
-else()
-  message(STATUS "Convergence is not defined")
-endif()
 if(BASIC)
   message(STATUS "Basic is defined")
   target_compile_definitions(main PRIVATE BASIC)
