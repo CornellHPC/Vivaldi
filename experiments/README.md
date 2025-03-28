@@ -11,7 +11,7 @@ Testing is split along three axes:
 * The number of processes. The current configurations are:
   * 1 GPU on 1 node (e.g. *s1*)
   * 2 GPUs on 1 node (e.g. *s2*)
-  * 4 GPUs on 1 node (e.g. *s3*)
+  * 4 GPUs on 1 node (e.g. *s4*)
   * 8 GPUs split amongst 2 nodes (e.g. *s8*)
   * 16 GPUs split amongst 4 nodes (e.g. *s16*)
   * 32 GPUs split amonst 8 nodes (e.g. *s32*)
