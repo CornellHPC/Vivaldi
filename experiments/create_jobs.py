@@ -3,6 +3,8 @@ import numpy as np
 
 
 def request_p_prefix(p, nodes, log_dir, s_name):
+    # todo (matthew): this is a template for the slurm header
+    # i'm not sure if time 20:00 mins is enough now
     return f"""#!/bin/bash
 #SBATCH --nodes={nodes}
 #SBATCH --gpus={p}
@@ -12,7 +14,9 @@ def request_p_prefix(p, nodes, log_dir, s_name):
 #SBATCH --account=m4341
 #SBATCH --output={log_dir}/{s_name}_out"""
 
+
 test_counter = 0
+
 
 def run_5_trials(
     f,
@@ -204,4 +208,5 @@ DATASETS = [
 #     the benchmark trial requires building with BASIC=0 and is non-negligibly slower due to finer-grained timing)
 
 # example:
-create_file_text(4, "")
+for p in [4, 8, 16, 32, 64]:
+    create_file_text(p, "")
