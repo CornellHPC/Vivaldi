@@ -7,3 +7,6 @@ venv
 data/*_out
 data/*_py
 data/*_diffs.txt
+experiments/data
+experiments/logs
+experiments/scripts
