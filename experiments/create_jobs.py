@@ -117,7 +117,7 @@ def create_file_text(
             d = input_dataset["d"]
             convergence = 0
             for k in [2, 5, 10, 20]:
-                m = 70000*np.sqrt(p) # todo (matthew): confirm this is correct formula for num. points in weak scaling, e.g. \sqrt{p*70k^2}
+                m = int(70000*np.sqrt(p)) # todo (matthew): confirm this is correct formula for num. points in weak scaling, e.g. \sqrt{p*70k^2}
                 sparse = (k >= 10)  # todo (matthew): based on the results of your experiment
                 run_5_trials(
                     f,
