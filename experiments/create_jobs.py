@@ -1,14 +1,16 @@
 import os
 import numpy as np
 
+from datetime import timedelta
+
 
 def request_p_prefix(p, nodes, log_dir, s_name):
-    # todo (matthew): this is a template for the slurm header
-    # i'm not sure if time 20:00 mins is enough now
+    timestamp = str(timedelta(minutes=30+15*np.sqrt(p)))
+
     return f"""#!/bin/bash
 #SBATCH --nodes={nodes}
 #SBATCH --gpus={p}
-#SBATCH --time=00:20:00
+#SBATCH --time={timestamp}
 #SBATCH --constraint=gpu
 #SBATCH --qos=regular
 #SBATCH --account=m4341
@@ -80,8 +82,8 @@ def create_file_text(
         )
         f.write("module load cudatoolkit/12.2\n")
         niter = 100  # max niter is always fixed at 100
-        gamma = 2  # gamma fixed todo (all): good value for gamma?
-        c = 2  # c fixed todo (all): good value for c?
+        gamma = 1  # gamma fixed todo (all): good value for gamma?
+        c = 1  # c fixed todo (all): good value for c?
         r = 2  # r fixed todo (all): good value for r?
         basic = True  # todo (all): this won't do breakdown
         for input_dataset in DATASETS:
@@ -91,11 +93,9 @@ def create_file_text(
             # strong scaling
             d = input_dataset["d"]
             convergence = 0
-            m = 70000  # todo (matthew): based on how many points fit on 4 GPUs, fixed for strong scaling
+            m = 140000  # todo (matthew): based on how many points fit on 4 GPUs, fixed for strong scaling
             for k in [2, 5, 10, 20]:
-                sparse = (
-                    k >= 10
-                )  # todo (matthew): based on the results of your experiment
+                sparse = (k >= 10)  # todo (matthew): based on the results of your experiment
                 run_5_trials(
                     f,
                     input_dataset_path,
@@ -117,12 +117,8 @@ def create_file_text(
             d = input_dataset["d"]
             convergence = 0
             for k in [2, 5, 10, 20]:
-                m = np.sqrt(
-                    (70000**2) * p
-                )  # todo (matthew): confirm this is correct formula for num. points in weak scaling, e.g. \sqrt{p*70k^2}
-                sparse = (
-                    k >= 10
-                )  # todo (matthew): based on the results of your experiment
+                m = 70000*np.sqrt(p) # todo (matthew): confirm this is correct formula for num. points in weak scaling, e.g. \sqrt{p*70k^2}
+                sparse = (k >= 10)  # todo (matthew): based on the results of your experiment
                 run_5_trials(
                     f,
                     input_dataset_path,
@@ -144,12 +140,8 @@ def create_file_text(
             # d = input_dataset["d"]
             # convergence = 1
             # for k in [2, 5, 10, 20]:
-            #     m = np.sqrt(
-            #         (70000**2) * p
-            #     )  # todo (matthew): confirm this is correct formula for num. points in weak scaling, e.g. \sqrt{p*70k^2}
-            #     sparse = (
-            #         k >= 10
-            #     )  # todo (matthew): based on the results of your experiment
+            #     m = 70000*np.sqrt(p)  # todo (matthew): confirm this is correct formula for num. points in weak scaling, e.g. \sqrt{p*70k^2}
+            #     sparse = (k >= 10)  # todo (matthew): based on the results of your experiment
             #     run_5_trials(
             #         f,
             #         input_dataset_path,
@@ -208,5 +200,5 @@ DATASETS = [
 #     the benchmark trial requires building with BASIC=0 and is non-negligibly slower due to finer-grained timing)
 
 # example:
-for p in [4, 8, 16, 32, 64]:
+for p in [4, 8, 16, 32, 64, 128, 256]:
     create_file_text(p, "")

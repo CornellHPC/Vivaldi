@@ -46,7 +46,7 @@ ArgParse::ArgParse(int argc, char* argv[]) {
       "gamma parameter for the polynomial kernel")(
       "c", po::value<float>()->default_value(1.0f),
       "c parameter for the polynomial kernel")(
-      "r", po::value<float>()->default_value(1.0f),
+      "r", po::value<float>()->default_value(2.0f),
       "r parameter for the polynomial kernel")(
       "output,o", po::value<std::string>(),
       "output path for cluster assignments, default to \"[path]_out\"")(
