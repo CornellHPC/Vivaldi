@@ -94,8 +94,8 @@ def create_file_text(
             d = input_dataset["d"]
             convergence = 0
             m = 140000  # todo (matthew): based on how many points fit on 4 GPUs, fixed for strong scaling
-            for k in [2, 5, 10, 20]:
-                sparse = (k >= 10)  # todo (matthew): based on the results of your experiment
+            for k in [2, 5, 10, 50, 100]:
+                sparse = (k > 32)  # todo (matthew): based on the results of your experiment
                 run_5_trials(
                     f,
                     input_dataset_path,
@@ -116,9 +116,9 @@ def create_file_text(
             # variant weak scaling
             d = input_dataset["d"]
             convergence = 0
-            for k in [2, 5, 10, 20]:
+            for k in [2, 5, 10, 50, 100]:
                 m = int(70000*np.sqrt(p)) # todo (matthew): confirm this is correct formula for num. points in weak scaling, e.g. \sqrt{p*70k^2}
-                sparse = (k >= 10)  # todo (matthew): based on the results of your experiment
+                sparse = (k > 32)  # todo (matthew): based on the results of your experiment
                 run_5_trials(
                     f,
                     input_dataset_path,
@@ -139,9 +139,9 @@ def create_file_text(
             # convergence
             # d = input_dataset["d"]
             # convergence = 1
-            # for k in [2, 5, 10, 20]:
+            # for k in [2, 5, 10, 50, 100]:
             #     m = 70000*np.sqrt(p)  # todo (matthew): confirm this is correct formula for num. points in weak scaling, e.g. \sqrt{p*70k^2}
-            #     sparse = (k >= 10)  # todo (matthew): based on the results of your experiment
+            #     sparse = (k > 32)  # todo (matthew): based on the results of your experiment
             #     run_5_trials(
             #         f,
             #         input_dataset_path,
