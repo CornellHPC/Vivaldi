@@ -141,32 +141,32 @@ def create_file_text(
                     convergence,
                 )
             # convergence
-            d = input_dataset["d"]
-            convergence = 1
-            for k in [2, 5, 10, 20]:
-                m = np.sqrt(
-                    (70000**2) * p
-                )  # todo (matthew): confirm this is correct formula for num. points in weak scaling, e.g. \sqrt{p*70k^2}
-                sparse = (
-                    k >= 10
-                )  # todo (matthew): based on the results of your experiment
-                run_5_trials(
-                    f,
-                    input_dataset_path,
-                    log_dir,
-                    f"{unique_id}_{p}_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}",
-                    nodes,
-                    p,
-                    m,
-                    d,
-                    k,
-                    niter,
-                    sparse,
-                    gamma,
-                    c,
-                    r,
-                    convergence,
-                )
+            # d = input_dataset["d"]
+            # convergence = 1
+            # for k in [2, 5, 10, 20]:
+            #     m = np.sqrt(
+            #         (70000**2) * p
+            #     )  # todo (matthew): confirm this is correct formula for num. points in weak scaling, e.g. \sqrt{p*70k^2}
+            #     sparse = (
+            #         k >= 10
+            #     )  # todo (matthew): based on the results of your experiment
+            #     run_5_trials(
+            #         f,
+            #         input_dataset_path,
+            #         log_dir,
+            #         f"{unique_id}_{p}_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}",
+            #         nodes,
+            #         p,
+            #         m,
+            #         d,
+            #         k,
+            #         niter,
+            #         sparse,
+            #         gamma,
+            #         c,
+            #         r,
+            #         convergence,
+            #     )
         f.write("echo 'Done!'\n")
 
 

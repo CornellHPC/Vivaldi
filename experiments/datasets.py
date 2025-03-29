@@ -19,7 +19,7 @@ def print_file_size(url):
 
 def download_extract(url) -> str:
   tar_file = "data/" + os.path.basename(url)
-  base_file, extension = os.path.splitext(tar_file)
+  base_file, extension = os.path.splitext(os.path.basename(tar_file))
   txt_out = "data/" + base_file + ".txt"
   if extension not in [".bz2", ".xz"]:
     raise ValueError(f"Unknown file format: {extension}")
@@ -65,6 +65,8 @@ def read_data(formatted_txt_file) -> np.ndarray:
 
   return np.array(data)
   
+MAX_NUM_POINTS = 1000000 ## one million points limit
+  
 def dump_raw_data(formatted_txt_file):
   print(f"Reading text data from {formatted_txt_file}...")
   base_file, extension = os.path.splitext(formatted_txt_file)
@@ -77,10 +79,12 @@ def dump_raw_data(formatted_txt_file):
   # all formatted with exactly one space between features
   out_bin_file = base_file + ".bin"
   print(f"Writing binary data to {out_bin_file}...")
+  lines_read = 0
   with open(out_bin_file, "wb+") as out:
     with open(formatted_txt_file, 'r') as file:
       while True:
         line = file.readline()
+        lines_read += 1
         if not line:
           break
         progress_hook(file.tell(), 1, nbytes)
@@ -89,6 +93,9 @@ def dump_raw_data(formatted_txt_file):
         features_as_str = list(map(lambda feature: float(feature.split(':')[1]), features))
         features = np.float32(features_as_str)
         out.write(features.tobytes())
+        if lines_read >= MAX_NUM_POINTS:
+          print(f"Reached maximum number of points: {MAX_NUM_POINTS}...")
+          break
   print()
   print(f"Wrote binary data to {out_bin_file}...")
   
@@ -102,5 +109,6 @@ URLS = [
 formatted_txt_files = [download_extract(url) for url in URLS]
 # Step 2: Clean the datasets
 # formatted_txt_files = ["data/HIGGS.txt", "data/australian.txt", "data/poker.t.txt"]
+# formatted_txt_files = ["data/mnist8m.scale.txt"]
 for file in formatted_txt_files:
   dump_raw_data(file)
