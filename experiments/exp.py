@@ -156,7 +156,7 @@ def create_file_text(
             convergence = 0
             for k in [2, 5, 10, 50, 100]:
                 # weak scaling number of points
-                m = min(int(70000*np.sqrt(p)), int(input_dataset["m"]))
+                m = min(int(70000*np.sqrt(p)), int(input_dataset["m"]), MAX_NUM_POINTS)
                 # 32 based on experiments
                 sparse = int(k > 32)
                 run_5_trials(
