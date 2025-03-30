@@ -41,7 +41,7 @@ MAX_NUM_POINTS = 1200000 ## one million points limit for basically everything
 
 
 def request_p_prefix(p, nodes, log_dir, s_name):
-    timestamp = str(timedelta(minutes=30+15*np.sqrt(p)))
+    timestamp = str(timedelta(minutes=int(30+15*np.sqrt(p))))
 
     return f"""#!/bin/bash
 #SBATCH --nodes={nodes}
@@ -59,7 +59,7 @@ test_counter = 0
 def run_5_trials(
     f,
     input_dataset_path,
-    log_dir,
+    results_dir,
     s_name,
     nodes,
     p,
@@ -78,7 +78,7 @@ def run_5_trials(
     print("Added test", test_counter)
     main_args = f"-i {input_dataset_path} -m {m} -n {d} --niter {niter} --sparse {sparse} --gamma {gamma} --c {c} --r {r} --convergence {convergence} -k {k}"
     log_args = (
-        f"-o {log_dir}/{s_name}_assignments --benchmark {log_dir}/{s_name}_time_$i"
+        f"-o {results_dir}/{s_name}_assignments --benchmark {results_dir}/{s_name}_time_$i"
     )
     n_trials = 5
     f.write(f'echo "Running with args {main_args}"\n')
@@ -104,9 +104,11 @@ def create_file_text(
     suffix = 0
     while os.path.exists(f"exp_{p}_{suffix}.sh"):
         suffix += 1
-    s_name = f"exp_{unique_id}_{p}_{suffix}.sh"
+    s_name = f"exp_{unique_id}_{p}_{suffix}"
     log_dir = "logs"
     os.makedirs(log_dir, exist_ok=True)
+    results_dir = "results"
+    os.makedirs(results_dir, exist_ok=True)
     scripts_dir = "scripts"
     os.makedirs(scripts_dir, exist_ok=True)
     bash_file = os.path.join(scripts_dir, f"{s_name}.sh")
@@ -137,7 +139,7 @@ def create_file_text(
                 run_5_trials(
                     f,
                     input_dataset_path,
-                    log_dir,
+                    results_dir,
                     f"{unique_id}_s_{p}_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}",
                     nodes,
                     p,
@@ -162,7 +164,7 @@ def create_file_text(
                 run_5_trials(
                     f,
                     input_dataset_path,
-                    log_dir,
+                    results_dir,
                     f"{unique_id}_w_{p}_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}",
                     nodes,
                     p,
