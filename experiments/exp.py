@@ -31,7 +31,7 @@ DATASETS = [
         "zip_fname": "data/mnist8m.scale.xz",
         "url": "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass/mnist8m.scale.xz",
         "name": "mnist8m",
-        "m": "1000000", # "8100000",
+        "m": "8100000",
         "d": "784",
         "k": "10",
     },
