@@ -163,7 +163,7 @@ def create_file_text(
                     f,
                     input_dataset_path,
                     log_dir,
-                    f"{unique_id}_{p}_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}",
+                    f"{unique_id}_w_{p}_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}",
                     nodes,
                     p,
                     m,
