@@ -12,6 +12,8 @@
 
 typedef std::chrono::seconds s;
 typedef std::chrono::milliseconds ms;
+using hrc = std::chrono::high_resolution_clock;
+// using ms = std::chrono::milliseconds;
 
 namespace popcorn {
 
@@ -43,8 +45,10 @@ void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
     std::cout << "Reading data from " << data_path << std::endl;
 #endif
 
+  auto io_start = hrc::now();
   // Load the original data with SLATE, this will be transposed
   auto PT = DenseMat::load_from_file(data_path, m, n, comm);
+  auto io_elapsed = get_time_elapsed(io_start);
 #ifdef P_DEBUG
   PT.print("PT");
 #endif
@@ -53,11 +57,12 @@ void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
   // Start the timer (after IO)
   auto start = std::chrono::high_resolution_clock::now();
   double k_elapsed = 0;
-  double v_elapsed = 0;
+  double vi_elapsed = 0;
+  double e_elapsed = 0;
   double vk_elapsed = 0;
   double c_elapsed = 0;
-  double d_elapsed = 0;
   double vr_elapsed = 0;
+  double d_elapsed = 0;
 #endif
 
   // Transpose back to obtain the original matrix
@@ -87,16 +92,14 @@ void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
 #endif
 
 #ifdef P_BENCHMARK
-  auto v_start = std::chrono::high_resolution_clock::now();
+  auto vi_start = std::chrono::high_resolution_clock::now();
 #endif
 
   // Initialize the V matrix
   auto V = SparseMat::initialize_v(m, k, comm);
 
 #ifdef P_BENCHMARK
-  v_elapsed += std::chrono::duration_cast<ms>(
-                   std::chrono::high_resolution_clock::now() - v_start)
-                   .count();
+  vi_elapsed = get_time_elapsed(vi_start);
 #endif
 
 #ifdef P_DEBUG
@@ -105,16 +108,14 @@ void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
 
   for (int i = 0; i < 100; ++i) {
 #ifdef P_BENCHMARK
-    auto vk_start = std::chrono::high_resolution_clock::now();
+    auto e_start = std::chrono::high_resolution_clock::now();
 #endif
 
     // Perform SpMM(VK)
     auto ET = V.spmm(K);
 
 #ifdef P_BENCHMARK
-    vk_elapsed += std::chrono::duration_cast<ms>(
-                      std::chrono::high_resolution_clock::now() - vk_start)
-                      .count();
+    e_elapsed += get_time_elapsed(e_start);
 #endif
 
 #ifdef P_DEBUG
@@ -136,6 +137,10 @@ void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
 #endif
 
 #ifdef P_BENCHMARK
+auto vr_start = std::chrono::high_resolution_clock::now();
+#endif
+
+#ifdef P_BENCHMARK
     auto d_start = std::chrono::high_resolution_clock::now();
 #endif
 
@@ -148,10 +153,6 @@ void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
     d_elapsed += std::chrono::duration_cast<ms>(
                      std::chrono::high_resolution_clock::now() - d_start)
                      .count();
-#endif
-
-#ifdef P_BENCHMARK
-    auto vr_start = std::chrono::high_resolution_clock::now();
 #endif
 
     // Update V matrix
@@ -174,13 +175,14 @@ void cluster(char* data_path, int m, int n, int k, MPI_Comm comm) {
   // Output runtime
   double elapsed = std::chrono::duration_cast<ms>(end - start).count();
   if (rank == 0) {
-    std::cout << "Runtime: " << elapsed << " ms" << std::endl;
-    std::cout << "K: " << k_elapsed << " ms" << std::endl;
-    std::cout << "V: " << v_elapsed << " ms" << std::endl;
-    std::cout << "VK: " << vk_elapsed << " ms" << std::endl;
-    std::cout << "C: " << c_elapsed << " ms" << std::endl;
-    std::cout << "D: " << d_elapsed << " ms" << std::endl;
-    std::cout << "V (re): " << vr_elapsed << " ms" << std::endl;
+    std::cout << "IO: " << io_elapsed << std::endl;
+    std::cout << "K: " << k_elapsed << std::endl;
+    std::cout << "VI: " << vi_elapsed << std::endl;
+    std::cout << "E: " << e_elapsed << std::endl;
+    std::cout << "C: " << c_elapsed << std::endl;
+    std::cout << "VR total, including D: " << vr_elapsed << std::endl;
+    std::cout << "D: " << d_elapsed << std::endl;
+    std::cout << "Elapsed: " << elapsed << std::endl;
   }
 #endif
 

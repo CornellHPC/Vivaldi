@@ -52,3 +52,9 @@ int popcorn::tile_dim(MPI_Comm comm, int x) {
   int p = square_grid_dim(comm);
   return (x / p) + ((x % p == 0) ? 0 : 1);
 }
+
+int64_t popcorn::get_time_elapsed(std::chrono::_V2::system_clock::time_point start) {
+  return std::chrono::duration_cast<std::chrono::milliseconds>(
+             std::chrono::high_resolution_clock::now() - start)
+      .count();
+}
