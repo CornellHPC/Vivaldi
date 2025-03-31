@@ -1,5 +1,7 @@
 import urllib.request, bz2, lzma, os, sys
 import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.ticker
 
 from datetime import timedelta
 
@@ -39,6 +41,10 @@ DATASETS = [
 
 MAX_NUM_POINTS = 1200000 ## one million points limit for basically everything
 
+SCALING_HIGHEST_POWER = 6 ## for graph generation
+N_TRIALS = 5  ## number of trials for each experiment
+P = [4, 8, 16, 32, 64, 128]  # number of GPUs (must be divisible by 4)
+C = ["K", "VI", "E", "Z", "C MPI", "C Computation", "VR MPI", "VR Computation"]
 
 def request_p_prefix(p, nodes, log_dir, s_name):
     timestamp = str(timedelta(minutes=int(30+15*np.sqrt(p))))
@@ -296,6 +302,223 @@ def read_data(formatted_txt_file) -> np.ndarray:
 
   return np.array(data)
 
+
+def get_scaling_data(unique_id, scaling_type, p, m, d, k, niter, sparse, gamma, c, r, convergence, basic, input_dataset_name):
+    # ``scaling_type`` is one of "s" (strong) or "w" (weak)
+    scaling_data = {}
+    for trial in range(N_TRIALS):
+        trial_in_fname = trial + 1
+        fpath = f"results/{unique_id}_{scaling_type}_{p}_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}_time_{trial_in_fname}"
+        # print(f"Looking for {fpath}...")
+        if not os.path.exists(fpath):
+            print(f"Could not find {fpath}")
+            continue
+        with open(fpath, "r") as f:
+            while True:
+                line = f.readline()
+                if not line:
+                    break
+                k_, v_ = line.split(": ")
+                if not k_ in scaling_data:
+                    scaling_data[k_] = np.zeros(N_TRIALS)
+                scaling_data[k_][trial] = int(v_)
+    return scaling_data
+
+
+def construct_graphs():
+    os.makedirs("graphs", exist_ok=True)
+    unique_id = ""
+    
+    # construct strong scaling graph
+    fig, axs = plt.subplots(1, 3, figsize=(18, 4), sharey=True)
+    niter = 100
+    gamma = 1
+    c = 1
+    r = 2
+    basic = True
+    for idx, input_dataset in enumerate(DATASETS):
+        input_dataset_name = input_dataset["name"]
+        ax = axs[idx]
+        d = input_dataset["d"]
+        convergence = 0
+        m = 140000  # experimentally decided that 140k points fit on 4 GPUs
+        for k_idx, k in enumerate([2, 5, 10, 50, 100]):
+            color = plt.cm.viridis(k_idx / 4)  # Use a colormap for different k values
+            dataset_symbol = ["o", "s", "D", "^", "v"][k_idx]  # Different marker for each k value
+            y = []
+            sparse = int(k > 32)
+            for p in P:
+                scaling_data = get_scaling_data(
+                    unique_id,
+                    "s",
+                    p,
+                    m,
+                    d,
+                    k,
+                    niter,
+                    sparse,
+                    gamma,
+                    c,
+                    r,
+                    convergence,
+                    basic,
+                    input_dataset_name
+                )
+                y.append(np.average(scaling_data["Elapsed"]))
+            ax.plot(P, y, label=f"k={k}", marker=dataset_symbol, color=color)
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+        ax.set_title(f"{input_dataset_name.capitalize()} Dataset")
+        ax.set_xlabel("Number of GPUs (P)")
+        ax.set_xticks(P)
+        ax.minorticks_off()
+        ax.set_xticklabels(P)
+        if idx == 0:
+            ax.set_ylabel("Average Time (ms)")
+        ax.legend(loc="upper right")
+    # plt.suptitle("Strong Scaling Across Datasets")
+    plt.tight_layout(rect=[0, 0, 1, 0.95])
+    plt.savefig(f"graphs/strong_scaling_subfigures.png")
+    
+    # construct strong scaling breakdown graph
+    fig, axs = plt.subplots(1, 2, figsize=(12, 4), sharey=True)
+    niter = 100
+    gamma = 1
+    c = 1
+    r = 2
+    basic = True
+
+    for scaling_type in ["s", "w"]:
+        bar_width = 0.1
+        x_positions = []
+        x_labels = []
+        bar_offset = 0
+        ax = axs[0] if scaling_type == "s" else axs[1]
+        scaling_type_name = "Strong" if scaling_type == "s" else "Weak"
+        ax.set_title(f"MNIST8M {scaling_type_name} Scaling Breakdown")
+        for dataset_idx, input_dataset in enumerate(DATASETS):
+            input_dataset_name = input_dataset["name"]
+            if input_dataset_name != "mnist8m":
+                continue
+            d = input_dataset["d"]
+            convergence = 0
+            strong_m = 140000  # experimentally decided that 140k points fit on 4 GPUs
+            # for k_idx, k in enumerate([2, 5, 10, 50, 100]):
+            for k_idx, k in enumerate([10, 100]):
+                sparse = int(k > 32)
+                for p_idx, p in enumerate(P):
+                    weak_m = min(int(70000*np.sqrt(p)), int(input_dataset["m"]), MAX_NUM_POINTS)
+                    m = strong_m if scaling_type == "s" else weak_m
+                    strong_scaling_data = get_scaling_data(
+                        unique_id,
+                        scaling_type,
+                        p,
+                        m,
+                        d,
+                        k,
+                        niter,
+                        sparse,
+                        gamma,
+                        c,
+                        r,
+                        convergence,
+                        basic,
+                        input_dataset_name
+                    )
+                    # Prepare x-axis labels and positions
+                    x_label = f"P={p}\nK={k}" if p_idx == 0 else f"P={p}"
+                    x_positions.append(bar_offset)
+                    x_labels.append(x_label)
+
+                    # Prepare stacked bar data
+                    bottom = 0
+                    running_time = 0
+                    for key, values in strong_scaling_data.items():
+                        # if key not in C:
+                        #     continue
+                        # if (key not in ["K", "E", "VR MPI"]) and (np.average(values) / np.average(strong_scaling_data["Elapsed"]) > 0.02):
+                        #     print("Step", key, "took", np.average(values) / np.average(strong_scaling_data["Elapsed"]), "of total time")
+                        #     # if this doesn't print then only K, E, and VR MPI took more than 2% of the time
+                        useful_keys = ["K", "E", "VR MPI"]
+                        if key not in useful_keys:
+                            continue
+                        color = plt.cm.plasma(useful_keys.index(key) / len(useful_keys))  # Use a colormap for different routines
+                        avg_time = np.average(values)
+                        running_time += avg_time
+                        label = key if bar_offset == 0 else ""
+                        if label == "K":
+                            label = "GeMM"
+                        elif label == "E":
+                            label = "SpMV / GeMV"
+                        elif label == "VR MPI":
+                            label = "Assignments Gathering"
+                        ax.bar(bar_offset, avg_time, bar_width, bottom=bottom, label=label, color=color)
+                        bottom += avg_time
+                    bar_offset += bar_width * 1.2
+                bar_offset += bar_width * 1.3
+        ax.set_yscale("log")
+        ax.set_xticks(x_positions)
+        ax.set_xticklabels(x_labels, rotation=45, ha='right')
+        ax.minorticks_off()
+        if scaling_type == "s":
+            ax.set_ylabel("Average Time (ms)")
+            ax.legend(loc="upper left", title="Routines")
+    plt.tight_layout()
+    # plt.subplots_adjust(hspace=0, wspace=0, bottom=0.2, left=0)
+    plt.savefig(f"graphs/scaling_breakdown.png")
+    
+    # construct weak scaling graph
+    fig, axs = plt.subplots(1, 3, figsize=(18, 4), sharey=True)
+    niter = 100
+    gamma = 1
+    c = 1
+    r = 2
+    basic = True
+    for idx, input_dataset in enumerate(DATASETS):
+        input_dataset_name = input_dataset["name"]
+        ax = axs[idx]
+        d = input_dataset["d"]
+        convergence = 0
+        for k_idx, k in enumerate([2, 5, 10, 50, 100]):
+            color = plt.cm.viridis(k_idx / 4)  # Use a colormap for different k values
+            dataset_symbol = ["o", "s", "D", "^", "v"][k_idx]  # Different marker for each k value
+            y = []
+            sparse = int(k > 32)
+            for p in P:
+                m = min(int(70000*np.sqrt(p)), int(input_dataset["m"]), MAX_NUM_POINTS)
+                scaling_data = get_scaling_data(
+                    unique_id,
+                    "w",
+                    p,
+                    m,
+                    d,
+                    k,
+                    niter,
+                    sparse,
+                    gamma,
+                    c,
+                    r,
+                    convergence,
+                    basic,
+                    input_dataset_name
+                )
+                y.append(np.average(scaling_data["Elapsed"]))
+            ax.plot(P, y, label=f"k={k}", marker=dataset_symbol, color=color)
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+        ax.set_title(f"{input_dataset_name.capitalize()} Dataset")
+        ax.set_xlabel("Number of GPUs (P)")
+        ax.set_xticks(P)
+        ax.minorticks_off()
+        ax.set_xticklabels(P)
+        if idx == 0:
+            ax.set_ylabel("Average Time (ms)")
+        ax.legend(loc="upper right")
+    # plt.suptitle("Strong Scaling Across Datasets")
+    plt.tight_layout(rect=[0, 0, 1, 0.95])
+    plt.savefig(f"graphs/weak_scaling_subfigures.png")
+
+
 # remember that D is the number of features and has to be correct for each dataset otherwise
 # the MPI file read will be messed up
 # but we can vary N and K for each experiment
@@ -310,12 +533,14 @@ def read_data(formatted_txt_file) -> np.ndarray:
 #     create_file_text(p, "")
 
 if __name__ == "__main__":
+    legal = ["create_scripts", "download", "extract", "prepare", "graphs"]
+    usage_legal = " | ".join(legal)
     if len(sys.argv) < 2:
-        print('Usage: python exp.py ["create_scripts" | "download" | "extract" | "prepare"]')
+        print(f"Usage: python exp.py [{usage_legal}]")
         sys.exit(1)
     action = sys.argv[1]
-    if action not in ["create_scripts", "download", "extract", "prepare"]:
-        print('Invalid action. Must be one of ["create_scripts", "download", "extract", "prepare"]')
+    if action not in legal:
+        print(f"Invalid action. Must be one of {usage_legal}")
         sys.exit(1)
     if action == "create_scripts":
         for p in [4, 8, 16, 32, 64, 128, 256]:
@@ -333,4 +558,6 @@ if __name__ == "__main__":
         for dataset in DATASETS:
             prepare(dataset)
         print("Generated binary datasets in experiments/data/ directory... ready for use!")
-    
+    if action == "graphs":
+        construct_graphs()
+        print("Generated graphs in experiments/graphs/ directory.")

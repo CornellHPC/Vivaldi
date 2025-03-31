@@ -10,3 +10,6 @@ data/*_diffs.txt
 experiments/data
 experiments/logs
 experiments/scripts
+experiments/results
+experiments/graphs
+experiments/old*
