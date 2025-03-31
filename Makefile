@@ -3,6 +3,7 @@
 .PHONY: build alloc test small australian svmguide1 letter compare
 
 export SLATE_INSTALL := $(shell cd ~/slate/_install && pwd) # Change slate directory as necessary
+export COMBBLAS_INSTALL := $(shell cd ~/CombBLAS/_install && pwd)
 export mpi := cray
 export blas := libsci
 export CXX := CC
@@ -23,15 +24,15 @@ ifeq ($(BASIC), 1)
 endif
 
 # Library for SLATE linkage
-CMAKE_ARGS += -DSLATE_INSTALL=$$SLATE_INSTALL
+CMAKE_ARGS += -DSLATE_INSTALL=$$SLATE_INSTALL -DCOMBBLAS_INSTALL=$$COMBBLAS_INSTALL
 
 build:
 	source /opt/cray/pe/lmod/lmod/init/bash && \
 	module load cudatoolkit/12.2 && \
 	module load gcc-native/12.3 && \
-	rm -rf build && \
-	mkdir build && \
-	cd build && \
+	rm -rf blasbuild && \
+	mkdir blasbuild && \
+	cd blasbuild && \
 	cmake $(CMAKE_ARGS) .. && \
 	cmake --build . && \
 	touch device_wrapper && \
@@ -68,7 +69,7 @@ small:
 	module load cudatoolkit/12.2 && \
 	salloc -N 1 -q interactive -t 00:01:00 -C gpu -G 4 -A m4341 \
 	srun -N 1 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 4 \
-	build/device_wrapper build/main -i data/small -m 11 -n 8 -k 2
+	blasbuild/device_wrapper blasbuild/main data/small 11 8 2
 
 australian:
 	source /opt/cray/pe/lmod/lmod/init/bash && \
