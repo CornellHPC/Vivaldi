@@ -24,7 +24,7 @@ void launch_polynomial_kernel(int64_t m, int64_t n, float* B, float gamma,
  * @param assignments Cluster assignments on this process
  * @param ET This process's ET partial/submatrix (ET is k-by-t in row-major)
  */
-void launch_z_kernel(int64_t t, float* z, int64_t* assignments, float* ET);
+void launch_z_kernel(int64_t t, float* z, int* assignments, float* ET);
 
 /**
  * @brief Launches the argmin kernel, which computes D = -2E + c followed by a
@@ -39,7 +39,7 @@ void launch_z_kernel(int64_t t, float* z, int64_t* assignments, float* ET);
  * @param converged A boolean flag where the kernel will write false if not converged
  */
 void launch_argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
-                          int64_t* local_assignments, int* local_cluster_sizes,
+                          int* local_assignments, int* local_cluster_sizes,
                           bool* converged);
 
 /**
@@ -52,7 +52,7 @@ void launch_argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
  * @param m Number of points
  * @param sparse Whether or not V has sparse representation
  */
-void launch_reinit_kernel(float* V_global_values, int64_t* global_assignments,
+void launch_reinit_kernel(float* V_global_values, int* global_assignments,
                           int* global_cluster_sizes, int64_t k, int64_t m,
                           bool sparse);
 
@@ -64,7 +64,7 @@ void launch_reinit_kernel(float* V_global_values, int64_t* global_assignments,
  * @param t Assignments vector length
  * @return true if the vectors are equal, false otherwise
  */
-bool test_convergence_equality(int64_t* assignments, int64_t* prev_assignments,
+bool test_convergence_equality(int* assignments, int* prev_assignments,
                                int64_t t);
 
 }  // namespace cpop

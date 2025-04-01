@@ -31,24 +31,24 @@ V_t::V_t(int64_t m, int64_t k, bool sparse, MPI_Comm comm) {
     displs[i] = displs[i - 1] + t_sizes[i - 1];  // MPI displacements
 
   // Struct data initialization
-  CHECK_CUDA(cudaMalloc(&global_assignments, m * sizeof(int64_t)));
-  CHECK_CUDA(cudaMalloc(&global_cluster_sizes, k * sizeof(int64_t)));
-  CHECK_CUDA(cudaMalloc(&local_assignments, t * sizeof(int64_t)));
-  CHECK_CUDA(cudaMalloc(&local_cluster_sizes, k * sizeof(int64_t)));
+  CHECK_CUDA(cudaMalloc(&global_assignments, m * sizeof(int)));
+  CHECK_CUDA(cudaMalloc(&global_cluster_sizes, k * sizeof(int)));
+  CHECK_CUDA(cudaMalloc(&local_assignments, t * sizeof(int)));
+  CHECK_CUDA(cudaMalloc(&local_cluster_sizes, k * sizeof(int)));
 
   // round robin initialization (todo: GPU)
   int* init_global_cluster_sizes = (int*)calloc(k, sizeof(int));
-  for (int64_t i = 0; i < k; ++i)
+  for (int i = 0; i < k; ++i)
     init_global_cluster_sizes[i] = (m / k) + ((i < m % k) ? 1 : 0);
   CHECK_CUDA(cudaMemcpy(global_cluster_sizes, init_global_cluster_sizes,
                         k * sizeof(int), cudaMemcpyHostToDevice));
 
   // round robin initialization (todo: GPU)
-  int64_t* init_assignments = (int64_t*)calloc(m, sizeof(int64_t));
-  for (int64_t i = 0; i < m; ++i)
+  int* init_assignments = (int*)calloc(m, sizeof(int));
+  for (int i = 0; i < m; ++i)
     init_assignments[i] = i % k;
-  CHECK_CUDA(cudaMemcpy(global_assignments, init_assignments,
-                        m * sizeof(int64_t), cudaMemcpyHostToDevice));
+  CHECK_CUDA(cudaMemcpy(global_assignments, init_assignments, m * sizeof(int),
+                        cudaMemcpyHostToDevice));
 
   // set assignment pointers
   local_ptr_to_assignments = global_assignments + displs[rank];
@@ -57,23 +57,23 @@ V_t::V_t(int64_t m, int64_t k, bool sparse, MPI_Comm comm) {
 
   // Implementation-specific initialization
   if (sparse) {
-    CHECK_CUDA(cudaMalloc(&values, m * sizeof(int64_t)));
-    CHECK_CUDA(cudaMalloc(&global_csc_col_offsets, (m + 1) * sizeof(int64_t)));
-    CHECK_CUDA(cudaMalloc(&local_csc_col_offsets, (t + 1) * sizeof(int64_t)));
+    CHECK_CUDA(cudaMalloc(&values, m * sizeof(float)));
+    CHECK_CUDA(cudaMalloc(&global_csc_col_offsets, (m + 1) * sizeof(int)));
+    CHECK_CUDA(cudaMalloc(&local_csc_col_offsets, (t + 1) * sizeof(int)));
 
     // basic CSC initializations (todo: GPU)
-    int64_t* global_csc_col_offsets_ = (int64_t*)calloc(m + 1, sizeof(int64_t));
-    for (int64_t i = 0; i < m; ++i)
+    int* global_csc_col_offsets_ = (int*)calloc(m + 1, sizeof(int));
+    for (int i = 0; i < m; ++i)
       global_csc_col_offsets_[i + 1] = i + 1;
     CHECK_CUDA(cudaMemcpy(global_csc_col_offsets, global_csc_col_offsets_,
-                          (m + 1) * sizeof(int64_t), cudaMemcpyHostToDevice));
+                          (m + 1) * sizeof(int), cudaMemcpyHostToDevice));
     CHECK_CUDA(cudaMemcpy(local_csc_col_offsets, global_csc_col_offsets_,
-                          (t + 1) * sizeof(int64_t), cudaMemcpyHostToDevice));
+                          (t + 1) * sizeof(int), cudaMemcpyHostToDevice));
     free(global_csc_col_offsets_);
 
     // round robin initialization (todo: GPU)
     float* init_values = (float*)calloc(m, sizeof(float));
-    for (int64_t i = 0; i < m; ++i)
+    for (int i = 0; i < m; ++i)
       init_values[i] = 1.0f / init_global_cluster_sizes[i % k];
     CHECK_CUDA(cudaMemcpy(values, init_values, m * sizeof(float),
                           cudaMemcpyHostToDevice));
@@ -82,7 +82,7 @@ V_t::V_t(int64_t m, int64_t k, bool sparse, MPI_Comm comm) {
     // cusparse initializations
     CHECK_CUSPARSE(cusparseCreateCsc(&gV, k, m, m, global_csc_col_offsets,
                                      global_assignments, values,
-                                     CUSPARSE_INDEX_64I, CUSPARSE_INDEX_64I,
+                                     CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I,
                                      CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));
 
     // the local partition of V in CSC is found by slicing the global partition at [displs[rank]:displs[rank] + t]
@@ -91,7 +91,7 @@ V_t::V_t(int64_t m, int64_t k, bool sparse, MPI_Comm comm) {
     local_ptr_to_values = values + displs[rank];
     CHECK_CUSPARSE(cusparseCreateCsc(
         &lV, k, t, t, local_csc_col_offsets, local_ptr_to_assignments,
-        local_ptr_to_values, CUSPARSE_INDEX_64I, CUSPARSE_INDEX_64I,
+        local_ptr_to_values, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I,
         CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));
   } else {
     // round robin initialization (TODO: gpu)
@@ -122,12 +122,12 @@ int V_t::save(const char* path) {
   // Compute offset for rank
   int offset = displs[rank];
 
-  int64_t* assignments = (int64_t*)malloc(t * sizeof(int64_t));
-  CHECK_CUDA(cudaMemcpy(assignments, local_ptr_to_assignments,
-                        t * sizeof(int64_t), cudaMemcpyDeviceToHost));
+  int* assignments = (int*)malloc(t * sizeof(int));
+  CHECK_CUDA(cudaMemcpy(assignments, local_ptr_to_assignments, t * sizeof(int),
+                        cudaMemcpyDeviceToHost));
 
   // Write the data to disk
-  MPI_File_write_at(fh, offset * sizeof(int64_t), assignments, t, MPI_INT64_T,
+  MPI_File_write_at(fh, offset * sizeof(int), assignments, t, MPI_INT,
                     MPI_STATUS_IGNORE);
   MPI_File_close(&fh);
   free(assignments);
@@ -168,11 +168,11 @@ bool V_t::test_convergence() {
     return true;  // Converged
   } else if (!previous_global_assignments) {
     // First iteration, so we need to allocate previous_global_assignments
-    CHECK_CUDA(cudaMalloc(&previous_global_assignments, m_ * sizeof(int64_t)));
+    CHECK_CUDA(cudaMalloc(&previous_global_assignments, m_ * sizeof(int)));
   }
   // Set previous_global_assignments to current global_assignments
-  cudaMemcpy(previous_global_assignments, global_assignments,
-             m_ * sizeof(int64_t), cudaMemcpyDeviceToDevice);
+  cudaMemcpy(previous_global_assignments, global_assignments, m_ * sizeof(int),
+             cudaMemcpyDeviceToDevice);
   return false;  // Not converged
 }
 
@@ -339,7 +339,7 @@ int argmin(DnMat_t& E, DnVec_t& c, V_t& V) {
 
 int gather_assignments(DnMat_t& E, DnVec_t& c, V_t& V, int convergence) {
   int send_count = V.t;
-  int64_t* send_buffer = V.local_assignments;
+  int* send_buffer = V.local_assignments;
   int* recv_sizes = V.t_sizes;
 
   int dead_process_count = 0;
@@ -380,8 +380,8 @@ int gather_assignments(DnMat_t& E, DnVec_t& c, V_t& V, int convergence) {
                 MPI_SUM, MPI_COMM_WORLD);
   // this one will be reduced to the relevant processes as it allgathers a large
   // dense vector of points (if process-exlusion-based-convergence is enabled)
-  MPI_Allgatherv(send_buffer, send_count, MPI_INT64_T, V.global_assignments,
-                 recv_sizes, V.displs, MPI_INT64_T, MPI_COMM_WORLD);
+  MPI_Allgatherv(send_buffer, send_count, MPI_INT, V.global_assignments,
+                 recv_sizes, V.displs, MPI_INT, MPI_COMM_WORLD);
 
   if (convergence == 2)
     free(recv_sizes);

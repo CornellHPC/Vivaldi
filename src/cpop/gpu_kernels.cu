@@ -39,7 +39,7 @@ __global__ void polynomial_kernel(int64_t m, int64_t n, float* B, float gamma,
   }
 }
 
-__global__ void z_vector_kernel(int64_t t, float* z, int64_t* assignments,
+__global__ void z_vector_kernel(int64_t t, float* z, int* assignments,
                                 float* ET) {
   for (int64_t i = blockIdx.x * blockDim.x + threadIdx.x; i < t;
        i += blockDim.x * gridDim.x) {
@@ -52,8 +52,8 @@ __global__ void z_vector_kernel(int64_t t, float* z, int64_t* assignments,
 }
 
 __global__ void argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
-                              int64_t* local_assignments,
-                              int* local_cluster_sizes, bool* converged) {
+                              int* local_assignments, int* local_cluster_sizes,
+                              bool* converged) {
   for (int64_t point = blockIdx.x * blockDim.x + threadIdx.x; point < k;
        point += blockDim.x * gridDim.x) {
     local_cluster_sizes[point] = 0;
@@ -63,8 +63,8 @@ __global__ void argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
        point += blockDim.x * gridDim.x) {
     // printf("Argmin kernel started with point %lld\n", point);
     float min = FLT_MAX;
-    int64_t min_cluster = 0;
-    for (int64_t cluster = 0; cluster < k; ++cluster) {
+    int min_cluster = 0;
+    for (int cluster = 0; cluster < k; ++cluster) {
       float value = dc[cluster] - 2 * dE[cluster * t + point];
       // printf("C %f E %f (idx %lld) -> Value %f\n", dc[cluster],
       //        dE[cluster * t + point], cluster * t + point, value);
@@ -82,8 +82,7 @@ __global__ void argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
   }
 }
 
-__global__ void reinit_kernel(float* V_global_values,
-                              int64_t* global_assignments,
+__global__ void reinit_kernel(float* V_global_values, int* global_assignments,
                               int* global_cluster_sizes, int64_t k, int64_t m,
                               bool sparse) {
   if (sparse) {
@@ -101,7 +100,7 @@ __global__ void reinit_kernel(float* V_global_values,
       int64_t cluster = i / m;
 
       V_global_values[i] = 0.0f;
-      if (global_assignments[point] == cluster) {
+      if ((int64_t)(global_assignments[point]) == cluster) {
         V_global_values[i] = 1.0f / global_cluster_sizes[cluster];
       }
     }
@@ -124,7 +123,7 @@ void launch_polynomial_kernel(int64_t m, int64_t n, float* B, float gamma,
   polynomial_kernel<<<nblocks, nthreads>>>(m, n, B, gamma, c, r);
 }
 
-void launch_z_kernel(int64_t t, float* z, int64_t* assignments, float* ET) {
+void launch_z_kernel(int64_t t, float* z, int* assignments, float* ET) {
   // 1024 max threads for current CUDA compute capability (<= 7.5)
   // 16x16 blocks, with upwards round for more coverage
   // block cap is set to prevent overflow
@@ -135,7 +134,7 @@ void launch_z_kernel(int64_t t, float* z, int64_t* assignments, float* ET) {
 }
 
 void launch_argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
-                          int64_t* local_assignments, int* local_cluster_sizes,
+                          int* local_assignments, int* local_cluster_sizes,
                           bool* converged) {
   if (k == 0 || t == 0)
     return;
@@ -149,7 +148,7 @@ void launch_argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
                                        local_cluster_sizes, converged);
 }
 
-void launch_reinit_kernel(float* V_global_values, int64_t* global_assignments,
+void launch_reinit_kernel(float* V_global_values, int* global_assignments,
                           int* global_cluster_sizes, int64_t k, int64_t m,
                           bool sparse) {
   if (k == 0 || m == 0)
@@ -164,11 +163,11 @@ void launch_reinit_kernel(float* V_global_values, int64_t* global_assignments,
                                        global_cluster_sizes, k, m, sparse);
 }
 
-bool test_convergence_equality(int64_t* assignments, int64_t* prev_assignments,
+bool test_convergence_equality(int* assignments, int* prev_assignments,
                                int64_t t) {
-  thrust::device_ptr<int64_t> t_assignments =
+  thrust::device_ptr<int> t_assignments =
       thrust::device_pointer_cast(assignments);
-  thrust::device_ptr<int64_t> t_prev_assignments =
+  thrust::device_ptr<int> t_prev_assignments =
       thrust::device_pointer_cast(prev_assignments);
   return thrust::equal(t_assignments, t_assignments + t, t_prev_assignments);
 }

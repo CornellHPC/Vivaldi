@@ -58,20 +58,20 @@ struct V_t {
   cusparseSpMatDescr_t gV, lV;
 
   // GPU pointers to the components of the global CSC V matrix
-  int64_t* global_assignments;      // CSC row indices
-  int64_t* global_csc_col_offsets;  // CSC column offsets
+  int* global_assignments;      // CSC row indices
+  int* global_csc_col_offsets;  // CSC column offsets
   float* values;                    // CSC values of global V
 
   // GPU pointers to the components of the local CSC V matrix
   // Aside from local_csc_col_offsets, these are the same as the global ones
   //    plus some offset (which is determined by displs[rank])
-  int64_t* local_ptr_to_assignments;
-  int64_t* local_csc_col_offsets;
+  int* local_ptr_to_assignments;
+  int* local_csc_col_offsets;
   float* local_ptr_to_values;
 
   // Working vectors used in V reinitialization
   int* global_cluster_sizes;
-  int64_t* local_assignments;
+  int* local_assignments;
   int* local_cluster_sizes;
 
   // Other basic vars
@@ -82,7 +82,7 @@ struct V_t {
   MPI_Comm comm;
 
   // Device vectors used in convergence checking
-  int64_t* previous_global_assignments;
+  int* previous_global_assignments;
   bool* converged;
 
   /**
