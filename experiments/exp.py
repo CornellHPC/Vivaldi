@@ -138,7 +138,6 @@ def create_file_text(
             f'export EXE_PATH="{experiments_dir}/../build/device_wrapper {experiments_dir}/../build/main"\n'
         )
         f.write("module load cudatoolkit/12.2\n")
-        niter = 100  # max niter is always fixed at 100
         gamma = 1  # gamma fixed at 1
         c = 1  # c fixed at 1
         r = 2  # r fixed at 2 (quadratic kernel)
@@ -149,6 +148,7 @@ def create_file_text(
 
             # strong scaling
             d = input_dataset["d"]
+            niter = 100
             convergence = 0
             m = 128000  # experimentally decided that 128k points fit on 4 GPUs
             for k in [2, 5, 10, 50, 100]:
@@ -234,7 +234,6 @@ def create_file_text(
                     r,
                     convergence,
                 )
-            # convergence (todo)
             # combblas (todo)
         # proper weak scaling
         input_dataset = RANDOM_DATASET
