@@ -49,7 +49,7 @@ struct ArgParse {
   std::string output;
   std::string benchmark;
   int niter;
-  bool convergence;
+  int convergence;
 
   ArgParse(int argc, char* argv[]);
 };
@@ -87,6 +87,7 @@ struct Timer {
 
   // Number of iterations before convergence
   int64_t niter = 0;
+  int* dead_proc_counts = nullptr;
 
   /**
    * @brief Save only the elapsed time as a single value to a file.
