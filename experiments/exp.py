@@ -54,7 +54,12 @@ P = [4, 8, 16, 32, 64, 128]  # number of GPUs (must be divisible by 4)
 C = ["K", "VI", "E", "Z", "C MPI", "C Computation", "VR MPI", "VR Computation"]
 
 def request_p_prefix(p, nodes, log_dir, s_name):
-    timestamp = str(timedelta(minutes=int(30+15*np.sqrt(p))))
+    if p >= 256:
+        timestamp = "02:00:00"
+    elif p >= 128:
+        timestamp = "01:30:00"
+    else:
+        timestamp = "01:00:00"
 
     return f"""#!/bin/bash
 #SBATCH --nodes={nodes}
@@ -208,7 +213,7 @@ def create_file_text(
                 f,
                 input_dataset_path,
                 results_dir,
-                f"{unique_id}_w_{p}_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}",
+                f"{unique_id}_pw_{p}_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}",
                 nodes,
                 p,
                 m,
@@ -230,7 +235,7 @@ def create_file_text(
                         f,
                         input_dataset_path,
                         results_dir,
-                        f"{unique_id}_w_1_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}",
+                        f"{unique_id}_m_1_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}",
                         1,
                         1,
                         m,
@@ -248,7 +253,7 @@ def create_file_text(
                         f,
                         input_dataset_path,
                         results_dir,
-                        f"{unique_id}_w_1_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}",
+                        f"{unique_id}_m_1_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}",
                         1,
                         1,
                         m,
