@@ -344,7 +344,8 @@ int gather_assignments(DnMat_t& E, DnVec_t& c, V_t& V, int convergence) {
 
   int dead_process_count = 0;
   if (convergence) {
-    recv_sizes = (int*)malloc(V.n_procs * sizeof(int));
+    if (convergence == 2)
+      recv_sizes = (int*)malloc(V.n_procs * sizeof(int));
 
     bool locally_converged;
     cudaMemcpy(&locally_converged, V.converged, sizeof(bool),
@@ -359,7 +360,8 @@ int gather_assignments(DnMat_t& E, DnVec_t& c, V_t& V, int convergence) {
     MPI_Allgather(&locally_converged, 1, MPI_C_BOOL, local_convergence_ptr, 1,
                   MPI_C_BOOL, V.comm);
     for (int i = 0; i < V.n_procs; ++i) {
-      dead_process_count++;
+      if (local_convergence_ptr[i])
+        dead_process_count++;
       if (convergence == 2) {
         // exclude relevant processes from allgather
         if (local_convergence_ptr[i]) {
@@ -381,7 +383,7 @@ int gather_assignments(DnMat_t& E, DnVec_t& c, V_t& V, int convergence) {
   MPI_Allgatherv(send_buffer, send_count, MPI_INT64_T, V.global_assignments,
                  recv_sizes, V.displs, MPI_INT64_T, MPI_COMM_WORLD);
 
-  if (convergence)
+  if (convergence == 2)
     free(recv_sizes);
   return dead_process_count;
 }
