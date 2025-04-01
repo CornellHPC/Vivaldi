@@ -39,6 +39,13 @@ DATASETS = [
     },
 ]
 
+RANDOM_DATASET = {
+    "bin_fname": "data/rand.bin",
+    "name": "rand",
+    "m": "1024000",
+    "d": "1024",
+}
+
 MAX_NUM_POINTS = 1200000 ## one million points limit for basically everything
 
 SCALING_HIGHEST_POWER = 6 ## for graph generation
@@ -187,18 +194,21 @@ def create_file_text(
             # convergence (todo)
             # combblas (todo)
         # proper weak scaling
+        input_dataset = RANDOM_DATASET
+        input_dataset_path = input_dataset["bin_fname"]
+        input_dataset_name = input_dataset["name"]
         d = 4*p
         convergence = 0
         for k in [2, 5, 10, 50, 100]:
             # weak scaling number of points
-            m = min(int(64000*np.sqrt(p)), MAX_NUM_POINTS)
+            m = min(int(64000*np.sqrt(p)), int(input_dataset["m"]), MAX_NUM_POINTS)
             # 32 based on experiments
             sparse = int(k > 32)
             run_5_trials(
                 f,
-                "data/rand.bin",
+                input_dataset_path,
                 results_dir,
-                f"{unique_id}_w_{p}_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_rand.bin",
+                f"{unique_id}_w_{p}_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}",
                 nodes,
                 p,
                 m,
@@ -218,9 +228,9 @@ def create_file_text(
                     sparse = 1
                     run_5_trials(
                         f,
-                        "data/rand.bin",
+                        input_dataset_path,
                         results_dir,
-                        f"{unique_id}_w_1_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_rand.bin",
+                        f"{unique_id}_w_1_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}",
                         1,
                         1,
                         m,
@@ -236,9 +246,9 @@ def create_file_text(
                     sparse = 0
                     run_5_trials(
                         f,
-                        "data/rand.bin",
+                        input_dataset_path,
                         results_dir,
-                        f"{unique_id}_w_1_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_rand.bin",
+                        f"{unique_id}_w_1_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}",
                         1,
                         1,
                         m,
@@ -252,6 +262,15 @@ def create_file_text(
                         convergence,
                     )
         f.write("echo 'Done!'\n")
+
+
+def create_random(low=0, high=100):
+    filepath = RANDOM_DATASET["bin_fname"]
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    m = int(RANDOM_DATASET["m"])
+    d = int(RANDOM_DATASET["d"])
+    data = np.random.uniform(low, high, m*d).astype(np.float32)
+    data.tofile(filepath)
 
 
 # Functions related to downloading, extracting, and preparing the datasets
@@ -599,7 +618,7 @@ def construct_graphs():
 #     create_file_text(p, "")
 
 if __name__ == "__main__":
-    legal = ["create_scripts", "download", "extract", "prepare", "graphs"]
+    legal = ["create_scripts", "create_random", "download", "extract", "prepare", "graphs"]
     usage_legal = " | ".join(legal)
     if len(sys.argv) < 2:
         print(f"Usage: python exp.py [{usage_legal}]")
@@ -612,6 +631,9 @@ if __name__ == "__main__":
         for p in [4, 8, 16, 32, 64, 128, 256]:
             create_file_text(p, "")
         print("Generated scripts in experiments/scripts/ directory.")
+    if action == "create_random":
+        create_random()
+        print(f"Created random dataset at {RANDOM_DATASET['bin_fname']}.")
     if action == "download":
         for dataset in DATASETS:
             download(dataset)
