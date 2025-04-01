@@ -92,7 +92,7 @@ def run_5_trials(
     f.write(f"for i in $(seq 1 {n_trials}); do\n")
     f.write(f'  echo "Trial $i"\n')
     f.write(
-        f"  srun -N {nodes} --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G {p} $EXE_PATH {main_args} {log_args}\n"
+        f"  srun -N {nodes} --ntasks-per-node {p//nodes} --cpus-per-task 32 --cpu-bind cores -G {p} $EXE_PATH {main_args} {log_args}\n"
     )
     f.write(f'  echo ""\n')
     f.write(f"done\n\n")
@@ -138,7 +138,7 @@ def create_file_text(
             # strong scaling
             d = input_dataset["d"]
             convergence = 0
-            m = 140000  # experimentally decided that 140k points fit on 4 GPUs
+            m = 128000  # experimentally decided that 128k points fit on 4 GPUs
             for k in [2, 5, 10, 50, 100]:
                 # 32 based on experiments
                 sparse = int(k > 32)
@@ -164,7 +164,7 @@ def create_file_text(
             convergence = 0
             for k in [2, 5, 10, 50, 100]:
                 # weak scaling number of points
-                m = min(int(70000*np.sqrt(p)), int(input_dataset["m"]), MAX_NUM_POINTS)
+                m = min(int(64000*np.sqrt(p)), int(input_dataset["m"]), MAX_NUM_POINTS)
                 # 32 based on experiments
                 sparse = int(k > 32)
                 run_5_trials(
@@ -186,6 +186,71 @@ def create_file_text(
                 )
             # convergence (todo)
             # combblas (todo)
+        # proper weak scaling
+        d = 4*p
+        convergence = 0
+        for k in [2, 5, 10, 50, 100]:
+            # weak scaling number of points
+            m = min(int(64000*np.sqrt(p)), MAX_NUM_POINTS)
+            # 32 based on experiments
+            sparse = int(k > 32)
+            run_5_trials(
+                f,
+                "data/rand",
+                results_dir,
+                f"{unique_id}_w_{p}_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_rand",
+                nodes,
+                p,
+                m,
+                d,
+                k,
+                niter,
+                sparse,
+                gamma,
+                c,
+                r,
+                convergence,
+            )
+        # mode test
+        if p == 4:
+            for m in {16000, 32000, 64000}:
+                for k in [10, 20, 30, 40, 50, 60]:
+                    sparse = 1
+                    run_5_trials(
+                        f,
+                        "data/rand",
+                        results_dir,
+                        f"{unique_id}_w_1_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_rand",
+                        1,
+                        1,
+                        m,
+                        d,
+                        k,
+                        niter,
+                        sparse,
+                        gamma,
+                        c,
+                        r,
+                        convergence,
+                    )
+                    sparse = 0
+                    run_5_trials(
+                        f,
+                        "data/rand",
+                        results_dir,
+                        f"{unique_id}_w_1_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_rand",
+                        1,
+                        1,
+                        m,
+                        d,
+                        k,
+                        niter,
+                        sparse,
+                        gamma,
+                        c,
+                        r,
+                        convergence,
+                    )
         f.write("echo 'Done!'\n")
 
 
@@ -341,7 +406,7 @@ def construct_graphs():
         ax = axs[idx]
         d = input_dataset["d"]
         convergence = 0
-        m = 140000  # experimentally decided that 140k points fit on 4 GPUs
+        m = 128000  # experimentally decided that 128k points fit on 4 GPUs
         for k_idx, k in enumerate([2, 5, 10, 50, 100]):
             color = plt.cm.viridis(k_idx / 4)  # Use a colormap for different k values
             dataset_symbol = ["o", "s", "D", "^", "v"][k_idx]  # Different marker for each k value
@@ -402,12 +467,12 @@ def construct_graphs():
                 continue
             d = input_dataset["d"]
             convergence = 0
-            strong_m = 140000  # experimentally decided that 140k points fit on 4 GPUs
+            strong_m = 128000  # experimentally decided that 128k points fit on 4 GPUs
             # for k_idx, k in enumerate([2, 5, 10, 50, 100]):
             for k_idx, k in enumerate([10, 100]):
                 sparse = int(k > 32)
                 for p_idx, p in enumerate(P):
-                    weak_m = min(int(70000*np.sqrt(p)), int(input_dataset["m"]), MAX_NUM_POINTS)
+                    weak_m = min(int(64000*np.sqrt(p)), int(input_dataset["m"]), MAX_NUM_POINTS)
                     m = strong_m if scaling_type == "s" else weak_m
                     strong_scaling_data = get_scaling_data(
                         unique_id,
@@ -485,7 +550,7 @@ def construct_graphs():
             y = []
             sparse = int(k > 32)
             for p in P:
-                m = min(int(70000*np.sqrt(p)), int(input_dataset["m"]), MAX_NUM_POINTS)
+                m = min(int(64000*np.sqrt(p)), int(input_dataset["m"]), MAX_NUM_POINTS)
                 scaling_data = get_scaling_data(
                     unique_id,
                     "w",
