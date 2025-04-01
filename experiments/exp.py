@@ -279,6 +279,7 @@ def download(dataset):
         return
     print(f"Downloading dataset {name} from {url} to {tar_file}...")
     print_file_size(url)
+    os.makedirs(os.path.dirname(tar_file), exist_ok=True)
     urllib.request.urlretrieve(url, tar_file, reporthook=progress_hook)
     print()
     print("Download done!")
