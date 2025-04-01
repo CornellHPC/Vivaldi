@@ -513,9 +513,9 @@ def construct_graphs():
                         running_time += avg_time
                         label = key if bar_offset == 0 else ""
                         if label == "K":
-                            label = "GeMM"
+                            label = "Distributed GeMM"
                         elif label == "E":
-                            label = "SpMV / GeMV"
+                            label = "Local SpMM / Local GeMM"
                         elif label == "VR MPI":
                             label = "Assignments Gathering"
                         ax.bar(bar_offset, avg_time, bar_width, bottom=bottom, label=label, color=color)
