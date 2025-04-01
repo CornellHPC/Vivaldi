@@ -53,8 +53,8 @@ ArgParse::ArgParse(int argc, char* argv[]) {
       "benchmark,b", po::value<std::string>(),
       "path for benchmarked times, default to \"[path]_time\"")(
       "niter", po::value<int>()->default_value(100), "number of iterations")(
-      "convergence", po::value<bool>()->default_value(false),
-      "enable process-exclusion-based-convergence check");
+      "convergence", po::value<int>()->default_value(0),
+      "enable convergence check (1 for basic, 2 for process-exclusion-based-convergence)");
 
   // Parse command line arguments
   po::variables_map vm;
@@ -89,11 +89,7 @@ ArgParse::ArgParse(int argc, char* argv[]) {
   r = vm["r"].as<float>();
   niter = vm["niter"].as<int>();
 
-  if (vm.count("convergence")) {
-    convergence = vm["convergence"].as<bool>();
-  } else {
-    convergence = false;
-  }
+  convergence = vm["convergence"].as<int>();
 
   if (vm.count("benchmark")) {
     benchmark = vm["benchmark"].as<std::string>();
@@ -151,6 +147,17 @@ void Timer::save_all(const char* path) {
   file << "VR Computation: " << vr_computation << std::endl;
   file << "Elapsed: " << elapsed << std::endl;
   file << "Iterations before convergence: " << niter << std::endl;
+  if (dead_proc_counts != nullptr) {
+    file << "Dead process counts: ";
+    for (int i = 0; i < niter; ++i) {
+      file << dead_proc_counts[i];
+      if (i < niter - 1)
+        file << ", ";
+    }
+    file << std::endl;
+  } else {
+    file << "Dead process counts: Not recorded" << std::endl;
+  }
   file.close();  // Close the file
   std::cout << "-------------------" << std::endl;
   std::cout << "IO: " << io << " ms" << std::endl;

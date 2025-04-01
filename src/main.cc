@@ -73,8 +73,14 @@ int cluster(ArgParse args, MPI_Comm comm) {
   DnVec_t z(t);
   DnVec_t c(args.k);
 
+#ifndef BASIC
+  timer.dead_proc_counts =
+      (int*)calloc(args.niter, sizeof(int));  // initialize dead process counts
+#endif
+
   /** K-Means Loop */
   for (int i = 0; i < args.niter; ++i) {
+    timer.niter += 1;  // Increment iteration counter
 #ifndef BASIC
     auto e_start = hrc::now();
 #endif
@@ -112,7 +118,10 @@ int cluster(ArgParse args, MPI_Comm comm) {
     auto vr_mpi_start = hrc::now();
 #endif
     // Gather assignments and clusters
-    bool done = gather_assignments(E, c, V, args.convergence);
+    int dead_process_count = gather_assignments(E, c, V, args.convergence);
+    // Record dead process count at iteration
+    timer.dead_proc_counts[i] = dead_process_count;
+    bool done = (dead_process_count == V.n_procs);
 #ifndef BASIC
     MPI_Barrier(comm);
     timer.vr_mpi += get_time_elapsed(vr_mpi_start);
@@ -128,8 +137,6 @@ int cluster(ArgParse args, MPI_Comm comm) {
     timer.vr_computation += get_time_elapsed(vr_computation_start);
     timer.vr_elapsed += get_time_elapsed(vr_start);
 #endif
-
-    timer.niter += 1;  // Increment iteration counter
   }
 
   /** Save and exit */

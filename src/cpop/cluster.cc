@@ -337,19 +337,19 @@ int argmin(DnMat_t& E, DnVec_t& c, V_t& V) {
   return EXIT_SUCCESS;
 }
 
-bool gather_assignments(DnMat_t& E, DnVec_t& c, V_t& V, bool convergence) {
+int gather_assignments(DnMat_t& E, DnVec_t& c, V_t& V, int convergence) {
   int send_count = V.t;
   int64_t* send_buffer = V.local_assignments;
   int* recv_sizes = V.t_sizes;
 
+  int dead_process_count = 0;
   if (convergence) {
-    int dead_process_count = 0;
     recv_sizes = (int*)malloc(V.n_procs * sizeof(int));
 
     bool locally_converged;
     cudaMemcpy(&locally_converged, V.converged, sizeof(bool),
                cudaMemcpyDeviceToHost);
-    if (locally_converged) {
+    if (convergence == 2 && locally_converged) {
       // this process has locally converged, so it can be removed from allgather
       send_count = 0;
       send_buffer = nullptr;
@@ -359,16 +359,18 @@ bool gather_assignments(DnMat_t& E, DnVec_t& c, V_t& V, bool convergence) {
     MPI_Allgather(&locally_converged, 1, MPI_C_BOOL, local_convergence_ptr, 1,
                   MPI_C_BOOL, V.comm);
     for (int i = 0; i < V.n_procs; ++i) {
-      // exclude relevant processes from allgather
-      if (local_convergence_ptr[i]) {
-        recv_sizes[i] = 0;
-        dead_process_count++;
-      } else {
-        recv_sizes[i] = V.t_sizes[i];
+      dead_process_count++;
+      if (convergence == 2) {
+        // exclude relevant processes from allgather
+        if (local_convergence_ptr[i]) {
+          recv_sizes[i] = 0;
+        } else {
+          recv_sizes[i] = V.t_sizes[i];
+        }
       }
     }
     if (dead_process_count == V.n_procs)
-      return true;  // all processes are dead, quit
+      return dead_process_count;  // all processes are dead, quit
   }
 
   // this one always utilizes all processes, but only passes k-size vector
@@ -381,7 +383,7 @@ bool gather_assignments(DnMat_t& E, DnVec_t& c, V_t& V, bool convergence) {
 
   if (convergence)
     free(recv_sizes);
-  return false;
+  return dead_process_count;
 }
 
 int set_V_from_assignments(DnMat_t& E, DnVec_t& c, V_t& V) {
