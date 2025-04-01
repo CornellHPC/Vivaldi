@@ -83,7 +83,7 @@ if __name__ == "__main__":
     start_time = time.time()
 
     # Construct Kernel Matrix and P tilde
-    K = polynomial_kernel(data, 1, 1, 1)  # kernel matrix
+    K = polynomial_kernel(data, 1, 1, 2)  # kernel matrix
     # print(K)
     P = np.tile(np.diag(K), (k, 1)).T  # P tilde
 
