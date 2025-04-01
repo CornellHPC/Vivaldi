@@ -174,11 +174,11 @@ void check_k(DnMat_t& K, int rank) {
 void check_v0(V_t& V) {
   if (V.sparse) {
     int64_t count = 33;
-    int64_t* a = (int64_t*)malloc(count * sizeof(int64_t));
-    cudaMemcpy(a, V.global_assignments, count * sizeof(int64_t),
+    int* a = (int*)malloc(count * sizeof(int));
+    cudaMemcpy(a, V.global_assignments, count * sizeof(int),
                cudaMemcpyDeviceToHost);
 
-    int64_t buffer[33] = {0};
+    int buffer[33] = {0};
     for (int i = 1; i < 33; i += 2) {
       buffer[i] = 1;
     }
@@ -297,12 +297,12 @@ void check_c1(DnVec_t& c) {
 
 void check_v1(V_t& V) {
   int64_t count = 33;
-  int64_t* a = (int64_t*)malloc(count * sizeof(int64_t));
-  cudaMemcpy(a, V.global_assignments, count * sizeof(int64_t),
+  int* a = (int*)malloc(count * sizeof(int));
+  cudaMemcpy(a, V.global_assignments, count * sizeof(int),
              cudaMemcpyDeviceToHost);
 
-  int64_t buffer[33] = {1, 1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0,
-                        1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1};
+  int buffer[33] = {1, 1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0,
+                    1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1};
   assert_buffer_equal(buffer, a, count);
 
   float values[33] = {
@@ -417,12 +417,12 @@ void check_c2(DnVec_t& c) {
 
 void check_v2(V_t& V) {
   int64_t count = 33;
-  int64_t* a = (int64_t*)malloc(count * sizeof(int64_t));
-  cudaMemcpy(a, V.global_assignments, count * sizeof(int64_t),
+  int* a = (int*)malloc(count * sizeof(int));
+  cudaMemcpy(a, V.global_assignments, count * sizeof(int),
              cudaMemcpyDeviceToHost);
 
-  int64_t buffer[33] = {1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 0,
-                        1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1};
+  int buffer[33] = {1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 0,
+                    1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1};
   assert_buffer_equal(buffer, a, count);
 
   float values[33] = {
