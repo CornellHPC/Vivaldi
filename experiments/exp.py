@@ -173,17 +173,55 @@ def create_file_text(
                 )
             # variant weak scaling
             d = input_dataset["d"]
-            convergence = 0
             for k in [2, 5, 10, 50, 100]:
                 # weak scaling number of points
                 m = min(int(64000*np.sqrt(p)), int(input_dataset["m"]), MAX_NUM_POINTS)
                 # 32 based on experiments
                 sparse = int(k > 32)
+                niter = 100
+                convergence = 0
                 run_5_trials(
                     f,
                     input_dataset_path,
                     results_dir,
                     f"{unique_id}_w_{p}_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}",
+                    nodes,
+                    p,
+                    m,
+                    d,
+                    k,
+                    niter,
+                    sparse,
+                    gamma,
+                    c,
+                    r,
+                    convergence,
+                )
+                niter = 1000
+                convergence = 1
+                run_5_trials(
+                    f,
+                    input_dataset_path,
+                    results_dir,
+                    f"{unique_id}_wc_{p}_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}",
+                    nodes,
+                    p,
+                    m,
+                    d,
+                    k,
+                    niter,
+                    sparse,
+                    gamma,
+                    c,
+                    r,
+                    convergence,
+                )
+                convergence = 2
+                run_5_trials(
+                    f,
+                    input_dataset_path,
+                    results_dir,
+                    f"{unique_id}_wce_{p}_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}",
                     nodes,
                     p,
                     m,
@@ -203,6 +241,7 @@ def create_file_text(
         input_dataset_path = input_dataset["bin_fname"]
         input_dataset_name = input_dataset["name"]
         d = 4*p
+        niter = 100
         convergence = 0
         for k in [2, 5, 10, 50, 100]:
             # weak scaling number of points
@@ -213,7 +252,7 @@ def create_file_text(
                 f,
                 input_dataset_path,
                 results_dir,
-                f"{unique_id}_pw_{p}_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}",
+                f"{unique_id}_wp_{p}_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}",
                 nodes,
                 p,
                 m,
