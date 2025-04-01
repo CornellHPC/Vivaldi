@@ -39,6 +39,13 @@ DATASETS = [
     },
 ]
 
+RANDOM_DATASET = {
+    "bin_fname": "data/rand.bin",
+    "name": "rand",
+    "m": "1024000",
+    "d": "1024",
+}
+
 MAX_NUM_POINTS = 1200000 ## one million points limit for basically everything
 
 SCALING_HIGHEST_POWER = 6 ## for graph generation
@@ -47,7 +54,12 @@ P = [4, 8, 16, 32, 64, 128]  # number of GPUs (must be divisible by 4)
 C = ["K", "VI", "E", "Z", "C MPI", "C Computation", "VR MPI", "VR Computation"]
 
 def request_p_prefix(p, nodes, log_dir, s_name):
-    timestamp = str(timedelta(minutes=int(30+15*np.sqrt(p))))
+    if p >= 256:
+        timestamp = "02:00:00"
+    elif p >= 128:
+        timestamp = "01:30:00"
+    else:
+        timestamp = "01:00:00"
 
     return f"""#!/bin/bash
 #SBATCH --nodes={nodes}
@@ -92,7 +104,7 @@ def run_5_trials(
     f.write(f"for i in $(seq 1 {n_trials}); do\n")
     f.write(f'  echo "Trial $i"\n')
     f.write(
-        f"  srun -N {nodes} --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G {p} $EXE_PATH {main_args} {log_args}\n"
+        f"  srun -N {nodes} --ntasks-per-node {p//nodes} --cpus-per-task 32 --cpu-bind cores -G {p} $EXE_PATH {main_args} {log_args}\n"
     )
     f.write(f'  echo ""\n')
     f.write(f"done\n\n")
@@ -138,7 +150,7 @@ def create_file_text(
             # strong scaling
             d = input_dataset["d"]
             convergence = 0
-            m = 140000  # experimentally decided that 140k points fit on 4 GPUs
+            m = 128000  # experimentally decided that 128k points fit on 4 GPUs
             for k in [2, 5, 10, 50, 100]:
                 # 32 based on experiments
                 sparse = int(k > 32)
@@ -164,7 +176,7 @@ def create_file_text(
             convergence = 0
             for k in [2, 5, 10, 50, 100]:
                 # weak scaling number of points
-                m = min(int(70000*np.sqrt(p)), int(input_dataset["m"]), MAX_NUM_POINTS)
+                m = min(int(64000*np.sqrt(p)), int(input_dataset["m"]), MAX_NUM_POINTS)
                 # 32 based on experiments
                 sparse = int(k > 32)
                 run_5_trials(
@@ -186,7 +198,84 @@ def create_file_text(
                 )
             # convergence (todo)
             # combblas (todo)
+        # proper weak scaling
+        input_dataset = RANDOM_DATASET
+        input_dataset_path = input_dataset["bin_fname"]
+        input_dataset_name = input_dataset["name"]
+        d = 4*p
+        convergence = 0
+        for k in [2, 5, 10, 50, 100]:
+            # weak scaling number of points
+            m = min(int(64000*np.sqrt(p)), int(input_dataset["m"]), MAX_NUM_POINTS)
+            # 32 based on experiments
+            sparse = int(k > 32)
+            run_5_trials(
+                f,
+                input_dataset_path,
+                results_dir,
+                f"{unique_id}_pw_{p}_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}",
+                nodes,
+                p,
+                m,
+                d,
+                k,
+                niter,
+                sparse,
+                gamma,
+                c,
+                r,
+                convergence,
+            )
+        # mode test
+        if p == 4:
+            for m in {16000, 32000, 64000}:
+                for k in [10, 20, 30, 40, 50, 60]:
+                    sparse = 1
+                    run_5_trials(
+                        f,
+                        input_dataset_path,
+                        results_dir,
+                        f"{unique_id}_m_1_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}",
+                        1,
+                        1,
+                        m,
+                        d,
+                        k,
+                        niter,
+                        sparse,
+                        gamma,
+                        c,
+                        r,
+                        convergence,
+                    )
+                    sparse = 0
+                    run_5_trials(
+                        f,
+                        input_dataset_path,
+                        results_dir,
+                        f"{unique_id}_m_1_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}",
+                        1,
+                        1,
+                        m,
+                        d,
+                        k,
+                        niter,
+                        sparse,
+                        gamma,
+                        c,
+                        r,
+                        convergence,
+                    )
         f.write("echo 'Done!'\n")
+
+
+def create_random(low=0, high=100):
+    filepath = RANDOM_DATASET["bin_fname"]
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    m = int(RANDOM_DATASET["m"])
+    d = int(RANDOM_DATASET["d"])
+    data = np.random.uniform(low, high, m*d).astype(np.float32)
+    data.tofile(filepath)
 
 
 # Functions related to downloading, extracting, and preparing the datasets
@@ -214,6 +303,7 @@ def download(dataset):
         return
     print(f"Downloading dataset {name} from {url} to {tar_file}...")
     print_file_size(url)
+    os.makedirs(os.path.dirname(tar_file), exist_ok=True)
     urllib.request.urlretrieve(url, tar_file, reporthook=progress_hook)
     print()
     print("Download done!")
@@ -341,7 +431,7 @@ def construct_graphs():
         ax = axs[idx]
         d = input_dataset["d"]
         convergence = 0
-        m = 140000  # experimentally decided that 140k points fit on 4 GPUs
+        m = 128000  # experimentally decided that 128k points fit on 4 GPUs
         for k_idx, k in enumerate([2, 5, 10, 50, 100]):
             color = plt.cm.viridis(k_idx / 4)  # Use a colormap for different k values
             dataset_symbol = ["o", "s", "D", "^", "v"][k_idx]  # Different marker for each k value
@@ -402,12 +492,12 @@ def construct_graphs():
                 continue
             d = input_dataset["d"]
             convergence = 0
-            strong_m = 140000  # experimentally decided that 140k points fit on 4 GPUs
+            strong_m = 128000  # experimentally decided that 128k points fit on 4 GPUs
             # for k_idx, k in enumerate([2, 5, 10, 50, 100]):
             for k_idx, k in enumerate([10, 100]):
                 sparse = int(k > 32)
                 for p_idx, p in enumerate(P):
-                    weak_m = min(int(70000*np.sqrt(p)), int(input_dataset["m"]), MAX_NUM_POINTS)
+                    weak_m = min(int(64000*np.sqrt(p)), int(input_dataset["m"]), MAX_NUM_POINTS)
                     m = strong_m if scaling_type == "s" else weak_m
                     strong_scaling_data = get_scaling_data(
                         unique_id,
@@ -447,9 +537,9 @@ def construct_graphs():
                         running_time += avg_time
                         label = key if bar_offset == 0 else ""
                         if label == "K":
-                            label = "GeMM"
+                            label = "Distributed GeMM"
                         elif label == "E":
-                            label = "SpMV / GeMV"
+                            label = "Local SpMM / Local GeMM"
                         elif label == "VR MPI":
                             label = "Assignments Gathering"
                         ax.bar(bar_offset, avg_time, bar_width, bottom=bottom, label=label, color=color)
@@ -485,7 +575,7 @@ def construct_graphs():
             y = []
             sparse = int(k > 32)
             for p in P:
-                m = min(int(70000*np.sqrt(p)), int(input_dataset["m"]), MAX_NUM_POINTS)
+                m = min(int(64000*np.sqrt(p)), int(input_dataset["m"]), MAX_NUM_POINTS)
                 scaling_data = get_scaling_data(
                     unique_id,
                     "w",
@@ -533,7 +623,7 @@ def construct_graphs():
 #     create_file_text(p, "")
 
 if __name__ == "__main__":
-    legal = ["create_scripts", "download", "extract", "prepare", "graphs"]
+    legal = ["create_scripts", "create_random", "download", "extract", "prepare", "graphs"]
     usage_legal = " | ".join(legal)
     if len(sys.argv) < 2:
         print(f"Usage: python exp.py [{usage_legal}]")
@@ -546,6 +636,9 @@ if __name__ == "__main__":
         for p in [4, 8, 16, 32, 64, 128, 256]:
             create_file_text(p, "")
         print("Generated scripts in experiments/scripts/ directory.")
+    if action == "create_random":
+        create_random()
+        print(f"Created random dataset at {RANDOM_DATASET['bin_fname']}.")
     if action == "download":
         for dataset in DATASETS:
             download(dataset)
