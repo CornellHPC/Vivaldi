@@ -196,9 +196,9 @@ def create_file_text(
             sparse = int(k > 32)
             run_5_trials(
                 f,
-                "data/rand",
+                "data/rand.bin",
                 results_dir,
-                f"{unique_id}_w_{p}_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_rand",
+                f"{unique_id}_w_{p}_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_rand.bin",
                 nodes,
                 p,
                 m,
@@ -218,9 +218,9 @@ def create_file_text(
                     sparse = 1
                     run_5_trials(
                         f,
-                        "data/rand",
+                        "data/rand.bin",
                         results_dir,
-                        f"{unique_id}_w_1_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_rand",
+                        f"{unique_id}_w_1_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_rand.bin",
                         1,
                         1,
                         m,
@@ -236,9 +236,9 @@ def create_file_text(
                     sparse = 0
                     run_5_trials(
                         f,
-                        "data/rand",
+                        "data/rand.bin",
                         results_dir,
-                        f"{unique_id}_w_1_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_rand",
+                        f"{unique_id}_w_1_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_rand.bin",
                         1,
                         1,
                         m,
