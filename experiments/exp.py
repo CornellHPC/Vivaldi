@@ -3,8 +3,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker
 
-from datetime import timedelta
-
 
 DATASETS = [
     {
@@ -54,7 +52,6 @@ P = [4, 8, 16, 32, 64, 128]  # number of GPUs (must be divisible by 4)
 C = ["K", "VI", "E", "Z", "C MPI", "C Computation", "VR MPI", "VR Computation"]
 
 def request_p_prefix(p, nodes, log_dir, s_name):
-    timestamp = str(timedelta(minutes=30*np.sqrt(p)))
     if p >= 256:
         timestamp = "04:00:00"
     elif p >= 128:
