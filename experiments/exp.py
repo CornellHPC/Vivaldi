@@ -56,14 +56,10 @@ def request_p_prefix(p, nodes, log_dir, s_name):
         timestamp = "04:00:00"
     elif p >= 128:
         timestamp = "03:00:00"
-    elif p >= 64:
-        timestamp = "02:00:00"
     elif p >= 32:
-        timestamp = "01:30:00"
-    elif p >= 16:
-        timestamp = "01:15:00"
+        timestamp = "02:00:00"
     else:
-        timestamp = "01:00:00"
+        timestamp = "01:30:00"
 
     return f"""#!/bin/bash
 #SBATCH --nodes={nodes}
