@@ -649,6 +649,23 @@ def construct_graphs():
     plt.savefig(f"graphs/weak_scaling_subfigures.png")
 
 
+def compare(file1, file2):
+    if not os.path.exists(file1) or not os.path.exists(file2):
+        print(f"One of the files does not exist: {file1} or {file2}")
+        return
+    with open(file1, "rb") as f1, open(file2, "rb") as f2:
+        data1 = np.fromfile(f1, dtype=np.int32)
+        data2 = np.fromfile(f2, dtype=np.int32)
+        if data1.shape != data2.shape:
+            print(f"Files have different sizes: {data1.shape[0]} vs {data2.shape[0]}")
+            return
+        n = data1.shape[0]
+        diff = np.abs(data1 - data2)
+        diff_points = np.count_nonzero(diff)
+        print(f"Comparison of {file1} and {file2}:")
+        print(f"Total points: {n}")
+        print(f"Different points: {diff_points} ({(diff_points / n) * 100:.2f}%)")
+
 # remember that D is the number of features and has to be correct for each dataset otherwise
 # the MPI file read will be messed up
 # but we can vary N and K for each experiment
@@ -663,7 +680,7 @@ def construct_graphs():
 #     create_file_text(p, "")
 
 if __name__ == "__main__":
-    legal = ["create_scripts", "create_random", "download", "extract", "prepare", "graphs"]
+    legal = ["create_scripts", "create_random", "download", "extract", "prepare", "graphs", "compare"]
     usage_legal = " | ".join(legal)
     if len(sys.argv) < 2:
         print(f"Usage: python exp.py [{usage_legal}]")
@@ -694,3 +711,11 @@ if __name__ == "__main__":
     if action == "graphs":
         construct_graphs()
         print("Generated graphs in experiments/graphs/ directory.")
+    if action == "compare":
+        if len(sys.argv) != 4:
+            print("Usage: python exp.py compare <file1> <file2>")
+            sys.exit(1)
+        file1 = sys.argv[2]
+        file2 = sys.argv[3]
+        compare(file1, file2)
+        print("Comparison complete")

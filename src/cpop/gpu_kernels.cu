@@ -53,7 +53,10 @@ __global__ void z_vector_kernel(int64_t t, float* z, int* assignments,
 
 __global__ void argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
                               int* local_assignments, int* local_cluster_sizes,
-                              bool* converged) {
+                              bool* converged,
+                              float* local_k_means_objective_score,
+                              float* local_k_means_objective_delta,
+                              float* prev_point_to_cluster_distances) {
   for (int64_t point = blockIdx.x * blockDim.x + threadIdx.x; point < k;
        point += blockDim.x * gridDim.x) {
     local_cluster_sizes[point] = 0;
@@ -73,9 +76,18 @@ __global__ void argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
         min_cluster = cluster;
       }
     }
+
+    // convergence-related things
     // printf("Min %f idx %lld\n", min, min_cluster);
-    if (min_cluster != local_assignments[point])
-      *converged = false;
+    // if (min_cluster != local_assignments[point])
+    //   *converged = false;
+    atomicAdd(local_k_means_objective_score, min);
+    // current objective minus previous objective
+    float delta = min - prev_point_to_cluster_distances[point];
+    atomicAdd(local_k_means_objective_delta, delta);
+    prev_point_to_cluster_distances[point] = min;
+
+    // update assignment and cluster sizes
     local_assignments[point] = min_cluster;
     atomicAdd(&local_cluster_sizes[min_cluster], 1);
     // printf("Finished argmin kernel\n");
@@ -135,7 +147,9 @@ void launch_z_kernel(int64_t t, float* z, int* assignments, float* ET) {
 
 void launch_argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
                           int* local_assignments, int* local_cluster_sizes,
-                          bool* converged) {
+                          bool* converged, float* local_k_means_objective_score,
+                          float* local_k_means_objective_delta,
+                          float* prev_point_to_cluster_distances) {
   if (k == 0 || t == 0)
     return;
 
@@ -144,8 +158,10 @@ void launch_argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
   // block cap is set to prevent overflow
   int nthreads = 256;
   int nblocks = std::min(int64_t(1048576), (t + nthreads - 1) / nthreads);
-  argmin_kernel<<<nblocks, nthreads>>>(k, t, dE, dc, local_assignments,
-                                       local_cluster_sizes, converged);
+  argmin_kernel<<<nblocks, nthreads>>>(
+      k, t, dE, dc, local_assignments, local_cluster_sizes, converged,
+      local_k_means_objective_score, local_k_means_objective_delta,
+      prev_point_to_cluster_distances);
 }
 
 void launch_reinit_kernel(float* V_global_values, int* global_assignments,

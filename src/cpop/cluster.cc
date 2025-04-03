@@ -54,6 +54,16 @@ V_t::V_t(int64_t m, int64_t k, bool sparse, MPI_Comm comm) {
   local_ptr_to_assignments = global_assignments + displs[rank];
   previous_global_assignments = nullptr;
   CHECK_CUDA(cudaMalloc(&converged, sizeof(bool)));
+  CHECK_CUDA(cudaMalloc(&local_k_means_objective_score, sizeof(float)));
+  CHECK_CUDA(cudaMalloc(&local_k_means_objective_delta, sizeof(float)));
+  CHECK_CUDA(cudaMalloc(&prev_point_to_cluster_distances,
+                        t * sizeof(float)));  // for convergence checking
+  CHECK_CUDA(cudaMemset(prev_point_to_cluster_distances, 0,
+                        t * sizeof(float)));  // initialize to zero
+  previous_global_k_means_objective_score =
+      1e-6f;  // a very small number to start
+  previous_local_k_means_objective_score =
+      1e-6f;  // a very small number to start
 
   // Implementation-specific initialization
   if (sparse) {
@@ -178,6 +188,9 @@ bool V_t::test_convergence() {
 
 V_t::~V_t() {
   CHECK_CUDA(cudaFree(converged));
+  CHECK_CUDA(cudaFree(local_k_means_objective_score));
+  CHECK_CUDA(cudaFree(local_k_means_objective_delta));
+  CHECK_CUDA(cudaFree(prev_point_to_cluster_distances));
   free(t_sizes);
   free(displs);
   if (sparse) {
@@ -331,8 +344,12 @@ int compute_c(Handle& handle, V_t& V, DnVec_t& z, DnVec_t& c, MPI_Comm comm) {
 int argmin(DnMat_t& E, DnVec_t& c, V_t& V) {
   bool t = true;
   cudaMemcpy(V.converged, &t, sizeof(bool), cudaMemcpyHostToDevice);
-  launch_argmin_kernel(V.k_, V.t, E.dM, c.dz, V.local_assignments,
-                       V.local_cluster_sizes, V.converged);
+  cudaMemset(V.local_k_means_objective_score, 0, sizeof(float));
+  cudaMemset(V.local_k_means_objective_delta, 0, sizeof(float));
+  launch_argmin_kernel(
+      V.k_, V.t, E.dM, c.dz, V.local_assignments, V.local_cluster_sizes,
+      V.converged, V.local_k_means_objective_score,
+      V.local_k_means_objective_delta, V.prev_point_to_cluster_distances);
   cudaDeviceSynchronize();
   return EXIT_SUCCESS;
 }
@@ -347,29 +364,70 @@ int gather_assignments(DnMat_t& E, DnVec_t& c, V_t& V, int convergence) {
     if (convergence == 2)
       recv_sizes = (int*)malloc(V.n_procs * sizeof(int));
 
-    bool locally_converged;
-    cudaMemcpy(&locally_converged, V.converged, sizeof(bool),
-               cudaMemcpyDeviceToHost);
-    if (convergence == 2 && locally_converged) {
-      // this process has locally converged, so it can be removed from allgather
-      send_count = 0;
-      send_buffer = nullptr;
-    }
+    // bool locally_converged;
+    // cudaMemcpy(&locally_converged, V.converged, sizeof(bool),
+    //            cudaMemcpyDeviceToHost);
 
-    bool local_convergence_ptr[V.n_procs];
-    MPI_Allgather(&locally_converged, 1, MPI_C_BOOL, local_convergence_ptr, 1,
-                  MPI_C_BOOL, V.comm);
-    for (int i = 0; i < V.n_procs; ++i) {
-      if (local_convergence_ptr[i])
-        dead_process_count++;
-      if (convergence == 2) {
-        // exclude relevant processes from allgather
+    float K_MEANS_EPSILON = 1e-7f;
+
+    float local_k_means_objective_score, local_k_means_objective_delta;
+    cudaMemcpy(&local_k_means_objective_score, V.local_k_means_objective_score,
+               sizeof(float), cudaMemcpyDeviceToHost);
+    cudaMemcpy(&local_k_means_objective_delta, V.local_k_means_objective_delta,
+               sizeof(float), cudaMemcpyDeviceToHost);
+    float local_k_means_rel_difference =
+        fabs(local_k_means_objective_delta) /
+        fabs(V.previous_local_k_means_objective_score);
+    V.previous_local_k_means_objective_score = local_k_means_objective_score;
+    bool locally_converged = (local_k_means_rel_difference < K_MEANS_EPSILON);
+
+    float global_k_means_objective_score = 0.0f;
+    float global_k_means_objective_delta = 0.0f;
+    MPI_Allreduce(&local_k_means_objective_score,
+                  &global_k_means_objective_score, 1, MPI_FLOAT, MPI_SUM,
+                  V.comm);
+    MPI_Allreduce(&local_k_means_objective_delta,
+                  &global_k_means_objective_delta, 1, MPI_FLOAT, MPI_SUM,
+                  V.comm);
+    float k_means_rel_difference =
+        fabs(global_k_means_objective_delta) /
+        fabs(V.previous_global_k_means_objective_score);
+    V.previous_global_k_means_objective_score = global_k_means_objective_score;
+    bool globally_converged = (k_means_rel_difference < K_MEANS_EPSILON);
+
+    // int rank;
+    // MPI_Comm_rank(V.comm, &rank);
+    // std::cout << "Rank " << rank << " --- "
+    //           << "Local Score: " << local_k_means_objective_score
+    //           << ", Local Delta: " << local_k_means_objective_delta
+    //           << ", Global Score: " << global_k_means_objective_score
+    //           << ", Global Delta: " << global_k_means_objective_delta
+    //           << ", Relative Difference: " << k_means_rel_difference
+    //           << ", Locally Converged: "
+    //           << (locally_converged ? "true" : "false")
+    //           << ", Globally Converged: "
+    //           << (globally_converged ? "true" : "false") << std::endl;
+
+    if (convergence == 2) {
+      if (locally_converged) {
+        // this process has locally converged, so it can be removed from allgather
+        send_count = 0;
+        send_buffer = nullptr;
+      }
+      bool local_convergence_ptr[V.n_procs];
+      MPI_Allgather(&locally_converged, 1, MPI_C_BOOL, local_convergence_ptr, 1,
+                    MPI_C_BOOL, V.comm);
+      for (int i = 0; i < V.n_procs; ++i) {
         if (local_convergence_ptr[i]) {
+          dead_process_count++;
           recv_sizes[i] = 0;
         } else {
           recv_sizes[i] = V.t_sizes[i];
         }
       }
+    }
+    if (globally_converged) {
+      dead_process_count = V.n_procs;  // all processes have converged
     }
     if (dead_process_count == V.n_procs)
       return dead_process_count;  // all processes are dead, quit

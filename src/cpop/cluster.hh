@@ -60,7 +60,7 @@ struct V_t {
   // GPU pointers to the components of the global CSC V matrix
   int* global_assignments;      // CSC row indices
   int* global_csc_col_offsets;  // CSC column offsets
-  float* values;                    // CSC values of global V
+  float* values;                // CSC values of global V
 
   // GPU pointers to the components of the local CSC V matrix
   // Aside from local_csc_col_offsets, these are the same as the global ones
@@ -84,6 +84,11 @@ struct V_t {
   // Device vectors used in convergence checking
   int* previous_global_assignments;
   bool* converged;
+  float* local_k_means_objective_score;
+  float* local_k_means_objective_delta;
+  float previous_global_k_means_objective_score;
+  float previous_local_k_means_objective_score;
+  float* prev_point_to_cluster_distances;  // t-size vector
 
   /**
    * @brief Constructor
