@@ -29,103 +29,67 @@ Testing is split along three axes:
 Important constants in testing are:
 
 * For scaling tests, convergence detection is never used.
-
-
 * Run for **100** iterations.
 * Run with **64** features.
 * Cluster in **128** clusters.
 * For strong scaling, number of points is **70k**. For weak scaling, the initial number of points (i.e. for the *w1* configuration) is also **70k**.
 * Timing includes only the relevant initialization and k-means loop. IO is not included in overall elapsed time.
 
-### Convergence Detection Testing
-
-todo
-
-### Correctness Testing
-
-todo
-
 ## Running Tests
 
-### Basic Testing
-
-For basic testing, from the project folder build with:
-
-```bash
-make build BASIC=1
-```
-
-Once this completes, from the `experiments` folder run with:
-
-```bash
-sbatch basic/s1.sh
-sbatch basic/s2.sh
-sbatch basic/s4.sh
-sbatch basic/s8.sh
-sbatch basic/s16.sh
-sbatch basic/s32.sh
-sbatch basic/s64.sh
-sbatch basic/s128.sh
-sbatch basic/s256.sh
-sbatch basic/w1.sh
-sbatch basic/w2.sh
-sbatch basic/w4.sh
-sbatch basic/w8.sh
-sbatch basic/w16.sh
-sbatch basic/w32.sh
-sbatch basic/w64.sh
-sbatch basic/w128.sh
-sbatch basic/w256.sh
-```
-
-Note that the 32, 64, 128, and 256 GPU configurations demand a large number of resources and should be run with caution.
-
-### Breakdown Testing
-
-For breakdown testing, from the project folder build with:
+From the project folder build with:
 
 ```bash
 make build
 ```
 
+
 Once this completes, from the `experiments` folder run with:
 
 ```bash
-sbatch breakdown/s1.sh
-sbatch breakdown/s2.sh
-sbatch breakdown/s4.sh
-sbatch breakdown/s8.sh
-sbatch breakdown/s16.sh
-sbatch breakdown/s32.sh
-sbatch breakdown/s64.sh
-sbatch breakdown/s128.sh
-sbatch breakdown/s256.sh
-sbatch breakdown/w1.sh
-sbatch breakdown/w2.sh
-sbatch breakdown/w4.sh
-sbatch breakdown/w8.sh
-sbatch breakdown/w16.sh
-sbatch breakdown/w32.sh
-sbatch breakdown/w64.sh
-sbatch breakdown/w128.sh
-sbatch breakdown/w256.sh
+pip install -r requirements.txt
+python exp.py download
+python exp.py extract
+python exp.py prepare
+python exp.py create_random
+python exp.py create_scripts
 ```
 
-Note that the 32, 64, 128, and 256 GPU configurations demand a large number of resources and should be run with caution.
+This will do a number of things
+
+* `download` and `extract` download and extract the dataset to the `experiments/data` directory. The data is stored in `txt` files that follow the LibSVM format
+* `prepare` converts the dataset from LibSVM format to the format of a binary list of floats, which is the input to the algorithm. After running `python exp.py prepare`, the `txt` files in `experiments/data` can be deleted (since these take up a lot of space on disk and are not necessary anymore)
+* `create_random` creates a random number dataset which is used in proper weak scaling tests (where both number of points and number of features are scaled in accordance with number of processes)
+* `create_scripts` generates all the scripts. See `exp.py` for more. There are a couple of global variables at the top of the file that can be adjusted to only generate a subset of scripts (e.g. only generate strong scaling or weak scaling). The generated scripts go to the `experiments/scripts` folder. Launch these scripts FROM THE EXPERIMENTS DIRECTORY with sbatch, as in `sbatch scripts/exp__4_0.sh`. Note that the 32, 64, 128, and 256 GPU configurations demand a large number of resources and should be run with caution.
+
+
+Scripts can be monitored with `squeue --me` or (to roughly see the place in the queue) `squeue | grep "gpu_ss11" | grep -n "<username>"`.
+
+
+Once all scripts are done, run
+
+```bash
+python exp.py graphs
+```
+
+
+This will generate graphs in the `experiments/graphs` folder.
 
 ### Testing Output
 
-* The `sl_out` folder includes logging from tests that can usually be ignored.
-* The `assignments` folder contains the point assignments. This is only relevant for correctness testing.
-* The `basic_time` folder contains the timing for basic tests. For example, `basic_time/s1` contains a single line with the total time of the algorithm.
-* The `breakdown_time` folder contains the breakdown timing. For example, `breakdown_time/s1` contains lines for each routine’s time.
+The `logs` folder includes logging from tests that can usually be ignored.
 
-## Graphing
+The `results` folder contains the timing and assignments for basic tests. Each file has a fairly long name that indicates the arguments with which it was run. Each file starts with a prefix that looks like `_{w}_{p}_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}`. Explanation:
+* `w` is the type of test `s` for strong scaling, `w` for variant weak scaling, `wp` for proper weak scaling, `m` for cluster size mode testing, `wc`/`wce` for variant weak scaling with convergence (`e` is for process-exclusion)
+* `p` is the number of processes/ranks
+* `m` for number of points
+* `d` for number of features
+* `k` for number of clusters
+* `niter`, `gamma`, `c`, `r` obvious
+* `sparse` is `0` if the V matrix should be dense, else `1`
+* `convergence` is `0` for no convergence, `1` for simple convergence with no process exclusion, `2` for convergence with process exclusion
+* `basic` should always just be `True`
+* `input_dataset_name` is one of `higgs`, `mnist`, or `poker`
 
-Graphing for the strong basic, strong breakdown, weak basic, and weak breakdown should be run with
-
-```bash
-python generate_graphs.py
-```
-
+These names are decided automatically by the `create_scripts` routine, so we don't have to manually adjust any of these parameters. The result files are suffixed by `_assignments` (for the actual point assignment data), and `_time_i` (for the timing breakdown). `_time_i` is the more useful of the two, and is used to generate graphs/tables for the paper.
 
