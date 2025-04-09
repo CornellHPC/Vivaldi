@@ -719,9 +719,8 @@ def construct_graphs():
         plt.tight_layout(rect=[0, 0, 1, 0.95])
         plt.savefig(f"graphs/variant_weak_scaling_{base_m}.png")
 
-    # construct scaling breakdown graphs
+    # construct strong and variant weak scaling breakdown graphs
     for base_m in BASE_M:
-        fig, axs = plt.subplots(1, 3, figsize=(18, 4), sharey=True)
         niter = 100
         gamma = 1
         c = 1
@@ -729,13 +728,8 @@ def construct_graphs():
         basic = True
 
         for scaling_type in ["s", "w"]:
-            bar_width = 0.1
-            x_positions = []
-            x_labels = []
-            bar_offset = 0
-            ax = axs[0] if scaling_type == "s" else axs[1]
-            scaling_type_name = "Strong" if scaling_type == "s" else "Weak"
-            ax.set_title(f"MNIST8M {scaling_type_name} Scaling Breakdown")
+            fig, axs = plt.subplots(1, 3, figsize=(18, 4), sharey=True)
+            scaling_type_name = "Strong" if scaling_type == "s" else "Variant Weak"
             for dataset_idx, input_dataset in enumerate(DATASETS):
                 input_dataset_name = input_dataset["name"]
                 if input_dataset_name != "mnist8m":
@@ -743,7 +737,17 @@ def construct_graphs():
                 d = input_dataset["d"]
                 convergence = 0
                 strong_m = 2 * base_m
-                for k_idx, k in enumerate([10, 50, 100]):
+                for k_idx, k in enumerate([2, 50, 100]):
+                    bar_width = 0.5
+                    x_positions = np.arange(len(P))
+                    bar_offset = 0
+                    ax = axs[k_idx]
+                    ax.set_title(f"MNIST8m {scaling_type_name} Scaling Breakdown (k={k})")
+                    ax.set_xlabel("Number of GPUs (p)")
+                    ax.set_xticks(x_positions)
+                    ax.set_xticklabels(P)
+                    ax.set_yscale("log")
+                    ax.minorticks_off()
                     sparse = int(k > 32)
                     for p_idx, p in enumerate(P):
                         weak_m = min(
@@ -752,7 +756,7 @@ def construct_graphs():
                             MAX_NUM_POINTS,
                         )
                         m = strong_m if scaling_type == "s" else weak_m
-                        strong_scaling_data = get_scaling_data(
+                        scaling_data = get_scaling_data(
                             unique_id,
                             scaling_type,
                             p,
@@ -768,15 +772,11 @@ def construct_graphs():
                             basic,
                             input_dataset_name,
                         )
-                        # Prepare x-axis labels and positions
-                        x_label = f"P={p}\nK={k}" if p_idx == 0 else f"P={p}"
-                        x_positions.append(bar_offset)
-                        x_labels.append(x_label)
 
                         # Prepare stacked bar data
                         bottom = 0
                         running_time = 0
-                        for key, values in strong_scaling_data.items():
+                        for key, values in scaling_data.items():
                             # if key not in C:
                             #     continue
                             # if (key not in ["K", "E", "VR MPI"]) and (np.average(values) / np.average(strong_scaling_data["Elapsed"]) > 0.02):
@@ -798,7 +798,7 @@ def construct_graphs():
                             elif label == "VR MPI":
                                 label = "Assignments Gathering"
                             ax.bar(
-                                bar_offset,
+                                x_positions[p_idx],
                                 avg_time,
                                 bar_width,
                                 bottom=bottom,
@@ -808,15 +808,96 @@ def construct_graphs():
                             bottom += avg_time
                         bar_offset += bar_width * 1.2
                     bar_offset += bar_width * 1.3
-            ax.set_yscale("log")
-            ax.set_xticks(x_positions)
-            ax.set_xticklabels(x_labels)
-            ax.minorticks_off()
-            ax.set_ylabel("Average Time (ms)")
-            ax.legend(loc="upper left", title="Routines")
+            axs[0].set_ylabel("Average Time (ms)")
+            axs[0].legend(loc="upper left", title="Routines")
             plt.tight_layout()
             # plt.subplots_adjust(hspace=0, wspace=0, bottom=0.2, left=0)
-            plt.savefig(f"graphs/{scaling_type_name.lower()}_scaling_breakdown_{base_m}.png")
+            plt.savefig(f"graphs/{scaling_type_name.lower().replace(' ', '_')}_scaling_breakdown_{base_m}.png")
+
+    # construct weak scaling breakdown
+    base_m = 64000 # only ran this test with 64k baseline
+    fig, axs = plt.subplots(1, 3, figsize=(18, 4))
+    scaling_type_name = "Weak"
+    input_dataset = RANDOM_DATASET
+    input_dataset_name = input_dataset["name"]
+    convergence = 0
+    for k_idx, k in enumerate([2, 50, 100]):
+        bar_width = 0.5
+        x_positions = np.arange(len(P))
+        bar_offset = 0
+        ax = axs[k_idx]
+        ax.set_title(f"Synthetic {scaling_type_name} Scaling Breakdown (k={k})")
+        ax.set_xlabel("Number of GPUs (p)")
+        ax.set_xticks(x_positions)
+        ax.set_xticklabels(P)
+        ax.set_yscale("log")
+        ax.minorticks_off()
+        sparse = int(k > 32)
+        for p_idx, p in enumerate(P):
+            weak_m = min(
+                int(base_m * np.sqrt(p)) - (int(base_m * np.sqrt(p)) % p),
+                int(input_dataset["m"]),
+                MAX_NUM_POINTS,
+            )
+            m = weak_m
+            d = 4*p
+            scaling_data = get_scaling_data(
+                unique_id,
+                "wp",
+                p,
+                m,
+                d,
+                k,
+                niter,
+                sparse,
+                gamma,
+                c,
+                r,
+                convergence,
+                basic,
+                input_dataset_name,
+            )
+
+            # Prepare stacked bar data
+            bottom = 0
+            running_time = 0
+            for key, values in scaling_data.items():
+                # if key not in C:
+                #     continue
+                # if (key not in ["K", "E", "VR MPI"]) and (np.average(values) / np.average(strong_scaling_data["Elapsed"]) > 0.02):
+                #     print("Step", key, "took", np.average(values) / np.average(strong_scaling_data["Elapsed"]), "of total time")
+                #     # if this doesn't print then only K, E, and VR MPI took more than 2% of the time
+                useful_keys = ["K", "E", "VR MPI"]
+                if key not in useful_keys:
+                    continue
+                color = plt.cm.plasma(
+                    useful_keys.index(key) / len(useful_keys)
+                )  # Use a colormap for different routines
+                avg_time = np.average(values)
+                running_time += avg_time
+                label = key if bar_offset == 0 else ""
+                if label == "K":
+                    label = "Distributed GEMM"
+                elif label == "E":
+                    label = "Local SpMM / Local GEMM"
+                elif label == "VR MPI":
+                    label = "Assignments Gathering"
+                ax.bar(
+                    x_positions[p_idx],
+                    avg_time,
+                    bar_width,
+                    bottom=bottom,
+                    label=label,
+                    color=color,
+                )
+                bottom += avg_time
+            bar_offset += bar_width * 1.2
+        bar_offset += bar_width * 1.3
+    axs[0].set_ylabel("Average Time (ms)")
+    axs[0].legend(loc="upper left", title="Routines")
+    plt.tight_layout()
+    # plt.subplots_adjust(hspace=0, wspace=0, bottom=0.2, left=0)
+    plt.savefig(f"graphs/{scaling_type_name.lower()}_scaling_breakdown_{base_m}.png")
 
 
 def compare(file1, file2):
