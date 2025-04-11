@@ -1,37 +1,44 @@
 import sys
 import time
+import os
 
 import numpy as np
 from scipy.sparse import csc_matrix
 from sklearn.cluster import KMeans
 
-def read_data(fname):
-    path = "../data/" + fname + ".txt"
-    data = []
-    labels = []
+# def read_data(fname):
+#     path = "../data/" + fname + ".txt"
+#     data = []
+#     labels = []
 
-    # this currently assumes no missing data, 
-    # all formatted with exactly one space between features
-    with open(path, 'r') as file:
-        rows = [line.rstrip() for line in file]
-        for features in rows:
-            features = features.split(' ')
+#     # this currently assumes no missing data, 
+#     # all formatted with exactly one space between features
+#     with open(path, 'r') as file:
+#         rows = [line.rstrip() for line in file]
+#         for features in rows:
+#             features = features.split(' ')
 
-            # extract label, not really needed tbh
-            label = features.pop(0)
-            labels.append(label)
+#             # extract label, not really needed tbh
+#             label = features.pop(0)
+#             labels.append(label)
 
-            features = np.float32(
-                list(map(lambda feature: float(feature.split(':')[1]), features)))
-            data.append(features)
+#             features = np.float32(
+#                 list(map(lambda feature: float(feature.split(':')[1]), features)))
+#             data.append(features)
     
-    data = np.array(data)
+#     data = np.array(data)
 
-    # dump data as binary
-    # out = open("../data/" + fname, 'wb')
-    # data.tofile(out)
-    # out.close()
+#     # dump data as binary
+#     # out = open("../data/" + fname, 'wb')
+#     # data.tofile(out)
+#     # out.close()
 
+#     return data
+
+def read_bin(path, n, d):
+    with open(path, 'rb') as file:
+        data = np.fromfile(file, dtype=np.float32, count=n * d)
+    data = data.reshape((n, d))
     return data
 
 def polynomial_kernel(data, gamma, c, r):
@@ -69,12 +76,18 @@ def calculate_score(data, clusters, k):
     return score
 
 if __name__ == "__main__":
+    if len(sys.argv) != 6:
+        print("Usage: python test.py <data_file> <output_file> <n> <d> <k>")
+        sys.exit(1)
     fname = sys.argv[1]
-    k = int(sys.argv[2])
+    ofile = sys.argv[2]
+    n = int(sys.argv[3])
+    d = int(sys.argv[4])
+    k = int(sys.argv[5])
 
     # Read Data
-    data = read_data(fname)  # read data and construct matrix
-    n = data.shape[0]
+    data = read_bin(fname, n, d)  # read data and construct matrix
+    print("Read dataset of shape", data.shape)
 
     # model = KMeans(n_clusters=k, random_state=0, n_init='auto')
     # model.fit(data)
@@ -96,6 +109,7 @@ if __name__ == "__main__":
     maxiter = 100
     last_C = None
     for iter in range(maxiter):
+        print("iteration", iter)
         E = -2 * (K @ V.T)
         z = -0.5 * np.array([E[i][clusters[i]] for i in range(n)])
         C = V @ z.T
@@ -127,4 +141,4 @@ if __name__ == "__main__":
 
     clusters = clusters.astype(np.int32)
     print(clusters)
-    clusters.tofile("../data/" + fname + "_py")
+    clusters.tofile(ofile)
