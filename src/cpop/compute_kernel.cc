@@ -11,6 +11,12 @@ slate::Matrix<float> load_matrix(const char* fname, int64_t rows, int64_t cols,
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
 
+  // int grid_size = std::floor(std::sqrt(size));
+  // int64_t cols_per_block =
+  //     (cols / grid_size) + ((cols % grid_size == 0) ? 0 : 1);
+  // int64_t rows_per_block =
+  //     (rows / grid_size) + ((rows % grid_size == 0) ? 0 : 1);
+
   MPI_File fh;
   MPI_File_open(comm, fname, MPI_MODE_RDONLY, MPI_INFO_NULL, &fh);
 
@@ -19,8 +25,24 @@ slate::Matrix<float> load_matrix(const char* fname, int64_t rows, int64_t cols,
   MPI_File_read_all(fh, buf, cols * rows, MPI_FLOAT, MPI_STATUS_IGNORE);
 
   // Create empty SLATE matrix object of size equal to data
-  int t = rows / size + (rows > size * size && rows % size > 0);
-  auto M = slate::Matrix<float>(cols, rows, cols, t, 1, size, comm);
+  // int t = rows / size + (rows > size * size && rows % size > 0);
+  // auto M = slate::Matrix<float>(cols, rows, cols, t, 1, size, comm);
+
+  int p = std::floor(std::sqrt(size));
+  int q = std::floor(std::sqrt(size));
+  if (p * q != size) {
+    std::cout << "WARNING: The number of ranks is not a perfect square."
+              << std::endl;
+  }
+  auto M = slate::Matrix<float>(cols, rows, );
+
+  // auto M = slate::Matrix<float>(cols, rows, cols_per_block, rows_per_block,
+  //                               grid_size, grid_size, comm);
+  std::cout << "Initializing P with " << cols << " " << rows << " "
+            << cols_per_block << " " << rows_per_block << " " << grid_size
+            << std::endl;
+  std::cout << "Tile:" << M.tileMb(0) << " " << M.tileNb(0) << std::endl;
+  std::cout << "Size:" << M.mt() << " " << M.nt() << std::endl;
   M.insertLocalTiles(slate::Target::Devices);
 
   // Fill data
@@ -72,14 +94,22 @@ float* compute_kernel_matrix(slate::Matrix<float>& PT, float gamma, float c,
 
   // Perform GEMM
   auto P = slate::transpose(PT);
-  auto K = slate::Matrix<float>(P.m(), P.m(), P.tileMb(0), P.tileMb(0), 1, size,
-                                PT.mpiComm());
+  int p_rows = P.m();
+  int t = p_rows / size + (p_rows > size * size && p_rows % size > 0);
+  std::cout << "Rank " << rank << " Printing P size: " << P.tileMb(0) << " "
+            << P.tileNb(0) << " - t is still " << t << std::endl;
+  int grid_size = std::floor(std::sqrt(size));
+  auto K = slate::Matrix<float>(P.m(), P.m(), P.tileMb(0), P.tileMb(0),
+                                grid_size, grid_size, PT.mpiComm());
   K.insertLocalTiles(slate::Target::Devices);
   slate::gemm<float>(1.0f, P, PT, 0.0f, K,
                      {{slate::Option::Target, slate::Target::Devices}});
 
+  std::cout << "GEMM COMPLTED" << std::endl;
+
   for (int64_t j = 0; j < K.nt(); ++j) {
     for (int64_t i = 0; i < K.mt(); ++i) {
+      std::cout << "Fetching tile " << i << " " << j << std::endl;
       if (K.tileIsLocal(i, j)) {
         slate::Tile<float> tile = K.at(i, j, K.tileDevice(i, j));
         float* data = tile.data();
@@ -88,12 +118,67 @@ float* compute_kernel_matrix(slate::Matrix<float>& PT, float gamma, float c,
     }
   }
 
-  // Ensure tiles are row-major
-  K.tileLayoutConvertOnDevices(blas::Layout::RowMajor);
+  std::cout << "POLYNOMIAL KERNEL COMPLTED" << std::endl;
 
-  // Copy tiles in local column to buffer
+  int count = 0;
   float* values;
-  int64_t count = extract_kernel_tiles(&values, K, rank);
+  if (rank == 1) {
+    // Ensure tiles are row-major
+    K.tileLayoutConvertOnDevices(blas::Layout::RowMajor);
+
+    // Copy tiles in local column to buffer
+    int64_t count = P.tileMb(0) * P.tileNb(0);
+    float* values = (float*)malloc(count * sizeof(float));
+    // cudaMalloc(&values, count * sizeof(float));
+    for (int64_t j = 0; j < K.nt(); ++j) {
+      for (int64_t i = 0; i < K.mt(); ++i) {
+        if (K.tileIsLocal(i, j)) {
+          std::cout << "Copying tile " << i << " " << j << std::endl;
+          slate::Tile<float> tile = K.at(i, j, K.tileDevice(i, j));
+          float* data = tile.data();
+          cudaMemcpy(values, data, count * sizeof(float),
+                     cudaMemcpyDeviceToHost);
+          std::cout << "Rank" << rank << " Values content:" << std::endl;
+          for (int64_t i = 0; i < count; ++i) {
+            std::cout << values[i] << " ";
+          }
+          std::cout << std::endl;
+        }
+      }
+    }
+    free(values);
+  }
+
+  std::cout << "Rank" << rank << " Finished ROWMAJOR" << std::endl;
+
+  if (rank == 1) {
+    // Ensure tiles are row-major
+    K.tileLayoutConvertOnDevices(blas::Layout::ColMajor);
+
+    // Copy tiles in local column to buffer
+    int count = P.tileMb(0) * P.tileNb(0);
+    float* values = (float*)malloc(count * sizeof(float));
+    // cudaMalloc(&values, count * sizeof(float));
+    for (int64_t j = 0; j < K.nt(); ++j) {
+      for (int64_t i = 0; i < K.mt(); ++i) {
+        if (K.tileIsLocal(i, j)) {
+          std::cout << "Copying tile " << i << " " << j << std::endl;
+          slate::Tile<float> tile = K.at(i, j, K.tileDevice(i, j));
+          float* data = tile.data();
+          cudaMemcpy(values, data, count * sizeof(float),
+                     cudaMemcpyDeviceToHost);
+          std::cout << "Rank" << rank << " Values content:" << std::endl;
+          for (int64_t i = 0; i < count; ++i) {
+            std::cout << values[i] << " ";
+          }
+          std::cout << std::endl;
+        }
+      }
+    }
+    free(values);
+  }
+
+  MPI_Abort(PT.mpiComm(), EXIT_FAILURE);
 
   // Return early if there is no remainder
   if (K.tileNb(0) * size >= K.n())
