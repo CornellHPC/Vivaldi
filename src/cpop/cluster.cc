@@ -468,6 +468,8 @@ float compute_cluster_score(DnMat_t& K, DnMat_t& E, DnVec_t& c, V_t& V) {
   int row_offset = V.t_sizes[0] * V.rank;
   launch_score_kernel(_local_scores, K.dM + (row_offset * V.t), E.dM, c.dz,
                       V.local_assignments, V.t);
+  cudaMemcpy(local_scores, _local_scores, V.t * sizeof(float),
+             cudaMemcpyDeviceToHost);
 
   float score, local_score = 0;
   for (int i = 0; i < V.t; ++i) {
