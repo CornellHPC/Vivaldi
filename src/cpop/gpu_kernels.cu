@@ -125,7 +125,6 @@ __global__ void score_kernel(float* local_scores, float* dK, float* dE,
        i += blockDim.x * gridDim.x) {
     int a = local_assignments[i];
     local_scores[i] = dK[t * i + i] - 2 * dE[t * a + i] + dc[a];
-    local_scores[i] *= local_scores[i];
   }
 }
 

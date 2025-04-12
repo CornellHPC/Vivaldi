@@ -56,17 +56,8 @@ def construct_v(clusters, cluster_size, k, n):
         V[cluster][i] = 1 / cluster_size[cluster]
     return V
 
-def calculate_score(data, clusters, k):
-    score = 0
-
-    for i in range(k):
-        cluster = data[clusters == i]
-        centroid = np.mean(cluster, axis=0)
-        dists = cluster - centroid
-        norms = np.linalg.norm(dists, axis=1)
-        score += np.sum(norms ** 2)
-
-    return score
+def calculate_score(D, clusters):
+    return np.choose(clusters, D.T).sum()
 
 if __name__ == "__main__":
     fname = sys.argv[1]
@@ -122,8 +113,8 @@ if __name__ == "__main__":
     elapsed_time = end_time - start_time
     print("Elapsed time:", elapsed_time, "seconds")
     
-    # score = calculate_score(data, clusters, k)
-    # print('kernel kmeans score (sum of squared dists):', score)
+    score = calculate_score(D, clusters)
+    print('kernel kmeans score (sum of squared dists):', score)
 
     clusters = clusters.astype(np.int32)
     print(clusters)
