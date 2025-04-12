@@ -1,21 +1,20 @@
-# ClusterPop: Multi-GPU Kernel K-Means with Sparse Linear Algebra
+# Kettlecorn: Multi-GPU Kernel K-Means with Sparse Linear Algebra
 
 ## File Tree
 
 ```
-├── CMakeLists.txt - build configs
 ├── Makefile       - start point for building and testing
 ├── README.md
-├── run.sh
 ├── data           - contains test data
 ├── experiments    - contains experimentation tools, see there for more
 ├── tests          - correctness testing tools
+├── src_combblas   - implementation with CombBLAS
 └── src
     ├── main.cc                  - main algorithm implementation
     ├── test.cc                  - algorithm unit-testing
     └── cpop
         ├── cluster.cc/hh        - clustering methods
-        ├── compute_kernel.cc/hh - computing the kernel matrix
+        ├── compute_kernel.cc/hh - code relevant to computing the kernel matrix
         ├── gpu_kernels.cu/cuh   - cuda kernels
         ├── utils.cc             - other useful helpers
 ```
@@ -27,6 +26,7 @@ This library has been tested with the following requirements:
 * CUDA Toolkit 12.2
 * GCC 12.3
 * [SLATE 2024.10.29](https://github.com/icl-utk-edu/slate/releases/tag/v2024.10.29)
+* CombBLAS
 
 ### Installing SLATE
 
@@ -56,6 +56,20 @@ cd slate
 make check
 echo "srun --nodes=4 --ntasks=16 --cpus-per-task=8 ./test/tester gemm" > job.sh
 sbatch job.sh
+```
+
+### Installing CombBLAS
+Install CombBLAS (our local version, which has some bugfixes for which we should ultimately raise a PR to CombBLAS)
+```bash
+git clone git@github.com:nakuliyer/CombBLAS.git
+cd CombBLAS
+git switch combblas-gpu
+mkdir _build && mkdir _install
+cd _build
+cmake -DCMAKE_INSTALL_PREFIX=../_install ..
+cmake --build . --target install
+cd ../_install
+export COMBBLAS_INSTALL=$(pwd)
 ```
 
 ## Building
