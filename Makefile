@@ -26,12 +26,13 @@ endif
 # Library for SLATE linkage
 CMAKE_ARGS += -DSLATE_INSTALL=$$SLATE_INSTALL -DCOMBBLAS_INSTALL=$$COMBBLAS_INSTALL
 
+# rm -rf blasbuild && \
+# mkdir blasbuild && \
+
 build:
 	source /opt/cray/pe/lmod/lmod/init/bash && \
 	module load cudatoolkit/12.2 && \
 	module load gcc-native/12.3 && \
-	rm -rf blasbuild && \
-	mkdir blasbuild && \
 	cd blasbuild && \
 	cmake $(CMAKE_ARGS) .. && \
 	cmake --build . && \
@@ -88,24 +89,24 @@ svmguide1:
 letter:
 	source /opt/cray/pe/lmod/lmod/init/bash && \
 	module load cudatoolkit/12.2 && \
-	salloc -N 4 -q interactive -t 00:01:00 -C gpu -G 16 -A m4341 \
-	srun -N 4 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 16 \
-	build/device_wrapper build/main -i data/letter -m 15000 -n 5000 -k 26
+	salloc -N 1 -q interactive -t 00:02:00 -C gpu -G 4 -A m4341 \
+	srun -N 1 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 4 \
+	blasbuild/device_wrapper blasbuild/main data/letter 15000 5000 26
 
 rand:
 	source /opt/cray/pe/lmod/lmod/init/bash && \
 	module load cudatoolkit/12.2 && \
-	salloc -N 1 -q interactive -t 00:01:00 -C gpu -G 4 -A m4341 \
-	srun -N 1 --ntasks-per-node 1 --cpus-per-task 32 --cpu-bind cores -G 1 \
-	build/device_wrapper build/main -i data/rand -m 70000 -n 64 -k 128
+	salloc -N 4 -q interactive -t 00:05:00 -C gpu -G 16 -A m4341 \
+	srun -N 4 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 16 \
+	blasbuild/device_wrapper blasbuild/main data/rand 70000 64 128
 
 profile:
 	source /opt/cray/pe/lmod/lmod/init/bash && \
 	module load cudatoolkit/12.2 && \
-	salloc -N 1 -q interactive -t 00:01:00 -C gpu -G 4 -A m4341 \
+	salloc -N 1 -q interactive -t 00:03:00 -C gpu -G 4 -A m4341 \
 	srun -N 1 --ntasks-per-node 1 --cpus-per-task 32 --cpu-bind cores -G 1 \
-	nsys profile --stats=true --cuda-memory-usage=true --trace=cuda,cublas,cusparse --output=/tmp/report \
-	build/device_wrapper build/main -i data/rand -m 70000 -n 64 -k 128
+	nsys profile --stats=true --cuda-memory-usage=true --trace=cuda,cublas,cusparse,nvtx --output=/tmp/report \
+	blasbuild/device_wrapper blasbuild/main data/letter 15000 5000 26
 
 compare:
 	@if [ -z "$(file)" ]; then \
@@ -114,4 +115,3 @@ compare:
 	@if ! cmp -l data/$(file)_py data/$(file)_out > data/$(file)_diffs.txt; then \
 		echo "Comparison failed: Differences found between data/$(file)_py and data/$(file)_out. See data/$(file)_diffs.txt for details."; \
 	fi
-

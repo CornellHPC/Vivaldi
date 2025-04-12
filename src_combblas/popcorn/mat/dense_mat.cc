@@ -134,7 +134,12 @@ DenseMat::DenseMat(std::unique_ptr<combblas::DnParMat<int64_t, DATA_TYPE>> M,
   // TODO: Populate the rest of the stuff
 }
 
-void DenseMat::to_combblas() {
+void DenseMat::to_combblas(double* cuda_memcpy_elapsed, double* non_memcpy_elapsed) {
+  // int rank, size;
+  // MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  // MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+  auto total_start = std::chrono::high_resolution_clock::now();
   assert(sm && "SLATE matrix must exist!");
 
   // Initialize CombBLAS communicator grid
@@ -148,6 +153,8 @@ void DenseMat::to_combblas() {
       std::make_unique<combblas::DnParMat<int64_t, DATA_TYPE>>(
           grid, sm->m(), sm->n(), (DATA_TYPE)0);
 
+  double memcpy_total = 0;
+
   // Copy the tiles 1-to-1
   for (int64_t j = 0; j < sm->nt(); ++j) {
     for (int64_t i = 0; i < sm->mt(); ++i) {
@@ -157,8 +164,10 @@ void DenseMat::to_combblas() {
 
         DATA_TYPE* src = tile.data();
         DATA_TYPE* dst = C->getarr().data();
+        auto memcpy_start = std::chrono::high_resolution_clock::now();
         cudaMemcpy(dst, src, sizeof(DATA_TYPE) * tile.size(),
                    cudaMemcpyDeviceToHost);
+        memcpy_total += get_time_elapsed(memcpy_start);
       }
     }
   }
@@ -169,6 +178,10 @@ void DenseMat::to_combblas() {
 
   // Save pointer to CombBLAS matrix
   cm = std::move(C);
+
+  auto total_elapsed = get_time_elapsed(total_start);
+  *cuda_memcpy_elapsed += memcpy_total;
+  *non_memcpy_elapsed += (total_elapsed - memcpy_total);
 }
 
 void DenseMat::apply(Kernel& k) {

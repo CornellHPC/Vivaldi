@@ -77,7 +77,7 @@ class SparseMat {
   /**
    * @param R is the right dense matrix
    */
-  DenseMat spmm(DenseMat& R);
+  DenseMat spmm(DenseMat& R, double* cuda_memcpy_elapsed, double* non_memcpy_elapsed, double* malloc_elapsed);
 
   /**
    * Prints the SparseMat to the provided output stream.

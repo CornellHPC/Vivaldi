@@ -1,3 +1,0 @@
-/global/homes/n/npi2/distributed-popcorn/blasbuild/CMakeFiles/rebuild_cache.dir
-/global/homes/n/npi2/distributed-popcorn/blasbuild/CMakeFiles/edit_cache.dir
-/global/homes/n/npi2/distributed-popcorn/blasbuild/CMakeFiles/main.dir

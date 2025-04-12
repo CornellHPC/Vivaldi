@@ -129,7 +129,7 @@ class DenseMat {
    * require point culling. It also assumes the matrix
    * is symmetric.
    */
-  void to_combblas();
+  void to_combblas(double* cuda_memcpy_elapsed, double* non_memcpy_elapsed);
 
   /**
    * Converts the CombBLAS representation to SLATE.

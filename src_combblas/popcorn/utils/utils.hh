@@ -5,6 +5,8 @@
 
 #include <chrono>
 
+#include <nvToolsExt.h>
+
 namespace popcorn {
 
 /**

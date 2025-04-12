@@ -211,22 +211,29 @@ void SparseMat::print(std::string prefix, std::ostream& out) {
   cm->PrintInfo();
 }
 
-DenseMat SparseMat::spmm(DenseMat& R) {
+DenseMat SparseMat::spmm(DenseMat& R, double* cuda_memcpy_elapsed, double* non_memcpy_elapsed, double* malloc_elapsed) {
   assert(cm && "Must have a CombBLAS sparse matrix!");
   assert((R.cm || R.sm) && "Must have a SLATE or CombBLAS dense matrix!");
 
   // Convert dense matrix to CombBLAS if
   // it is still in SLATE representation
   if (R.cm == nullptr)
-    R.to_combblas();
+    R.to_combblas(cuda_memcpy_elapsed, non_memcpy_elapsed);
+
+  auto start = std::chrono::high_resolution_clock::now();
 
   // Setup for SpMM
   std::unique_ptr<combblas::DnParMat<int64_t, DATA_TYPE>> O =
       std::make_unique<combblas::DnParMat<int64_t, DATA_TYPE>>();
   combblas::spmm_stats stats;
 
+  *non_memcpy_elapsed += get_time_elapsed(start);
+
   // Perform SpMM
   *O = combblas::SpMM_sC<SR>(*cm, *R.cm, stats);
+  (*cuda_memcpy_elapsed) += stats.cuda_memcpy_time;
+  (*malloc_elapsed) += stats.cuda_malloc_time;
+  (*non_memcpy_elapsed) += stats.non_memcpy_time;
 
   return DenseMat(std::move(O), R.comm);
 }
