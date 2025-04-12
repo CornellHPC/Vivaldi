@@ -34,6 +34,12 @@ def read_data(fname):
 
     return data
 
+def read_bin(path, n, d):
+    with open(path, 'rb') as file:
+        data = np.fromfile(file, dtype=np.float32, count=n * d)
+    data = data.reshape((n, d))
+    return data
+
 def polynomial_kernel(data, gamma, c, r):
     B = data @ data.T
     K = np.power(gamma * B + c, r)
@@ -61,11 +67,14 @@ def calculate_score(D, clusters):
 
 if __name__ == "__main__":
     fname = sys.argv[1]
-    k = int(sys.argv[2])
+    ofile = sys.argv[2]
+    n = int(sys.argv[3])
+    d = int(sys.argv[4])
+    k = int(sys.argv[5])
 
     # Read Data
-    data = read_data(fname)  # read data and construct matrix
-    n = data.shape[0]
+    data = read_bin(fname, n, d)  # read data and construct matrix
+    # n = data.shape[0]
 
     # model = KMeans(n_clusters=k, random_state=0, n_init='auto')
     # model.fit(data)
@@ -118,4 +127,5 @@ if __name__ == "__main__":
 
     clusters = clusters.astype(np.int32)
     print(clusters)
-    clusters.tofile("../data/" + fname + "_py")
+    clusters.tofile(ofile)
+    # clusters.tofile("../data/" + fname + "_py")
