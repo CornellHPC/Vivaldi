@@ -1,8 +1,9 @@
 # Makefile
 
-.PHONY: build alloc test small australian svmguide1 letter compare
+.PHONY: build blasbuild alloc test australian svmguide1 letter compare letter_combblas
 
-export SLATE_INSTALL := $(shell cd ~/slate/_install && pwd) # Change slate directory as necessary
+export SLATE_INSTALL := $(shell cd ~/slate/_install && pwd)
+export COMBBLAS_INSTALL := $(shell cd ~/CombBLAS/_install && pwd)
 export mpi := cray
 export blas := libsci
 export CXX := CC
@@ -23,7 +24,7 @@ ifeq ($(BASIC), 1)
 endif
 
 # Library for SLATE linkage
-CMAKE_ARGS += -DSLATE_INSTALL=$$SLATE_INSTALL
+CMAKE_ARGS += -DSLATE_INSTALL=$$SLATE_INSTALL -DCOMBBLAS_INSTALL=$$COMBBLAS_INSTALL
 
 build:
 	source /opt/cray/pe/lmod/lmod/init/bash && \
@@ -32,7 +33,24 @@ build:
 	rm -rf build && \
 	mkdir build && \
 	cd build && \
-	cmake $(CMAKE_ARGS) .. && \
+	cmake $(CMAKE_ARGS) ../src && \
+	cmake --build . && \
+	touch device_wrapper && \
+	chmod +x device_wrapper && \
+	echo '#!/bin/bash' >> device_wrapper && \
+	echo 'export CUDA_VISIBLE_DEVICES=$$SLURM_LOCALID' >> device_wrapper && \
+	echo 'exec $$*' >> device_wrapper && \
+	echo "Build finished!" && \
+	cd ..
+
+blasbuild:
+	source /opt/cray/pe/lmod/lmod/init/bash && \
+	module load cudatoolkit/12.2 && \
+	module load gcc-native/12.3 && \
+	rm -rf blasbuild && \
+	mkdir blasbuild && \
+	cd blasbuild && \
+	cmake $(CMAKE_ARGS) ../src_combblas && \
 	cmake --build . && \
 	touch device_wrapper && \
 	chmod +x device_wrapper && \
@@ -63,13 +81,6 @@ debug:
 	srun -N 1 --ntasks-per-node 1 --cpus-per-task 32 --cpu-bind cores -G 1 \
 	device_wrapper cuda-gdb test_exe
 
-small:
-	source /opt/cray/pe/lmod/lmod/init/bash && \
-	module load cudatoolkit/12.2 && \
-	salloc -N 1 -q interactive -t 00:01:00 -C gpu -G 4 -A m4341 \
-	srun -N 1 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 4 \
-	build/device_wrapper build/main -i data/small -m 11 -n 8 -k 2
-
 australian:
 	source /opt/cray/pe/lmod/lmod/init/bash && \
 	module load cudatoolkit/12.2 && \
@@ -90,6 +101,13 @@ letter:
 	salloc -N 4 -q interactive -t 00:01:00 -C gpu -G 16 -A m4341 \
 	srun -N 4 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 16 \
 	build/device_wrapper build/main -i data/letter -m 15000 -n 5000 -k 26
+
+letter_combblas:
+	source /opt/cray/pe/lmod/lmod/init/bash && \
+	module load cudatoolkit/12.2 && \
+	salloc -N 1 -q interactive -t 00:02:00 -C gpu -G 4 -A m4341 \
+	srun -N 1 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 4 \
+	blasbuild/device_wrapper blasbuild/main data/letter 15000 5000 26
 
 rand:
 	source /opt/cray/pe/lmod/lmod/init/bash && \
@@ -113,4 +131,3 @@ compare:
 	@if ! cmp -l data/$(file)_py data/$(file)_out > data/$(file)_diffs.txt; then \
 		echo "Comparison failed: Differences found between data/$(file)_py and data/$(file)_out. See data/$(file)_diffs.txt for details."; \
 	fi
-

@@ -31,7 +31,7 @@ if(NOT IS_DIRECTORY "${SLATE_INSTALL}")
 endif()
 
 # Executable
-file(GLOB SOURCES "src/main.cc" "src/**/*.cu" "src/**/*.cc" "src/cpop/**/*.cu" "src/cpop/**/*.cc")
+file(GLOB SOURCES "main.cc" "**/*.cu" "**/*.cc" "cpop/**/*.cu" "cpop/**/*.cc")
 add_executable(main ${SOURCES})
 
 # Compile definitions
@@ -44,7 +44,7 @@ endif()
 
 # Test
 enable_testing()
-file(GLOB SOURCES "src/test.cc" "src/**/*.cu" "src/**/*.cc" "src/cpop/**/*.cu" "src/cpop/**/*.cc")
+file(GLOB SOURCES "test.cc" "**/*.cu" "**/*.cc" "cpop/**/*.cu" "cpop/**/*.cc")
 add_executable(test_exe ${SOURCES})
 add_test(cluster_test test_exe)
 
