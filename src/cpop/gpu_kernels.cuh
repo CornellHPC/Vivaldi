@@ -59,6 +59,19 @@ void launch_reinit_kernel(float* V_global_values, int* global_assignments,
                           bool sparse);
 
 /**
+  * @brief Launches the cluster score kernel, which computes the sum of squared distance
+  *
+  * @param local_scores The output length t vector of individual point distances
+  * @param dK Offset into K matrix
+  * @param dE Pointer to E matrix
+  * @param dc Pointer to c vector
+  * @param local_assignments Pointer to cluster assignments
+  * @param t The tile width
+  */
+void launch_score_kernel(float* local_scores, float* dK, float* dE, float* dc,
+                         int* local_assignments, int64_t t);
+
+/**
  * @brief Compares two assignments vectors for exact equality
  * 
  * @param assignments Assignments vector to compare

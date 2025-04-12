@@ -100,8 +100,9 @@ struct Timer {
    * @brief Save all benchmarked values to file.
    * 
    * @param path filename
+   * @param score cluster score
    */
-  void save_all(const char* path);
+  void save_all(const char* path, float score);
 };
 
 class Handle {

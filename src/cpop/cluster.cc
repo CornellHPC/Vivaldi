@@ -460,4 +460,24 @@ int reinit_V(DnMat_t& E, DnVec_t& c, V_t& V) {
   return EXIT_SUCCESS;
 }
 
+float compute_cluster_score(DnMat_t& K, DnMat_t& E, DnVec_t& c, V_t& V) {
+  float* local_scores = (float*)malloc(V.t * sizeof(float));
+  float* _local_scores;
+  cudaMalloc(&_local_scores, V.t * sizeof(float));
+
+  int row_offset = V.t_sizes[0] * V.rank;
+  launch_score_kernel(_local_scores, K.dM + (row_offset * V.t), E.dM, c.dz,
+                      V.local_assignments, V.t);
+
+  float score, local_score = 0;
+  for (int i = 0; i < V.t; ++i) {
+    local_score += local_scores[i];
+  }
+
+  MPI_Allreduce(&local_score, &score, 1, MPI_FLOAT, MPI_SUM, V.comm);
+  free(local_scores);
+  cudaFree(_local_scores);
+  return score;
+}
+
 }  // namespace cpop

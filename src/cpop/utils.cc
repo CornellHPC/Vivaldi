@@ -54,7 +54,8 @@ ArgParse::ArgParse(int argc, char* argv[]) {
       "path for benchmarked times, default to \"[path]_time\"")(
       "niter", po::value<int>()->default_value(100), "number of iterations")(
       "convergence", po::value<int>()->default_value(0),
-      "enable convergence check (1 for basic, 2 for process-exclusion-based-convergence)");
+      "enable convergence check (1 for basic, 2 for "
+      "process-exclusion-based-convergence)");
 
   // Parse command line arguments
   po::variables_map vm;
@@ -122,7 +123,7 @@ void Timer::save_elapsed(const char* path) {
   std::cout << "-------------------" << std::endl;
 }
 
-void Timer::save_all(const char* path) {
+void Timer::save_all(const char* path, float score) {
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   if (rank != 0)
@@ -147,6 +148,7 @@ void Timer::save_all(const char* path) {
   file << "VR Computation: " << vr_computation << std::endl;
   file << "Elapsed: " << elapsed << std::endl;
   file << "Iterations before convergence: " << niter << std::endl;
+  file << "Cluster score: " << score << std::endl;
   if (dead_proc_counts != nullptr) {
     file << "Dead process counts: ";
     for (int i = 0; i < niter; ++i) {
@@ -173,6 +175,7 @@ void Timer::save_all(const char* path) {
   std::cout << "VR Computation: " << vr_computation << " ms" << std::endl;
   std::cout << "Elapsed: " << elapsed << " ms" << std::endl;
   std::cout << "Iterations before convergence: " << niter << std::endl;
+  std::cout << "Cluster score: " << score << std::endl;
   std::cout << "Results saved to: " << path << std::endl;
   std::cout << "-------------------" << std::endl;
 }

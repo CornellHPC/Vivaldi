@@ -219,6 +219,16 @@ int set_V_from_assignments(DnMat_t& E, DnVec_t& c, V_t& V);
  */
 int reinit_V(DnMat_t& E, DnVec_t& c, V_t& V);
 
+/**
+ * @brief Computes the final cluster score
+ *
+ * @param K The K matrix
+ * @param D The D matrix
+ * @param c The c vector
+ * @param V The V matrix
+ */
+float compute_cluster_score(DnMat_t& K, DnMat_t& E, DnVec_t& c, V_t& V);
+
 }  // namespace cpop
 
 #endif  // CPOP_COMPUTE_C_HH

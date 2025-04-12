@@ -142,7 +142,7 @@ int cluster(ArgParse args, MPI_Comm comm) {
   /** Save and exit */
   MPI_Barrier(comm);
   timer.elapsed = get_time_elapsed(start);
-  timer.save_all(args.benchmark.c_str());
+  timer.save_all(args.benchmark.c_str(), compute_cluster_score(K, E, c, V));
   V.save(args.output.c_str());
   return EXIT_SUCCESS;
 }

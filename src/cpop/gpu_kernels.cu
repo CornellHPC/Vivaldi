@@ -119,6 +119,16 @@ __global__ void reinit_kernel(float* V_global_values, int* global_assignments,
   }
 }
 
+__global__ void score_kernel(float* local_scores, float* dK, float* dE,
+                             float* dc, int* local_assignments, int64_t t) {
+  for (int64_t i = blockIdx.x * blockDim.x + threadIdx.x; i < t;
+       i += blockDim.x * gridDim.x) {
+    int a = local_assignments[i];
+    local_scores[i] = dK[t * i + i] - 2 * dE[t * a + i] + dc[a];
+    local_scores[i] *= local_scores[i];
+  }
+}
+
 namespace cpop {
 
 void launch_polynomial_kernel(int64_t m, int64_t n, float* B, float gamma,
@@ -177,6 +187,20 @@ void launch_reinit_kernel(float* V_global_values, int* global_assignments,
   int nblocks = std::min(int64_t(1048576), (m + nthreads - 1) / nthreads);
   reinit_kernel<<<nblocks, nthreads>>>(V_global_values, global_assignments,
                                        global_cluster_sizes, k, m, sparse);
+}
+
+void launch_score_kernel(float* local_scores, float* dK, float* dE, float* dc,
+                         int* local_assignments, int64_t t) {
+  if (t == 0)
+    return;
+
+  // 1024 max threads for current CUDA compute capability (<= 7.5)
+  // 16x16 blocks, with upwards round for more coverage
+  // block cap is set to prevent overflow
+  int nthreads = 256;
+  int nblocks = std::min(int64_t(1048576), (t + nthreads - 1) / nthreads);
+  score_kernel<<<nblocks, nthreads>>>(local_scores, dK, dE, dc,
+                                      local_assignments, t);
 }
 
 bool test_convergence_equality(int* assignments, int* prev_assignments,
