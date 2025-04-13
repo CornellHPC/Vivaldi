@@ -1,4 +1,4 @@
-# ClusterPop Experimentation
+# Kettlecorn Experimentation
 
 ## Installation
 
