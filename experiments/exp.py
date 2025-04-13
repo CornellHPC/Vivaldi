@@ -601,7 +601,7 @@ def construct_graphs():
             ax.set_title(f"{input_dataset_name.capitalize()} Dataset")
             ax.set_xlabel("Number of GPUs (P)")
             ax.set_xticks(P)
-            ax.minorticks_off()
+            # ax.minorticks_off()
             ax.set_xticklabels(P)
             if idx == 0:
                 ax.set_ylabel("Average Time (ms)")
@@ -609,6 +609,58 @@ def construct_graphs():
         # plt.suptitle("Strong Scaling Across Datasets")
         plt.tight_layout(rect=[0, 0, 1, 0.95])
         plt.savefig(f"graphs/strong_scaling_{base_m}.png")
+
+    # construct strong scaling graph (minus K)
+    for base_m in BASE_M:
+        fig, axs = plt.subplots(1, 3, figsize=(18, 4), sharey=True)
+        niter = 100
+        gamma = 1
+        c = 1
+        r = 2
+        basic = True
+        for idx, input_dataset in enumerate(DATASETS):
+            input_dataset_name = input_dataset["name"]
+            ax = axs[idx]
+            d = input_dataset["d"]
+            convergence = 0
+            m = 2 * base_m
+            for k_idx, k in enumerate([2, 5, 10, 50, 100]):
+                color = CMAP(k_idx / 4)  # Use a colormap for different k values
+                dataset_symbol = MARKERS[k_idx]  # Different marker for each k value
+                y = []
+                sparse = int(k > 32)
+                for p in P:
+                    scaling_data = get_scaling_data(
+                        unique_id,
+                        "s",
+                        p,
+                        m,
+                        d,
+                        k,
+                        niter,
+                        sparse,
+                        gamma,
+                        c,
+                        r,
+                        convergence,
+                        basic,
+                        input_dataset_name,
+                    )
+                    y.append(np.average(scaling_data["Elapsed"]-scaling_data["K"]))
+                ax.plot(P, y, label=f"k={k}", marker=dataset_symbol, color=color)
+            ax.set_xscale("log")
+            ax.set_yscale("log")
+            ax.set_title(f"{input_dataset_name.capitalize()} Dataset")
+            ax.set_xlabel("Number of GPUs (P)")
+            ax.set_xticks(P)
+            # ax.minorticks_off()
+            ax.set_xticklabels(P)
+            if idx == 0:
+                ax.set_ylabel("Average Time (ms)")
+            ax.legend(loc="upper right")
+        # plt.suptitle("Strong Scaling Across Datasets")
+        plt.tight_layout(rect=[0, 0, 1, 0.95])
+        plt.savefig(f"graphs/strong_scaling_minus_k_{base_m}.png")
 
     # construct weak scaling graph
     base_m = 64000 # only ran this test with 64K baseline
@@ -710,7 +762,7 @@ def construct_graphs():
             ax.set_title(f"{input_dataset_name.capitalize()} Dataset")
             ax.set_xlabel("Number of GPUs (P)")
             ax.set_xticks(P)
-            ax.minorticks_off()
+            # ax.minorticks_off()
             ax.set_xticklabels(P)
             if idx == 0:
                 ax.set_ylabel("Average Time (ms)")
@@ -746,8 +798,8 @@ def construct_graphs():
                     ax.set_xlabel("Number of GPUs (p)")
                     ax.set_xticks(x_positions)
                     ax.set_xticklabels(P)
-                    ax.set_yscale("log")
-                    ax.minorticks_off()
+                    # ax.set_yscale("log")
+                    # ax.minorticks_off()
                     sparse = int(k > 32)
                     for p_idx, p in enumerate(P):
                         weak_m = min(
@@ -830,8 +882,8 @@ def construct_graphs():
         ax.set_xlabel("Number of GPUs (p)")
         ax.set_xticks(x_positions)
         ax.set_xticklabels(P)
-        ax.set_yscale("log")
-        ax.minorticks_off()
+        # ax.set_yscale("log")
+        # ax.minorticks_off()
         sparse = int(k > 32)
         for p_idx, p in enumerate(P):
             weak_m = min(
