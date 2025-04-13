@@ -1,0 +1,60 @@
+// C++ standard imports
+#include <cmath>
+#include <iostream>
+
+// Library imports
+#include <cuda_runtime.h>
+#include <mpi.h>
+
+// Local imports
+#include "utils.hh"
+
+void popcorn::wake_gpus(int myrank) {
+  int ndevices;
+  cudaGetDeviceCount(&ndevices);
+  if (myrank == 0) {
+    std::cout << "Number of GPUs per node " << ndevices << "\n" << std::flush;
+    std::cout << "Waking the GPUs..." << std::flush;
+  }
+  int ts = 0;
+  for (int i = 0; i < ndevices; ++i) {
+    cudaSetDevice(i);
+    int* array;
+    int* dArray;
+    int count = 7;
+    int size = count * sizeof(int);
+    array = new int[count];
+    for (int j = 0; j < count; j += 1)
+      array[j] = j;
+    cudaMalloc(&dArray, size);
+    cudaMemcpy(dArray, array, size, cudaMemcpyHostToDevice);
+    cudaFree(dArray);
+    delete[] array;
+  }
+  if (myrank == 0)
+    std::cout << " DONE!\n" << std::flush;
+}
+
+int popcorn::square_grid_dim(MPI_Comm comm) {
+  int size;
+  MPI_Comm_size(comm, &size);
+  return std::floor(std::sqrt(size));
+}
+
+bool popcorn::is_square_grid(MPI_Comm comm) {
+  int size, sr;
+  MPI_Comm_size(comm, &size);
+  sr = square_grid_dim(comm);
+  return sr * sr == size;
+}
+
+int popcorn::tile_dim(MPI_Comm comm, int x) {
+  int p = square_grid_dim(comm);
+  return (x / p) + ((x % p == 0) ? 0 : 1);
+}
+
+int64_t popcorn::get_time_elapsed(std::chrono::_V2::system_clock::time_point start) {
+  return std::chrono::duration_cast<std::chrono::milliseconds>(
+             std::chrono::high_resolution_clock::now() - start)
+      .count();
+}

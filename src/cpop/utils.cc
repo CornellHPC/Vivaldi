@@ -148,7 +148,7 @@ void Timer::save_all(const char* path, float score) {
   file << "VR Computation: " << vr_computation << std::endl;
   file << "Elapsed: " << elapsed << std::endl;
   file << "Iterations before convergence: " << niter << std::endl;
-  file << "Cluster score: " << score << std::endl;
+  // file << "Cluster score: " << score << std::endl;
   if (dead_proc_counts != nullptr) {
     file << "Dead process counts: ";
     for (int i = 0; i < niter; ++i) {
@@ -175,7 +175,7 @@ void Timer::save_all(const char* path, float score) {
   std::cout << "VR Computation: " << vr_computation << " ms" << std::endl;
   std::cout << "Elapsed: " << elapsed << " ms" << std::endl;
   std::cout << "Iterations before convergence: " << niter << std::endl;
-  std::cout << "Cluster score: " << score << std::endl;
+  // std::cout << "Cluster score: " << score << std::endl;
   std::cout << "Results saved to: " << path << std::endl;
   std::cout << "-------------------" << std::endl;
 }

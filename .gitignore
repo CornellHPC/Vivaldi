@@ -1,11 +1,15 @@
 build*
+blasbuild*
 out
 slate
 CombBLAS
 .vscode
 venv
+scripts
 data/*_out
+data/*_out_conv
 data/*_py
+data/*_time
 data/*_diffs.txt
 experiments/data
 experiments/logs
