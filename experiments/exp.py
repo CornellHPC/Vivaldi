@@ -27,6 +27,7 @@ DATASETS = [
         "zip_fname": "data/poker.t.bz2",
         "url": "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass/poker.t.bz2",
         "name": "poker",
+        "label": "Poker",
         "m": "999936",
         "d": "10",
         "k": "10",
@@ -37,6 +38,7 @@ DATASETS = [
         "zip_fname": "data/HIGGS.xz",
         "url": "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/HIGGS.xz",
         "name": "higgs",
+        "label": "HIGGS",
         "m": "11000000",
         "d": "28",
         "k": "2",
@@ -47,6 +49,7 @@ DATASETS = [
         "zip_fname": "data/mnist8m.scale.xz",
         "url": "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass/mnist8m.scale.xz",
         "name": "mnist8m",
+        "label": "MNIST8m",
         "m": "1120000",
         "d": "784",
         "k": "10",
@@ -56,6 +59,7 @@ DATASETS = [
 RANDOM_DATASET = {
     "bin_fname": "data/rand.bin",
     "name": "rand",
+    "label": "Synthetic",
     "m": "1024000",
     "d": "1024",
 }
@@ -568,6 +572,7 @@ def construct_graphs():
         basic = True
         for idx, input_dataset in enumerate(DATASETS):
             input_dataset_name = input_dataset["name"]
+            input_dataset_label = input_dataset["label"]
             ax = axs[idx]
             d = input_dataset["d"]
             convergence = 0
@@ -598,8 +603,8 @@ def construct_graphs():
                 ax.plot(P, y, label=f"k={k}", marker=dataset_symbol, color=color)
             ax.set_xscale("log")
             ax.set_yscale("log")
-            ax.set_title(f"{input_dataset_name.capitalize()} Dataset")
-            ax.set_xlabel("Number of GPUs (P)")
+            ax.set_title(f"{input_dataset_label} Strong Scaling")
+            ax.set_xlabel("Number of GPUs (p)")
             ax.set_xticks(P)
             # ax.minorticks_off()
             ax.set_xticklabels(P)
@@ -620,6 +625,7 @@ def construct_graphs():
         basic = True
         for idx, input_dataset in enumerate(DATASETS):
             input_dataset_name = input_dataset["name"]
+            input_dataset_label = input_dataset["label"]
             ax = axs[idx]
             d = input_dataset["d"]
             convergence = 0
@@ -650,8 +656,8 @@ def construct_graphs():
                 ax.plot(P, y, label=f"k={k}", marker=dataset_symbol, color=color)
             ax.set_xscale("log")
             ax.set_yscale("log")
-            ax.set_title(f"{input_dataset_name.capitalize()} Dataset")
-            ax.set_xlabel("Number of GPUs (P)")
+            ax.set_title(f"{input_dataset_label} Strong Scaling")
+            ax.set_xlabel("Number of GPUs (p)")
             ax.set_xticks(P)
             # ax.minorticks_off()
             ax.set_xticklabels(P)
@@ -672,6 +678,7 @@ def construct_graphs():
     basic = True
     input_dataset = RANDOM_DATASET
     input_dataset_name = input_dataset["name"]
+    input_dataset_label = input_dataset["label"]
     convergence = 0
     fig, ax = plt.subplots()
     for k_idx, k in enumerate([2, 5, 10, 50, 100]):
@@ -704,10 +711,10 @@ def construct_graphs():
             )
             y.append(np.average(scaling_data["Elapsed"]))
         ax.plot(P, y, label=f"k={k}", marker=dataset_symbol, color=color)
-    plt.title("Synthetic Dataset")
+    plt.title(f"{input_dataset_label} Weak Scaling")
     plt.xscale("log")
     plt.yscale("log")
-    plt.xlabel("Number of GPUs (P)")
+    plt.xlabel("Number of GPUs (p)")
     ax.set_xticks(P)
     ax.set_xticklabels(P)
     # plt.minorticks_off()
@@ -715,7 +722,7 @@ def construct_graphs():
     plt.legend(loc="upper left")
     plt.savefig(f"graphs/weak_scaling_{base_m}.png")
 
-    # construct variant weak scaling graph
+    # construct weak scaling variant graph
     for base_m in BASE_M:
         fig, axs = plt.subplots(1, 3, figsize=(18, 4), sharey=True)
         niter = 100
@@ -725,6 +732,7 @@ def construct_graphs():
         basic = True
         for idx, input_dataset in enumerate(DATASETS):
             input_dataset_name = input_dataset["name"]
+            input_dataset_label = input_dataset["label"]
             ax = axs[idx]
             d = input_dataset["d"]
             convergence = 0
@@ -759,8 +767,8 @@ def construct_graphs():
                 ax.plot(P, y, label=f"k={k}", marker=dataset_symbol, color=color)
             ax.set_xscale("log")
             ax.set_yscale("log")
-            ax.set_title(f"{input_dataset_name.capitalize()} Dataset")
-            ax.set_xlabel("Number of GPUs (P)")
+            ax.set_title(f"{input_dataset_label} Weak Scaling Variant")
+            ax.set_xlabel("Number of GPUs (p)")
             ax.set_xticks(P)
             # ax.minorticks_off()
             ax.set_xticklabels(P)
@@ -781,9 +789,10 @@ def construct_graphs():
 
         for scaling_type in ["s", "w"]:
             fig, axs = plt.subplots(1, 3, figsize=(18, 4), sharey=True)
-            scaling_type_name = "Strong" if scaling_type == "s" else "Variant Weak"
+            scaling_type_name = "Strong Scaling" if scaling_type == "s" else "Weak Scaling Variant"
             for dataset_idx, input_dataset in enumerate(DATASETS):
                 input_dataset_name = input_dataset["name"]
+                input_dataset_label = input_dataset["label"]
                 if input_dataset_name != "mnist8m":
                     continue
                 d = input_dataset["d"]
@@ -794,7 +803,7 @@ def construct_graphs():
                     x_positions = np.arange(len(P))
                     bar_offset = 0
                     ax = axs[k_idx]
-                    ax.set_title(f"MNIST8m {scaling_type_name} Scaling Breakdown (k={k})")
+                    ax.set_title(f"{input_dataset_label} {scaling_type_name} Breakdown (k={k})")
                     ax.set_xlabel("Number of GPUs (p)")
                     ax.set_xticks(x_positions)
                     ax.set_xticklabels(P)
@@ -864,7 +873,7 @@ def construct_graphs():
             axs[0].legend(loc="upper left", title="Routines")
             plt.tight_layout()
             # plt.subplots_adjust(hspace=0, wspace=0, bottom=0.2, left=0)
-            plt.savefig(f"graphs/{scaling_type_name.lower().replace(' ', '_')}_scaling_breakdown_{base_m}.png")
+            plt.savefig(f"graphs/{scaling_type_name.lower().replace(' ', '_')}_breakdown_{base_m}.png")
 
     # construct weak scaling breakdown
     base_m = 64000 # only ran this test with 64k baseline
@@ -872,13 +881,14 @@ def construct_graphs():
     scaling_type_name = "Weak"
     input_dataset = RANDOM_DATASET
     input_dataset_name = input_dataset["name"]
+    input_dataset_label = input_dataset["label"]
     convergence = 0
     for k_idx, k in enumerate([2, 50, 100]):
         bar_width = 0.5
         x_positions = np.arange(len(P))
         bar_offset = 0
         ax = axs[k_idx]
-        ax.set_title(f"Synthetic {scaling_type_name} Scaling Breakdown (k={k})")
+        ax.set_title(f"{input_dataset_label} {scaling_type_name} Scaling Breakdown (k={k})")
         ax.set_xlabel("Number of GPUs (p)")
         ax.set_xticks(x_positions)
         ax.set_xticklabels(P)
