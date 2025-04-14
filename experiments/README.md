@@ -101,5 +101,5 @@ stores and fetches data from `$PSCRATCH` directory instead of `data` directory,
 but `$PSCRATCH` can be replaced with `data` if you have already downloaded and prepared the data
 from `exp.py`.
 
-Running `python exp.py create_scripts` will generate three strong scaling scripts
+Running `python exp_combblas.py create_scripts` will generate three strong scaling scripts
 for `p=16,64,256`, which can be run with `sbatch scripts/exp__16_0.sh` for example.
