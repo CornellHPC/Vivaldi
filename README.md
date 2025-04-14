@@ -76,7 +76,7 @@ Build with `make build`. Relevant options are
 
 ## Makefile: Testing
 
-Before you proceed, please replace ACCOUNT in Makefile with your account id for your project.
+**Before you proceed, please replace ACCOUNT in Makefile with your account id for your project.**
 
 * `make alloc` requests interactive compute session on your cluster
 
@@ -89,7 +89,9 @@ Naive testing on smaller datasets can be done with:
 * `make rand` (70k points, 64 features, 128 clusters, Sparse V)
 * You may append `--convergence=1` at the end ofin the Makefile to run with convergence
 
-All of these tests launch their own allocated interactive session. Svmguide1 and Letter request 16 GPUs while the others request 4 GPUs, where 1 node has 4 GPUs. Note that these commands may need to be modified according to the architecture of the cluster you run on. More rigorous scaling testing should be done from within the `experiments` folder (for more, see the README there). Rigorous scaling testing must not use the interactive session and or convergence checking.
+All of these tests launch their own allocated interactive session. Svmguide1 and Letter request 16 GPUs while the others request 4 GPUs, where 1 node has 4 GPUs. Note that these commands may need to be modified according to the architecture of the cluster you run on. 
+
+More rigorous scaling testing should be done from within the `experiments` folder (for more, see the [README](experiments/README.md) there). Rigorous scaling testing must not use the interactive session and or convergence checking.
 
 * use `--convergence=1` in the Makefile to run with convergence
 (ex: build/device_wrapper build/main -i data/letter -m 690 -n 14 -k 2 --convergence=1)
@@ -99,9 +101,3 @@ All of these tests launch their own allocated interactive session. Svmguide1 and
 
 ### Additional Profiling
 * `make profile` launches nsys profiling on rand on 1 GPU
-
-### Correctness Testing
-
-Correctness testing can be done with `make compare`. Todo
-
-
