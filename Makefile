@@ -15,7 +15,7 @@ export OMP_NUM_THREADS := 1
 export OMP_PLACES := threads
 export OMP_PROC_BIND := spread
 
-ACCOUNT = m4341
+ACCOUNT = mXXXX
 
 # CMake arguments
 CMAKE_ARGS :=
