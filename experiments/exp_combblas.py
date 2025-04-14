@@ -111,7 +111,7 @@ def create_file_text(
         f.write(request_p_prefix(p, nodes, log_dir, s_name) + "\n")
         f.write("export DVS_MAXNODES=1__\n")
         f.write(
-            f'export EXE_PATH="{experiments_dir}/blasbuild/device_wrapper {experiments_dir}/blasbuild/main"\n'
+            f'export EXE_PATH="{experiments_dir}/../blasbuild/device_wrapper {experiments_dir}/../blasbuild/main"\n'
         )
         f.write("module load cudatoolkit/12.2\n")
         niter = 100  # max niter is always fixed at 100

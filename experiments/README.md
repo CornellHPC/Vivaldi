@@ -93,3 +93,13 @@ The `results` folder contains the timing and assignments for basic tests. Each f
 
 These names are decided automatically by the `create_scripts` routine, so we don't have to manually adjust any of these parameters. The result files are suffixed by `_assignments` (for the actual point assignment data), and `_time_i` (for the timing breakdown). `_time_i` is the more useful of the two, and is used to generate graphs/tables for the paper.
 
+
+## CombBLAS Implementation Testing
+We also provide `exp_combblas.py` for generating strong scaling test scripts
+for testing the alternative CombBLAS implementation. Note that this script
+stores and fetches data from `$PSCRATCH` directory instead of `data` directory,
+but `$PSCRATCH` can be replaced with `data` if you have already downloaded and prepared the data
+from `exp.py`.
+
+Running `python exp.py create_scripts` will generate three strong scaling scripts
+for `p=16,64,256`, which can be run with `sbatch scripts/exp__16_0.sh` for example.

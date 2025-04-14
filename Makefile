@@ -15,6 +15,8 @@ export OMP_NUM_THREADS := 1
 export OMP_PLACES := threads
 export OMP_PROC_BIND := spread
 
+ACCOUNT = m4341
+
 # CMake arguments
 CMAKE_ARGS :=
 
@@ -62,64 +64,48 @@ blasbuild:
 
 alloc:
 	@if [ -z "$$SLURM_JOB_ID" ]; then\
-		salloc -N 4 -q interactive -t 01:00:00 -C gpu -G 16 -A m4341;\
+		salloc -N 4 -q interactive -t 01:00:00 -C gpu -G 16 -A $(ACCOUNT);\
 	fi
-
-test:
-	source /opt/cray/pe/lmod/lmod/init/bash && \
-	module load cudatoolkit/12.2 && \
-	cd build && \
-	salloc -N 1 -q interactive -t 00:01:00 -C gpu -G 4 -A m4341 \
-	srun -N 1 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 4 \
-	device_wrapper ctest --output-on-failure -O /tmp/output test_exe
-
-debug:
-	source /opt/cray/pe/lmod/lmod/init/bash && \
-	module load cudatoolkit/12.2 && \
-	cd build && \
-	salloc -N 1 -q interactive -t 01:00:00 -C gpu -G 4 -A m4341 \
-	srun -N 1 --ntasks-per-node 1 --cpus-per-task 32 --cpu-bind cores -G 1 \
-	device_wrapper cuda-gdb test_exe
 
 australian:
 	source /opt/cray/pe/lmod/lmod/init/bash && \
 	module load cudatoolkit/12.2 && \
-	salloc -N 1 -q interactive -t 00:01:00 -C gpu -G 4 -A m4341 \
+	salloc -N 1 -q interactive -t 00:01:00 -C gpu -G 4 -A $(ACCOUNT) \
 	srun -N 1 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 4 \
 	build/device_wrapper build/main -i data/australian -m 690 -n 14 -k 2
 
 svmguide1:
 	source /opt/cray/pe/lmod/lmod/init/bash && \
 	module load cudatoolkit/12.2 && \
-	salloc -N 4 -q interactive -t 00:01:00 -C gpu -G 16 -A m4341 \
+	salloc -N 4 -q interactive -t 00:01:00 -C gpu -G 16 -A $(ACCOUNT) \
 	srun -N 4 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 16 \
 	build/device_wrapper build/main -i data/svmguide1 -m 3089 -n 4 -k 2
 
 letter:
 	source /opt/cray/pe/lmod/lmod/init/bash && \
 	module load cudatoolkit/12.2 && \
-	salloc -N 4 -q interactive -t 00:01:00 -C gpu -G 16 -A m4341 \
+	salloc -N 4 -q interactive -t 00:01:00 -C gpu -G 16 -A $(ACCOUNT) \
 	srun -N 4 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 16 \
 	build/device_wrapper build/main -i data/letter -m 15000 -n 5000 -k 26
 
 letter_combblas:
 	source /opt/cray/pe/lmod/lmod/init/bash && \
 	module load cudatoolkit/12.2 && \
-	salloc -N 1 -q interactive -t 00:02:00 -C gpu -G 4 -A m4341 \
-	srun -N 1 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 4 \
+	salloc -N 4 -q interactive -t 00:02:00 -C gpu -G 16 -A $(ACCOUNT) \
+	srun -N 4 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 16 \
 	blasbuild/device_wrapper blasbuild/main data/letter 15000 5000 26
 
 rand:
 	source /opt/cray/pe/lmod/lmod/init/bash && \
 	module load cudatoolkit/12.2 && \
-	salloc -N 1 -q interactive -t 00:01:00 -C gpu -G 4 -A m4341 \
-	srun -N 1 --ntasks-per-node 1 --cpus-per-task 32 --cpu-bind cores -G 1 \
+	salloc -N 1 -q interactive -t 00:01:00 -C gpu -G 4 -A $(ACCOUNT) \
+	srun -N 1 --ntasks-per-node 1 --cpus-per-task 32 --cpu-bind cores -G 4 \
 	build/device_wrapper build/main -i data/rand -m 70000 -n 64 -k 128
 
 profile:
 	source /opt/cray/pe/lmod/lmod/init/bash && \
 	module load cudatoolkit/12.2 && \
-	salloc -N 1 -q interactive -t 00:01:00 -C gpu -G 4 -A m4341 \
+	salloc -N 1 -q interactive -t 00:01:00 -C gpu -G 4 -A $(ACCOUNT) \
 	srun -N 1 --ntasks-per-node 1 --cpus-per-task 32 --cpu-bind cores -G 1 \
 	nsys profile --stats=true --cuda-memory-usage=true --trace=cuda,cublas,cusparse --output=/tmp/report \
 	build/device_wrapper build/main -i data/rand -m 70000 -n 64 -k 128
