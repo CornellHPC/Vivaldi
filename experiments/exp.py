@@ -668,7 +668,7 @@ def construct_graphs():
         plt.tight_layout(rect=[0, 0, 1, 0.95])
         plt.savefig(f"graphs/strong_scaling_minus_k_{base_m}.png")
 
-    # construct weak scaling graph
+    # construct weak scaling variant graph
     base_m = 64000 # only ran this test with 64K baseline
     plt.figure(figsize=(6, 4))
     niter = 100
@@ -711,7 +711,7 @@ def construct_graphs():
             )
             y.append(np.average(scaling_data["Elapsed"]))
         ax.plot(P, y, label=f"k={k}", marker=dataset_symbol, color=color)
-    plt.title(f"{input_dataset_label} Weak Scaling")
+    plt.title(f"{input_dataset_label} Weak Scaling Variant")
     plt.xscale("log")
     plt.yscale("log")
     plt.xlabel("Number of GPUs (p)")
@@ -720,9 +720,9 @@ def construct_graphs():
     # plt.minorticks_off()
     plt.ylabel("Average Time (ms)")
     plt.legend(loc="upper left")
-    plt.savefig(f"graphs/weak_scaling_{base_m}.png")
+    plt.savefig(f"graphs/weak_scaling_variant_{base_m}.png")
 
-    # construct weak scaling variant graph
+    # construct weak scaling graph
     for base_m in BASE_M:
         fig, axs = plt.subplots(1, 3, figsize=(18, 4), sharey=True)
         niter = 100
@@ -767,7 +767,7 @@ def construct_graphs():
                 ax.plot(P, y, label=f"k={k}", marker=dataset_symbol, color=color)
             ax.set_xscale("log")
             ax.set_yscale("log")
-            ax.set_title(f"{input_dataset_label} Weak Scaling Variant")
+            ax.set_title(f"{input_dataset_label} Weak Scaling")
             ax.set_xlabel("Number of GPUs (p)")
             ax.set_xticks(P)
             # ax.minorticks_off()
@@ -777,9 +777,9 @@ def construct_graphs():
             ax.legend(loc="upper left")
         # plt.suptitle("Strong Scaling Across Datasets")
         plt.tight_layout(rect=[0, 0, 1, 0.95])
-        plt.savefig(f"graphs/variant_weak_scaling_{base_m}.png")
+        plt.savefig(f"graphs/weak_scaling_{base_m}.png")
 
-    # construct strong and variant weak scaling breakdown graphs
+    # construct strong and weak scaling breakdown graphs
     for base_m in BASE_M:
         niter = 100
         gamma = 1
@@ -789,7 +789,7 @@ def construct_graphs():
 
         for scaling_type in ["s", "w"]:
             fig, axs = plt.subplots(1, 3, figsize=(18, 4), sharey=True)
-            scaling_type_name = "Strong Scaling" if scaling_type == "s" else "Weak Scaling Variant"
+            scaling_type_name = "Strong" if scaling_type == "s" else "Weak"
             for dataset_idx, input_dataset in enumerate(DATASETS):
                 input_dataset_name = input_dataset["name"]
                 input_dataset_label = input_dataset["label"]
@@ -803,7 +803,7 @@ def construct_graphs():
                     x_positions = np.arange(len(P))
                     bar_offset = 0
                     ax = axs[k_idx]
-                    ax.set_title(f"{input_dataset_label} {scaling_type_name} Breakdown (k={k})")
+                    ax.set_title(f"{input_dataset_label} {scaling_type_name} Scaling Breakdown (k={k})")
                     ax.set_xlabel("Number of GPUs (p)")
                     ax.set_xticks(x_positions)
                     ax.set_xticklabels(P)
@@ -873,12 +873,12 @@ def construct_graphs():
             axs[0].legend(loc="upper left", title="Routines")
             plt.tight_layout()
             # plt.subplots_adjust(hspace=0, wspace=0, bottom=0.2, left=0)
-            plt.savefig(f"graphs/{scaling_type_name.lower().replace(' ', '_')}_breakdown_{base_m}.png")
+            plt.savefig(f"graphs/{scaling_type_name.lower().replace(' ', '_')}_scaling_breakdown_{base_m}.png")
 
-    # construct weak scaling breakdown
+    # construct weak scaling variant breakdown
     base_m = 64000 # only ran this test with 64k baseline
     fig, axs = plt.subplots(1, 3, figsize=(18, 4))
-    scaling_type_name = "Weak"
+    scaling_type_name = "Weak Scaling Variant"
     input_dataset = RANDOM_DATASET
     input_dataset_name = input_dataset["name"]
     input_dataset_label = input_dataset["label"]
@@ -888,7 +888,7 @@ def construct_graphs():
         x_positions = np.arange(len(P))
         bar_offset = 0
         ax = axs[k_idx]
-        ax.set_title(f"{input_dataset_label} {scaling_type_name} Scaling Breakdown (k={k})")
+        ax.set_title(f"{input_dataset_label} {scaling_type_name} Breakdown (k={k})")
         ax.set_xlabel("Number of GPUs (p)")
         ax.set_xticks(x_positions)
         ax.set_xticklabels(P)
@@ -959,7 +959,7 @@ def construct_graphs():
     axs[0].legend(loc="upper left", title="Routines")
     plt.tight_layout()
     # plt.subplots_adjust(hspace=0, wspace=0, bottom=0.2, left=0)
-    plt.savefig(f"graphs/{scaling_type_name.lower()}_scaling_breakdown_{base_m}.png")
+    plt.savefig(f"graphs/{scaling_type_name.lower().replace(' ', '_')}_breakdown_{base_m}.png")
 
 
 def compare(file1, file2):
