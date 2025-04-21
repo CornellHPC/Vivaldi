@@ -918,6 +918,71 @@ def compare(file1, file2):
         print(f"Different points: {diff_points} ({(diff_points / n) * 100:.2f}%)")
 
 
+def parallel_efficiency(p):
+    parallel_efficiencies = []
+    speedups = []
+    for dataset in DATASETS:
+        niter = 100
+        gamma = 1
+        c = 1
+        r = 2
+        basic = True
+        for idx, input_dataset in enumerate(DATASETS):
+            input_dataset_name = input_dataset["name"]
+            d = input_dataset["d"]
+            convergence = 0
+            m = 2 * BASE_M[0]
+            for k_idx, k in enumerate([2, 5, 10, 50, 100]):
+                sparse = int(k > 32)
+                p4_scaling_data = get_scaling_data(
+                    "",
+                    "s",
+                    4,
+                    m,
+                    d,
+                    k,
+                    niter,
+                    sparse,
+                    gamma,
+                    c,
+                    r,
+                    convergence,
+                    basic,
+                    input_dataset_name,
+                )
+                scaling_data = get_scaling_data(
+                    "",
+                    "s",
+                    p,
+                    m,
+                    d,
+                    k,
+                    niter,
+                    sparse,
+                    gamma,
+                    c,
+                    r,
+                    convergence,
+                    basic,
+                    input_dataset_name,
+                )
+                keys_to_sum = ["E", "Z", "C MPI", "C Computation", "VR MPI", "VR Computation"]
+                # time_for_4 = np.mean([np.sum(p4_scaling_data[key]) for key in keys_to_sum])
+                # time_for_p = np.mean([np.sum(scaling_data[key]) for key in keys_to_sum])
+                time_for_4 = np.mean(p4_scaling_data["Elapsed"])
+                time_for_p = np.mean(scaling_data["Elapsed"])
+                speedup = time_for_4 / time_for_p
+                speedups.append(speedup)
+                parallel_efficiency = speedup / (int(p) / 4)
+                parallel_efficiencies.append(parallel_efficiency)
+    a = np.array(speedups)
+    geometric_mean = a.prod() ** (1.0 / len(a))
+    print("Speedup for p=", p, "is", f"{geometric_mean:.1f}")
+    a = np.array(parallel_efficiencies)
+    geometric_mean = a.prod() ** (1.0 / len(a))
+    print("Parallel efficiency for p=", p, "is", f"{geometric_mean * 100:.1f}%")
+
+
 # remember that D is the number of features and has to be correct for each dataset otherwise
 # the MPI file read will be messed up
 # but we can vary N and K for each experiment
@@ -940,6 +1005,7 @@ if __name__ == "__main__":
         "prepare",
         "graphs",
         "compare",
+        "pareff"
     ]
     usage_legal = " | ".join(legal)
     if len(sys.argv) < 2:
@@ -983,3 +1049,7 @@ if __name__ == "__main__":
         file2 = sys.argv[3]
         compare(file1, file2)
         print("Comparison complete")
+    if action == "pareff":
+        p = sys.argv[2]
+        parallel_efficiency(p)
+        print("Parallel efficiency complete")
