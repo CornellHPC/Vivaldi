@@ -1,3 +1,4 @@
+#include <fstream>
 #include "mpi.h"
 
 #include "compute_kernel.hh"
@@ -19,8 +20,16 @@ slate::Matrix<float> load_matrix(const char* fname, int64_t rows, int64_t cols,
   MPI_File_read_all(fh, buf, cols * rows, MPI_FLOAT, MPI_STATUS_IGNORE);
 
   // Create empty SLATE matrix object of size equal to data
-  int t = rows / size + (rows > size * size && rows % size > 0);
-  auto M = slate::Matrix<float>(cols, rows, cols, t, 1, size, comm);
+  int p = std::floor(std::sqrt(size));
+  int q = std::floor(std::sqrt(size));
+  if (p * q != size) {
+    std::cout << "WARNING: The number of ranks is not a perfect square."
+              << std::endl;
+  }
+  int rows_per_block = (rows / size) + ((rows % size == 0) ? 0 : 1);
+  int cols_per_block = (cols / size) + ((cols % size == 0) ? 0 : 1);
+  auto M = slate::Matrix<float>(cols, rows, cols_per_block, rows_per_block, p,
+                                q, comm);
   M.insertLocalTiles(slate::Target::Devices);
 
   // Fill data
@@ -48,22 +57,6 @@ slate::Matrix<float> load_matrix(const char* fname, int64_t rows, int64_t cols,
   return M;
 }
 
-int64_t extract_kernel_tiles(float** tiles, slate::Matrix<float>& K, int col) {
-  int64_t elems = K.m() * K.tileNb(col);
-  cudaMalloc(tiles, elems * sizeof(float));
-
-  int64_t offset = 0;
-  for (int64_t j = 0; j < K.mt(); ++j) {
-    // Tiles guaranteed to be local
-    slate::Tile<float> tile = K.at(j, col, K.tileDevice(j, col));
-    cudaMemcpy(*tiles + offset, tile.data(),
-               tile.mb() * tile.nb() * sizeof(float), cudaMemcpyDeviceToDevice);
-    offset += tile.mb() * tile.nb();
-  }
-
-  return elems;
-}
-
 float* compute_kernel_matrix(slate::Matrix<float>& PT, float gamma, float c,
                              float r) {
   int rank, size;
@@ -72,123 +65,109 @@ float* compute_kernel_matrix(slate::Matrix<float>& PT, float gamma, float c,
 
   // Perform GEMM
   auto P = slate::transpose(PT);
-  auto K = slate::Matrix<float>(P.m(), P.m(), P.tileMb(0), P.tileMb(0), 1, size,
+
+  // std::cout << "Multiplying a " << P.m() << "x" << P.n() << " matrix with a "
+  //           << PT.n() << "x" << PT.m() << " matrix on rank " << rank << " with "
+  //           << "tiles of size " << P.tileMb(0) << "x" << P.tileNb(0) << " and "
+  //           << PT.tileMb(0) << "x" << PT.tileNb(0) << std::endl;
+
+  int grid_size = std::floor(std::sqrt(size));
+  int tile_size = P.tileMb(0);
+  auto K = slate::Matrix<float>(P.m(), P.m(), tile_size, tile_size,
+                                slate::GridOrder::Row, grid_size, grid_size,
                                 PT.mpiComm());
   K.insertLocalTiles(slate::Target::Devices);
   slate::gemm<float>(1.0f, P, PT, 0.0f, K,
                      {{slate::Option::Target, slate::Target::Devices}});
 
-  for (int64_t j = 0; j < K.nt(); ++j) {
-    for (int64_t i = 0; i < K.mt(); ++i) {
-      if (K.tileIsLocal(i, j)) {
-        slate::Tile<float> tile = K.at(i, j, K.tileDevice(i, j));
-        float* data = tile.data();
-        launch_polynomial_kernel(tile.mb(), tile.nb(), data, gamma, c, r);
-      }
-    }
-  }
-
   // Ensure tiles are row-major
   K.tileLayoutConvertOnDevices(blas::Layout::RowMajor);
 
-  // Copy tiles in local column to buffer
-  float* values;
-  int64_t count = extract_kernel_tiles(&values, K, rank);
+  // std::cout << "Gemm Completed" << std::endl;
 
-  // Return early if there is no remainder
-  if (K.tileNb(0) * size >= K.n())
-    return values;
-
-  // Warn on remainder
-  std::cout << "WARNING: The tiles could not be distributed without remainder."
-            << std::endl;
-
-  // Copy tiles in remainder column to buffer
-  float* _remainder;
-  int remainder_count = 0;
-  if (rank + size < K.nt()) {
-    float* remainder;
-    remainder_count = (int)extract_kernel_tiles(&remainder, K, rank + size);
-    _remainder = (float*)malloc(remainder_count * sizeof(float));
-    cudaMemcpy(_remainder, remainder, remainder_count * sizeof(float),
-               cudaMemcpyDeviceToHost);
-    cudaFree(remainder);
+  float* horizontal_tile = nullptr;
+  // std::cout << "Allocating memory for horizontal tile on rank " << rank
+  //           << " with size " << K.m() * tile_size * sizeof(float) << std::endl;
+  cudaMalloc(&horizontal_tile, K.m() * tile_size * sizeof(float));
+  if (!horizontal_tile) {
+    std::cerr << "Failed to allocate memory for horizontal tile on rank "
+              << rank << std::endl;
+    return nullptr;
   }
 
-  // Gather remainder buffer sizes on root (i.e. last rank)
-  int root = size - 1;
-  int* recvcounts;
-  if (rank == root) {
-    recvcounts = (int*)malloc(size * sizeof(int));
-  }
-  MPI_Gather(&remainder_count, 1, MPI_INT, recvcounts, 1, MPI_INT, root,
-             PT.mpiComm());
-
-  // Gather remainder buffers on root (i.e. last rank)
-  int* displs;
-  int64_t total = 0;
-  float* recvbuf;
-  if (rank == root) {
-    displs = (int*)malloc(size * sizeof(int));
-    displs[0] = 0;
-    total = recvcounts[0];
-    for (int i = 1; i < size; ++i) {
-      displs[i] = displs[i - 1] + recvcounts[i - 1];
-      total += recvcounts[i];
-    }
-    recvbuf = (float*)malloc(total * sizeof(float));
-  }
-  MPI_Gatherv(_remainder, remainder_count, MPI_FLOAT, recvbuf, recvcounts,
-              displs, MPI_FLOAT, root, PT.mpiComm());
-
-  // Reconstruct root buffer (i.e. last rank)
-  int64_t rows = K.m();
-  int64_t cols = (count + total) / rows;
-  if (rank == root) {
-    // Copy local column to host
-    float* _values = (float*)malloc(count * sizeof(float));
-    cudaMemcpy(_values, values, count * sizeof(float), cudaMemcpyDeviceToHost);
-
-    // Allocate output
-    float* tmp = (float*)malloc((count + total) * sizeof(float));
-
-    // Fill output buffer
-    int64_t offset = 0;
-    for (int64_t i = 0; i < rows; ++i) {
-      // Copy local row
-      int64_t local_cols = K.tileNb(rank);
-      for (int64_t j = 0; j < local_cols; ++j) {
-        tmp[offset++] = _values[i * local_cols + j];
-      }
-
-      // Copy remainder rows
-      for (int64_t p = 0; p < size; ++p) {
-        int64_t remainder_cols = recvcounts[p] / rows;
-        for (int64_t j = 0; j < remainder_cols; ++j) {
-          tmp[offset++] = recvbuf[displs[p] + i * remainder_cols + j];
+  for (int64_t j = 0; j < K.nt(); ++j) {
+    for (int64_t i = 0; i < K.mt(); ++i) {
+      if (K.tileIsLocal(i, j)) {
+        // std::cout << "On rank " << rank << ", processing tile (" << i << ", "
+        //           << j << ") " << std::endl;
+        slate::Tile<float> tile = K.at(i, j, K.tileDevice(i, j));
+        float* data = tile.data();
+        if (j != rank) {
+          // std::cout << "Tile (" << i << ", " << j
+          //           << ") is not in the local column for rank " << rank
+          //           << " and needs to be moved to rank " << j << std::endl;
+          MPI_Send(data, tile_size * tile_size, MPI_FLOAT, j, i, K.mpiComm());
+        } else {
+          int offset = tile_size * tile_size * i;
+          cudaMemcpy(horizontal_tile + offset, data,
+                     tile_size * tile_size * sizeof(float),
+                     cudaMemcpyDeviceToDevice);
+          // std::cout << "Tile (" << i << ", " << j
+          //           << ") is in the local column for rank " << rank
+          //           << ", copied to horizontal tile at offset " << offset
+          //           << std::endl;
         }
+
+        // slate::Tile<float> tile = K.at(i, j, K.tileDevice(i, j));
+        // float* data = tile.data();
+
+        // launch_polynomial_kernel(tile.mb(), tile.nb(), data, gamma, c, r);
+      } else if (j == rank) {
+        // std::cout << "Tile (" << i << ", " << j
+        //           << ") is in the local column for rank " << rank
+        //           << ", need to receive." << std::endl;
+
+        int offset = tile_size * tile_size * i;
+        int source_rank = K.tileRank(i, j);
+        // std::cout << "Receiving tile (" << i << ", " << j << ") from rank "
+        //           << source_rank << " on rank " << rank << " at offset "
+        //           << offset << std::endl;
+        MPI_Recv(horizontal_tile + offset, tile_size * tile_size, MPI_FLOAT,
+                 source_rank, i, K.mpiComm(), MPI_STATUS_IGNORE);
+        // std::cout << "Tile (" << i << ", " << j << ") received on rank " << rank
+        //           << std::endl;
       }
     }
-
-    // Move data to device
-    cudaFree(values);
-    cudaMalloc(&values, (count + total) * sizeof(float));
-    cudaMemcpy(values, tmp, (count + total) * sizeof(float),
-               cudaMemcpyHostToDevice);
-
-    // Free host resources
-    free(recvcounts);
-    free(displs);
-    free(recvbuf);
-    free(_values);
-    free(tmp);
-  }
-  if (rank + size < K.nt()) {
-    free(_remainder);
   }
 
-  // Create cuSPARSE dense matrix descriptors
-  return values;
+  // std::cout << "Kernel Resorting Completed" << std::endl;
+  launch_polynomial_kernel(K.m(), tile_size, horizontal_tile, gamma, c, r);
+  // std::cout << "Kernel Computation Completed" << std::endl;
+
+  // std::cout << "Horizontal tile on rank " << rank << " is ready with size "
+  //           << K.m() << " by " << tile_size << std::endl;
+
+  // float* values = horizontal_tile;
+  // int64_t count = K.m() * tile_size;
+
+  // std::ofstream out_file("2d_gemm_" + std::to_string(rank) + ".txt");
+  // std::cout << "Opening file: 2d_gemm_" << rank << ".txt" << std::endl;
+  // if (out_file.is_open()) {
+  //   std::cout << "Writing values to file." << std::endl;
+  //   float* host_values = (float*)malloc(count * sizeof(float));
+  //   cudaMemcpy(host_values, values, count * sizeof(float),
+  //              cudaMemcpyDeviceToHost);
+  //   for (int i = 0; i < count; ++i) {
+  //     out_file << std::fixed << std::setprecision(2) << host_values[i] << "\n";
+  //   }
+  //   out_file.close();
+  // } else {
+  //   std::cerr << "Could not open file for writing buffer mismatch."
+  //             << std::endl;
+  // }
+
+  // Return early (there will be no remainder tiles)
+  return horizontal_tile;
 }
 
 }  // namespace cpop
