@@ -2,6 +2,7 @@
 
 #include "compute_kernel.hh"
 #include "gpu_kernels.cuh"
+#include "utils.hh"
 
 namespace cpop {
 
@@ -48,147 +49,40 @@ slate::Matrix<float> load_matrix(const char* fname, int64_t rows, int64_t cols,
   return M;
 }
 
-int64_t extract_kernel_tiles(float** tiles, slate::Matrix<float>& K, int col) {
-  int64_t elems = K.m() * K.tileNb(col);
-  cudaMalloc(tiles, elems * sizeof(float));
-
-  int64_t offset = 0;
-  for (int64_t j = 0; j < K.mt(); ++j) {
-    // Tiles guaranteed to be local
-    slate::Tile<float> tile = K.at(j, col, K.tileDevice(j, col));
-    cudaMemcpy(*tiles + offset, tile.data(),
-               tile.mb() * tile.nb() * sizeof(float), cudaMemcpyDeviceToDevice);
-    offset += tile.mb() * tile.nb();
-  }
-
-  return elems;
-}
-
 float* compute_kernel_matrix(slate::Matrix<float>& PT, float gamma, float c,
                              float r) {
   int rank, size;
   MPI_Comm_rank(PT.mpiComm(), &rank);
   MPI_Comm_size(PT.mpiComm(), &size);
 
-  // Perform GEMM
+  assert(PT.n() > size * size && "TODO: Handle case with remainder.");
+
+  // Create local K buffer
+  float* data;
+  int64_t rows = PT.n();
+  int* t_sizes = compute_tile_sizes(rows, size);
+  CHECK_CUDA(cudaMalloc(&data, rows * t_sizes[rank] * sizeof(float)));
+
+  // Initialize matrices
   auto P = slate::transpose(PT);
   auto K = slate::Matrix<float>(P.m(), P.m(), P.tileMb(0), P.tileMb(0), 1, size,
                                 PT.mpiComm());
-  K.insertLocalTiles(slate::Target::Devices);
+
+  // Fill K matrix with tiles using buffer
+  for (int64_t i = 0; i < size; ++i) {
+    int offset = P.tileMb(0) * t_sizes[rank] * i;
+    K.tileInsert(i, rank, 0, data + offset, t_sizes[i]);
+  }
+
+  // Compute kernel matrix
   slate::gemm<float>(1.0f, P, PT, 0.0f, K,
                      {{slate::Option::Target, slate::Target::Devices}});
-
-  for (int64_t j = 0; j < K.nt(); ++j) {
-    for (int64_t i = 0; i < K.mt(); ++i) {
-      if (K.tileIsLocal(i, j)) {
-        slate::Tile<float> tile = K.at(i, j, K.tileDevice(i, j));
-        float* data = tile.data();
-        launch_polynomial_kernel(tile.mb(), tile.nb(), data, gamma, c, r);
-      }
-    }
-  }
-
-  // Ensure tiles are row-major
   K.tileLayoutConvertOnDevices(blas::Layout::RowMajor);
+  launch_polynomial_kernel(rows, t_sizes[rank], data, gamma, c, r);
 
-  // Copy tiles in local column to buffer
-  float* values;
-  int64_t count = extract_kernel_tiles(&values, K, rank);
-
-  // Return early if there is no remainder
-  if (K.tileNb(0) * size >= K.n())
-    return values;
-
-  // Warn on remainder
-  std::cout << "WARNING: The tiles could not be distributed without remainder."
-            << std::endl;
-
-  // Copy tiles in remainder column to buffer
-  float* _remainder;
-  int remainder_count = 0;
-  if (rank + size < K.nt()) {
-    float* remainder;
-    remainder_count = (int)extract_kernel_tiles(&remainder, K, rank + size);
-    _remainder = (float*)malloc(remainder_count * sizeof(float));
-    cudaMemcpy(_remainder, remainder, remainder_count * sizeof(float),
-               cudaMemcpyDeviceToHost);
-    cudaFree(remainder);
-  }
-
-  // Gather remainder buffer sizes on root (i.e. last rank)
-  int root = size - 1;
-  int* recvcounts;
-  if (rank == root) {
-    recvcounts = (int*)malloc(size * sizeof(int));
-  }
-  MPI_Gather(&remainder_count, 1, MPI_INT, recvcounts, 1, MPI_INT, root,
-             PT.mpiComm());
-
-  // Gather remainder buffers on root (i.e. last rank)
-  int* displs;
-  int64_t total = 0;
-  float* recvbuf;
-  if (rank == root) {
-    displs = (int*)malloc(size * sizeof(int));
-    displs[0] = 0;
-    total = recvcounts[0];
-    for (int i = 1; i < size; ++i) {
-      displs[i] = displs[i - 1] + recvcounts[i - 1];
-      total += recvcounts[i];
-    }
-    recvbuf = (float*)malloc(total * sizeof(float));
-  }
-  MPI_Gatherv(_remainder, remainder_count, MPI_FLOAT, recvbuf, recvcounts,
-              displs, MPI_FLOAT, root, PT.mpiComm());
-
-  // Reconstruct root buffer (i.e. last rank)
-  int64_t rows = K.m();
-  int64_t cols = (count + total) / rows;
-  if (rank == root) {
-    // Copy local column to host
-    float* _values = (float*)malloc(count * sizeof(float));
-    cudaMemcpy(_values, values, count * sizeof(float), cudaMemcpyDeviceToHost);
-
-    // Allocate output
-    float* tmp = (float*)malloc((count + total) * sizeof(float));
-
-    // Fill output buffer
-    int64_t offset = 0;
-    for (int64_t i = 0; i < rows; ++i) {
-      // Copy local row
-      int64_t local_cols = K.tileNb(rank);
-      for (int64_t j = 0; j < local_cols; ++j) {
-        tmp[offset++] = _values[i * local_cols + j];
-      }
-
-      // Copy remainder rows
-      for (int64_t p = 0; p < size; ++p) {
-        int64_t remainder_cols = recvcounts[p] / rows;
-        for (int64_t j = 0; j < remainder_cols; ++j) {
-          tmp[offset++] = recvbuf[displs[p] + i * remainder_cols + j];
-        }
-      }
-    }
-
-    // Move data to device
-    cudaFree(values);
-    cudaMalloc(&values, (count + total) * sizeof(float));
-    cudaMemcpy(values, tmp, (count + total) * sizeof(float),
-               cudaMemcpyHostToDevice);
-
-    // Free host resources
-    free(recvcounts);
-    free(displs);
-    free(recvbuf);
-    free(_values);
-    free(tmp);
-  }
-  if (rank + size < K.nt()) {
-    free(_remainder);
-  }
-
-  // Create cuSPARSE dense matrix descriptors
-  return values;
+  // Clean up and return
+  free(t_sizes);
+  return data;
 }
 
 }  // namespace cpop

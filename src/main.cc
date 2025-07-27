@@ -2,7 +2,6 @@
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
-#include <iostream>
 
 #include "mpi.h"
 
