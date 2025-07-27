@@ -1,6 +1,6 @@
 # Makefile
 
-.PHONY: build blasbuild alloc test australian svmguide1 letter compare letter_combblas
+.PHONY: build blasbuild alloc test debug australian svmguide1 letter compare letter_combblas
 
 export SLATE_INSTALL := $(shell cd ~/slate/_install && pwd)
 export COMBBLAS_INSTALL := $(shell cd ~/CombBLAS/_install && pwd)
@@ -66,6 +66,22 @@ alloc:
 	@if [ -z "$$SLURM_JOB_ID" ]; then\
 		salloc -N 4 -q interactive -t 01:00:00 -C gpu -G 16 -A $(ACCOUNT);\
 	fi
+
+test:
+	source /opt/cray/pe/lmod/lmod/init/bash && \
+	module load cudatoolkit/12.2 && \
+	cd build && \
+	salloc -N 1 -q interactive -t 00:01:00 -C gpu -G 4 -A $(ACCOUNT) \
+	srun -N 1 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 4 \
+	device_wrapper ctest --output-on-failure -O /tmp/output test_exe
+
+debug:
+	source /opt/cray/pe/lmod/lmod/init/bash && \
+	module load cudatoolkit/12.2 && \
+	cd build && \
+	salloc -N 1 -q interactive -t 01:00:00 -C gpu -G 4 -A $(ACCOUNT) \
+	srun -N 1 --ntasks-per-node 1 --cpus-per-task 32 --cpu-bind cores -G 1 \
+	device_wrapper cuda-gdb test_exe
 
 australian:
 	source /opt/cray/pe/lmod/lmod/init/bash && \
