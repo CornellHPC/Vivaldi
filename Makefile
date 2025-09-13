@@ -30,8 +30,6 @@ CMAKE_ARGS += -DSLATE_INSTALL=$$SLATE_INSTALL -DCOMBBLAS_INSTALL=$$COMBBLAS_INST
 
 build:
 	source /opt/cray/pe/lmod/lmod/init/bash && \
-	module load cudatoolkit/12.2 && \
-	module load gcc-native/12.3 && \
 	rm -rf build && \
 	mkdir build && \
 	cd build && \
