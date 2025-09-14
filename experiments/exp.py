@@ -581,7 +581,7 @@ def create_script(path, prefix, account, p, m, k, dataset, d=None, sparse=None, 
             "#SBATCH --constraint=gpu&hbm80g\n",
             "#SBATCH --qos=regular\n",
             f"#SBATCH --account={account}\n",
-            f"#SBATCH --output={log_fname}\n",
+            f"#SBATCH --output={log_fname}_%a\n",
             "export DVS_MAXNODES=1__\n",
             "module load cudatoolkit/12.2\n",
         ])
@@ -612,8 +612,8 @@ def create_script(path, prefix, account, p, m, k, dataset, d=None, sparse=None, 
                         result_fname = os.path.join(results_dir, f"{name}_assignments")
                         bench_fname = os.path.join(results_dir, f"{name}_time_${{SLURM_ARRAY_TASK_ID}}")
 
-                        f.write(f"srun -N {nodes} --n-tasks-per-node {p//nodes} --cpus-per-task 32 --cpu-bind cores -G {p//nodes} $PWD/../build/device_wrapper $PWD/../build/main ") # No newline so params on same line
-                        f.write(f"-i {dataset_fname} -m {_m} -n {_d} --niter {niter} --sparse {sparse} --gamma {gamma} --c {c} --r {r} --convergence {convergence} --k {_k} -o {result_fname} --benchmark {bench_fname}\n")
+                        f.write(f"srun -N {nodes} --ntasks-per-node {p//nodes} --cpus-per-task 32 --cpu-bind cores -G {p//nodes} $PWD/../build/device_wrapper $PWD/../build/main ") # No newline so params on same line
+                        f.write(f"-i {dataset_fname} -m {_m} -n {_d} --niter {niter} --sparse {sparse} --gamma {gamma} --c {c} --r {r} --convergence {convergence} -k {_k} -o {result_fname} --benchmark {bench_fname}\n")
 
 
 def get_scaling_data(
