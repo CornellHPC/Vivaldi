@@ -495,9 +495,9 @@ def create_scripts(account, path=os.getcwd(), n_trials=5, base_m=128000, max_m=1
 
     # Mode test
     p = 1
-    m = [16000, 32000, 64000, 128000]
+    m = [32000, 64000, 128000]
     k = [10, 20, 30, 40, 50, 60]
-    create_script(path, "mode", account, p, m, k, RANDOM_DATASET)
+    create_script(path, "mode", account, p, m, k, RANDOM_DATASET, sparse=[True, False])
 
     # Strong scaling runner
     strong_path = os.path.join(path, "scripts", "strong.sh")
@@ -546,8 +546,8 @@ def create_scripts(account, path=os.getcwd(), n_trials=5, base_m=128000, max_m=1
 
 def create_script(path, prefix, account, p, m, k, dataset, d=None, sparse=None, niter=100, gamma=1, c=1, r=2, basic=False, convergence=False):
     """
-    This function accepts either a single value or list
-    for m, d, k, and dataset. If a list is supplied, the
+    This function accepts either a single value or list for
+    m, d, k, dataset, and sparse. If a list is supplied, the
     script will perform one srun for each value.
     """
 
@@ -596,24 +596,28 @@ def create_script(path, prefix, account, p, m, k, dataset, d=None, sparse=None, 
             k = [k]
         if not isinstance(dataset, list):
             dataset = [dataset]
+        if not isinstance(sparse, list):
+            sparse = [sparse]
 
         for _m in m:
             for _d in d:
                 for _k in k:
                     for _dataset in dataset:
-                        dataset_fname = _dataset["bin_fname"]
-                        dataset_label = _dataset["label"].lower()
-                        if d[0] is None:
-                            _d = _dataset["d"]
-                        _m = min(_m, _dataset["m"])
+                        for _sparse in sparse:
+                            dataset_fname = _dataset["bin_fname"]
+                            dataset_label = _dataset["label"].lower()
+                            if d[0] is None:
+                                _d = _dataset["d"]
+                            _m = min(_m, _dataset["m"])
+                            _sparse = int(_sparse)
 
-                        name = f"{prefix}_{p}_{_m}_{_d}_{_k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{dataset_label}"
-                        log_fname = os.path.join(log_dir, f"{name}_out")
-                        result_fname = os.path.join(results_dir, f"{name}_assignments")
-                        bench_fname = os.path.join(results_dir, f"{name}_time_${{SLURM_ARRAY_TASK_ID}}")
+                            name = f"{prefix}_{p}_{_m}_{_d}_{_k}_{niter}_{_sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{dataset_label}"
+                            log_fname = os.path.join(log_dir, f"{name}_out")
+                            result_fname = os.path.join(results_dir, f"{name}_assignments")
+                            bench_fname = os.path.join(results_dir, f"{name}_time_${{SLURM_ARRAY_TASK_ID}}")
 
-                        f.write(f"srun -N {nodes} --ntasks-per-node {p//nodes} --cpus-per-task 32 --cpu-bind cores -G {p//nodes} $PWD/../build/device_wrapper $PWD/../build/main ") # No newline so params on same line
-                        f.write(f"-i {dataset_fname} -m {_m} -n {_d} --niter {niter} --sparse {sparse} --gamma {gamma} --c {c} --r {r} --convergence {convergence} -k {_k} -o {result_fname} --benchmark {bench_fname}\n")
+                            f.write(f"srun -N {nodes} --ntasks-per-node {p//nodes} --cpus-per-task 32 --cpu-bind cores -G {p//nodes} $PWD/../build/device_wrapper $PWD/../build/main ") # No newline so params on same line
+                            f.write(f"-i {dataset_fname} -m {_m} -n {_d} --niter {niter} --sparse {_sparse} --gamma {gamma} --c {c} --r {r} --convergence {convergence} -k {_k} -o {result_fname} --benchmark {bench_fname}\n")
 
 
 def get_scaling_data(
