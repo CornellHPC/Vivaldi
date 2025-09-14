@@ -70,7 +70,7 @@ float* compute_kernel_matrix(slate::Matrix<float>& PT, float gamma, float c,
 
   // Fill K matrix with tiles using buffer
   for (int64_t i = 0; i < size; ++i) {
-    int offset = P.tileMb(0) * t_sizes[rank] * i;
+    int64_t offset = P.tileMb(0) * t_sizes[rank] * i;
     K.tileInsert(i, rank, 0, data + offset, t_sizes[i]);
   }
 
