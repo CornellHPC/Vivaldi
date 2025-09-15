@@ -478,15 +478,9 @@ int main(int argc, char* argv[]) {
 
   Handle handle(s);
 
-
-#ifdef GEMM_2D
-  auto PT = load_matrix2d("../data/randi", m, n, comm);
-  DnMat_t K(m, t, compute_kernel_matrix2d(handle, PT, 1.0f, 1.0f, 1.0f, true));
-#else
   auto PT = load_matrix("../data/randi", m, n, comm);
-  DnMat_t K(m, t, compute_kernel_matrix(PT, 1.0f, 1.0f, 1.0f));
-#endif
 
+  DnMat_t K(m, t, compute_kernel_matrix(PT, 1.0f, 1.0f, 1.0f));
   PT.releaseWorkspace();
   check_k(K, rank);
 

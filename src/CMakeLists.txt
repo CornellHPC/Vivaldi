@@ -60,6 +60,8 @@ if(SANITIZE)
   target_link_options(test_exe PRIVATE -fsanitize=address,leak -fno-omit-frame-pointer)
 endif()
 
+target_compile_options(main PRIVATE -O3)
+
 # Includes
 target_include_directories(main PRIVATE "${SLATE_INSTALL}/include")
 target_include_directories(test_exe PRIVATE "${SLATE_INSTALL}/include")

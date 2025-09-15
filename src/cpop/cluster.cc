@@ -10,6 +10,7 @@
 #include "cluster.hh"
 #include "gpu_kernels.cuh"
 #include "utils.hh"
+#include "dist_v.hh"
 
 namespace cpop {
 
@@ -254,6 +255,12 @@ DnVec_t::~DnVec_t() {
   CHECK_CUSPARSE(cusparseDestroyDnVec(z));
 }
 
+int spmm2d(Handle& handle, DistV2D& V, DnMat_t& K, DnMat_t& E)
+{
+
+}
+
+
 int spmm(Handle& handle, V_t& V, DnMat_t& K, DnMat_t& E) {
   // Define constants
   float alpha = 1.0f;
@@ -297,6 +304,9 @@ int compute_z(V_t& V, DnMat_t& E, DnVec_t& z) {
   return EXIT_SUCCESS;
 }
 
+int compute_z2d(DistV2D& V, DnMat_t& E, DnVec_t& z) {
+}
+
 int spmv(Handle& handle, V_t& V, DnVec_t& z, DnVec_t& c) {
   float alpha = 1.0f;
   float beta = 0.0f;
@@ -335,6 +345,10 @@ int sum_vec(DnVec_t& c, MPI_Comm comm) {
   return EXIT_SUCCESS;
 }
 
+
+int sum_vec2d(DnVec_t& c, MPI_Comm comm) {
+}
+
 int compute_c(Handle& handle, V_t& V, DnVec_t& z, DnVec_t& c, MPI_Comm comm) {
   spmv(handle, V, z, c);  // SpMV: c = Vz using local V
   sum_vec(c, comm);       // Calculate global c by summing across ranks
@@ -352,6 +366,9 @@ int argmin(DnMat_t& E, DnVec_t& c, V_t& V) {
       V.local_k_means_objective_delta, V.prev_point_to_cluster_distances);
   cudaDeviceSynchronize();
   return EXIT_SUCCESS;
+}
+
+int argmin2d(DnMat_t& E, DnVec_t& c, DistV2D& V) {
 }
 
 int gather_assignments(DnMat_t& E, DnVec_t& c, V_t& V, int convergence) {
@@ -451,6 +468,9 @@ int set_V_from_assignments(DnMat_t& E, DnVec_t& c, V_t& V) {
                        V.k_, V.m_, V.sparse);
   cudaDeviceSynchronize();
   return EXIT_SUCCESS;
+}
+
+int set_V_from_assignments2d(DnMat_t& E, DnVec_t& c, DistV2D& V) {
 }
 
 int reinit_V(DnMat_t& E, DnVec_t& c, V_t& V) {

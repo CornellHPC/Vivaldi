@@ -5,6 +5,7 @@
 #include "mpi.h"
 
 #include "utils.hh"
+#include "dist_v.hh"
 
 #define GEMM_2D
 
@@ -137,6 +138,7 @@ struct V_t {
  * @return int 
  */
 int spmm(Handle& handle, V_t& V, DnMat_t& K, DnMat_t& E);
+int spmm2d(Handle& handle, DistV2D& V, DnMat_t& K, DnMat_t& E);
 
 /**
  * @brief Computes z based on the local V matrix and E (i.e. using the masking strategy)
@@ -147,6 +149,7 @@ int spmm(Handle& handle, V_t& V, DnMat_t& K, DnMat_t& E);
  * @return int 
  */
 int compute_z(V_t& V, DnMat_t& E, DnVec_t& z);
+int compute_z2d(DistV2D& V, DnMat_t& E, DnVec_t& z);
 
 /**
  * @brief Computes the local c norm vector by SpMV. Used in ``compute_c``.
@@ -167,6 +170,7 @@ int spmv(Handle& handle, V_t& V, DnVec_t& z, DnVec_t& c);
  * @return int
  */
 int sum_vec(DnVec_t& c, MPI_Comm comm);
+int sum_vec2d(DnVec_t& c, MPI_Comm comm);
 
 /**
  * @brief Computes the c norm vector by SpMV and sums it across the communicator row
@@ -189,6 +193,7 @@ int compute_c(Handle& handle, V_t& V, DnVec_t& z, DnVec_t& c, MPI_Comm comm);
  * @return int
  */
 int argmin(DnMat_t& E, DnVec_t& c, V_t& V);
+int argmin2d(DnMat_t& E, DnVec_t& c, DistV2D& V);
 
 /**
  * @brief Gathers assignments and clusters. Used in ``reinit_V``.
@@ -210,6 +215,7 @@ int gather_assignments(DnMat_t& E, DnVec_t& c, V_t& V, int convergence);
  * @return int
  */
 int set_V_from_assignments(DnMat_t& E, DnVec_t& c, V_t& V);
+int set_V_from_assignments2d(DnMat_t& E, DnVec_t& c, DistV2D& V);
 
 /**
  * @brief Reinitializes V based on the distances matrix (computed from E and c)
