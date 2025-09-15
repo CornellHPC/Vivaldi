@@ -14,6 +14,14 @@ using namespace cpop;
 using hrc = std::chrono::high_resolution_clock;
 using ms = std::chrono::milliseconds;
 
+int cluster_15d(ArgParse args, MPI_Comm comm) 
+{
+}
+
+int cluster2d(ArgParse args, MPI_Comm comm) 
+{
+}
+
 /**
  * @brief Cluster the data using the popcorn kernel k-means algorithm.
  * 
@@ -21,7 +29,8 @@ using ms = std::chrono::milliseconds;
  * @param comm MPI communicator
  * @return EXIT_SUCCESS on success
  */
-int cluster(ArgParse args, MPI_Comm comm) {
+int cluster1d(ArgParse args, MPI_Comm comm) 
+{
   Timer timer;
   int rank, size;
   MPI_Comm_rank(comm, &rank);
@@ -33,7 +42,13 @@ int cluster(ArgParse args, MPI_Comm comm) {
 #ifndef BASIC
   auto io_start = hrc::now();
 #endif
+
+#ifdef GEMM_2D
+  auto PT = load_matrix2d(args.path.c_str(), args.m, args.n, comm);
+#else
   auto PT = load_matrix(args.path.c_str(), args.m, args.n, comm);
+#endif
+
 #ifndef BASIC
   MPI_Barrier(comm);
   timer.io = get_time_elapsed(io_start);
@@ -60,8 +75,14 @@ int cluster(ArgParse args, MPI_Comm comm) {
 #ifndef BASIC
   auto k_start = hrc::now();
 #endif
+
+#ifdef GEMM_2D
+  DnMat_t K(args.m, t, compute_kernel_matrix2d(handle, PT, args.gamma, args.c, args.r, true));
+#else
   DnMat_t K(args.m, t, compute_kernel_matrix(PT, args.gamma, args.c, args.r));
+#endif
   PT.releaseWorkspace();
+
 #ifndef BASIC
   MPI_Barrier(comm);
   timer.k_elapsed = get_time_elapsed(k_start);
@@ -89,6 +110,7 @@ int cluster(ArgParse args, MPI_Comm comm) {
     timer.e_elapsed += get_time_elapsed(e_start);
     auto z_start = hrc::now();
 #endif
+
     compute_z(V, E, z);  // Calculate z from the mask of local V on ET
 #ifndef BASIC
     MPI_Barrier(comm);
@@ -96,13 +118,17 @@ int cluster(ArgParse args, MPI_Comm comm) {
     auto c_start = hrc::now();
     auto c_computation_start = hrc::now();
 #endif
+
     spmv(handle, V, z, c);  // SpMV: c = Vz using local V
+                            //
 #ifndef BASIC
     MPI_Barrier(comm);
     timer.c_computation += get_time_elapsed(c_computation_start);
     auto c_mpi_start = hrc::now();
 #endif
+
     sum_vec(c, comm);  // Calculate global c by summing across ranks
+                       //
 #ifndef BASIC
     MPI_Barrier(comm);
     timer.c_mpi += get_time_elapsed(c_mpi_start);
@@ -110,7 +136,9 @@ int cluster(ArgParse args, MPI_Comm comm) {
     auto vr_start = hrc::now();
     auto vr_computation_start = hrc::now();
 #endif
+
     argmin(E, c, V);  // Argmin kernel (compute D matrix)
+
 #ifndef BASIC
     MPI_Barrier(comm);
     timer.vr_computation += get_time_elapsed(vr_computation_start);
@@ -121,21 +149,27 @@ int cluster(ArgParse args, MPI_Comm comm) {
     // Record dead process count at iteration
     timer.dead_proc_counts[i] = dead_process_count;
     bool done = (dead_process_count == V.n_procs);
+
 #ifndef BASIC
     MPI_Barrier(comm);
     timer.vr_mpi += get_time_elapsed(vr_mpi_start);
 #endif
+
     if (args.convergence && done)
       break;  // All processes are dead, so quit
+
 #ifndef BASIC
     vr_computation_start = hrc::now();
 #endif
+
     set_V_from_assignments(E, c, V);  // Reinitialize V based on D matrix
+                                      
 #ifndef BASIC
     MPI_Barrier(comm);
     timer.vr_computation += get_time_elapsed(vr_computation_start);
     timer.vr_elapsed += get_time_elapsed(vr_start);
 #endif
+
   }
 
   /** Save and exit */
@@ -159,7 +193,7 @@ int main(int argc, char* argv[]) {
   ArgParse args(argc, argv);
 
   /** Cluster */
-  cluster(args, comm);
+  cluster1d(args, comm);
 
   /** Exit */
   MPI_Finalize();

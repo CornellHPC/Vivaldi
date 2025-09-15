@@ -6,6 +6,8 @@
 
 #include "utils.hh"
 
+#define GEMM_2D
+
 namespace cpop {
 
 struct DnMat_t {

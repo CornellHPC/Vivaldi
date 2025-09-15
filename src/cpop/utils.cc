@@ -212,4 +212,88 @@ int* compute_tile_sizes(int m, int nprocs) {
   return t_sizes;
 }
 
+std::vector<std::vector<std::array<int, 2>>> compute_tile_sizes2d(int m, int nprocs) 
+{
+  int nprocs_root = std::floor(std::sqrt(nprocs));
+
+  std::vector<std::vector<std::array<int, 2>>> result;
+  for (int i=0; i<nprocs_root; i++)
+  {
+      result.emplace_back(nprocs_root);
+  }
+
+  int t = tile_dim2(nprocs_root, m);//m / nprocs + (m > nprocs * nprocs && m % nprocs > 0);
+  for (int i = 0; i < nprocs_root; ++i) {
+    for (int j=0; j<nprocs_root; j++)
+    {
+        if (i == nprocs_root - 1)
+        {
+            result[i][j][0] = m - (nprocs_root - 1) * t;
+        }
+        else
+        {
+            result[i][j][0] = t;
+        }
+
+        if (j == nprocs_root - 1)
+        {
+            result[i][j][1] = m - (nprocs_root - 1) * t;
+        }
+        else
+        {
+            result[i][j][1] = t;
+        }
+    }
+  }
+  return result;
+}
+
+
+int square_grid_dim(MPI_Comm comm) {
+  int size;
+  MPI_Comm_size(comm, &size);
+  return std::floor(std::sqrt(size));
+}
+
+bool is_square_grid(MPI_Comm comm) {
+  int size, sr;
+  MPI_Comm_size(comm, &size);
+  sr = square_grid_dim(comm);
+  return sr * sr == size;
+}
+
+int tile_dim(MPI_Comm comm, int x) {
+  int p = square_grid_dim(comm);
+  return (x / p) + ((x % p == 0) ? 0 : 1);
+}
+
+int tile_dim2(int p, int x) {
+  return (x / p) + ((x % p == 0) ? 0 : 1);
+}
+
+void print_phase(const char * name)
+{
+    MPI_Barrier(MPI_COMM_WORLD);
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if (rank==0)
+    {
+        std::cout<<"=========="<<name<<"=========="<<std::endl;
+    }
+    sleep(1);
+    MPI_Barrier(MPI_COMM_WORLD);
+}
+
+void print_line()
+{
+    MPI_Barrier(MPI_COMM_WORLD);
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if (rank==0)
+    {
+        std::cout<<"=========="<<__LINE__<<"=========="<<std::endl;
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+}
+
 }  // namespace cpop

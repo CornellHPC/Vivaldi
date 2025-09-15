@@ -1,5 +1,6 @@
 #ifndef CPOP_UTILS_HH
 #define CPOP_UTILS_HH
+#include <vector>
 
 #define CHECK_CUDA(func)                                                   \
   {                                                                        \
@@ -113,19 +114,13 @@ class Handle {
  public:
   Handle(bool sparse) {
     this->sparse = sparse;
-    if (sparse) {
-      cusparseCreate(&s_handle);
-    } else {
-      cublasCreate_v2(&d_handle);
-    }
+    cusparseCreate(&s_handle);
+    cublasCreate_v2(&d_handle);
   }
 
   ~Handle() {
-    if (sparse) {
-      cusparseDestroy(s_handle);
-    } else {
-      cublasDestroy_v2(d_handle);
-    }
+    cusparseDestroy(s_handle);
+    cublasDestroy_v2(d_handle);
   }
 
   bool isSparse() { return sparse; }
@@ -155,6 +150,17 @@ int64_t get_time_elapsed(std::chrono::_V2::system_clock::time_point start);
  */
 int* compute_tile_sizes(int m, int nprocs);
 
+
+std::vector<std::vector<std::array<int, 2>>> compute_tile_sizes2d(int m, int nprocs);
+
+
+int square_grid_dim(MPI_Comm comm);
+bool is_square_grid(MPI_Comm comm);
+int tile_dim(MPI_Comm comm, int x);
+int tile_dim2(int p, int x);
+void print_phase(const char * name);
+void print_line();
+
 /**
  * @brief Print buffer on device
  * 
@@ -171,6 +177,17 @@ void print_device_buffer(T* buf, size_t count) {
   std::cout << std::endl;
 
   free(temp);
+}
+
+template <typename T>
+void print_host_buffer(T* buf, size_t count, int rank) 
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+  std::cout<<"Rank: "<<rank<<std::endl;
+  for (int i = 0; i < count; ++i)
+    std::cout << buf[i] << " ";
+  std::cout << std::endl;
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 /**
@@ -195,6 +212,8 @@ void print_device_matrix(T* mat, size_t h, size_t w) {
 
   free(temp);
 }
+
+
 
 }  // namespace cpop
 
