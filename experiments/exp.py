@@ -1,4 +1,4 @@
-import urllib.request, bz2, lzma, os, re, sys
+import urllib.request, bz2, lzma, math, os, re, stat, sys
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker
@@ -28,9 +28,9 @@ DATASETS = [
         "url": "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass/poker.t.bz2",
         "name": "poker",
         "label": "Poker",
-        "m": "999936",
-        "d": "10",
-        "k": "10",
+        "m": 999936,
+        "d": 10,
+        "k": 10,
     },
     {
         "bin_fname": "data/HIGGS.bin",
@@ -39,9 +39,9 @@ DATASETS = [
         "url": "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/HIGGS.xz",
         "name": "higgs",
         "label": "HIGGS",
-        "m": "11000000",
-        "d": "28",
-        "k": "2",
+        "m": 11000000,
+        "d": 28,
+        "k": 2,
     },
     {
         "bin_fname": "data/mnist8m.scale.bin",
@@ -50,9 +50,9 @@ DATASETS = [
         "url": "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass/mnist8m.scale.xz",
         "name": "mnist8m",
         "label": "MNIST8m",
-        "m": "1120000",
-        "d": "784",
-        "k": "10",
+        "m": 1120000,
+        "d": 784,
+        "k": 10,
     },
 ]
 
@@ -60,8 +60,8 @@ RANDOM_DATASET = {
     "bin_fname": "data/rand.bin",
     "name": "rand",
     "label": "Synthetic",
-    "m": "1024000",
-    "d": "1024",
+    "m": 1024000,
+    "d": 1024,
 }
 
 MAX_NUM_POINTS = 1200000  ## one million points limit for basically everything
@@ -473,6 +473,151 @@ def read_data(formatted_txt_file) -> np.ndarray:
             data.append(features)
 
     return np.array(data)
+
+
+def create_scripts(account, path=os.getcwd(), n_trials=5, base_m=128000, max_m=1200000):
+    P = [2**i for i in range(2,9)]
+
+    for p in P:
+        k = [2, 5, 10, 50, 100]
+
+        # Strong scaling
+        m = int(min(4*base_m, max_m))
+        create_script(path, "strong", account, p, m, k, DATASETS)
+
+        # Weak scaling
+        m = int(min(2*base_m*math.sqrt(p), max_m))
+        create_script(path, "weak", account, p, m, k, DATASETS)
+
+        # Variant weak scaling
+        m = int(min(2*base_m*math.sqrt(p), max_m))
+        create_script(path, "vweak", account, p, m, k, RANDOM_DATASET, d=p*4)
+
+    # Mode test
+    p = 1
+    m = [32000, 64000, 128000]
+    k = [10, 20, 30, 40, 50, 60]
+    create_script(path, "mode", account, p, m, k, RANDOM_DATASET, sparse=[True, False])
+
+    # Strong scaling runner
+    strong_path = os.path.join(path, "scripts", "strong.sh")
+    with open(strong_path, "w") as f:
+        f.write("#!/bin/bash\n")
+        for p in P:
+            f.write(f"sbatch --array=1-{n_trials} scripts/strong_{p}.sh\n")
+    st = os.stat(strong_path)
+    os.chmod(strong_path, st.st_mode | stat.S_IEXEC)
+
+    # Weak scaling runner
+    weak_path = os.path.join(path, "scripts", "weak.sh")
+    with open(weak_path, "w") as f:
+        f.write("#!/bin/bash\n")
+        for p in P:
+            f.write(f"sbatch --array=1-{n_trials} scripts/weak_{p}.sh\n")
+    st = os.stat(weak_path)
+    os.chmod(weak_path, st.st_mode | stat.S_IEXEC)
+
+    # Variant weak scaling runner
+    vweak_path = os.path.join(path, "scripts", "vweak.sh")
+    with open(vweak_path, "w") as f:
+        f.write("#!/bin/bash\n")
+        for p in P:
+            f.write(f"sbatch --array=1-{n_trials} scripts/vweak_{p}.sh\n")
+    st = os.stat(vweak_path)
+    os.chmod(vweak_path, st.st_mode | stat.S_IEXEC)
+
+    # Mode runner
+    mode_path = os.path.join(path, "scripts", "mode.sh")
+    with open(mode_path, "w") as f:
+        f.write("#!/bin/bash\n")
+        f.write(f"sbatch --array=1-{n_trials} scripts/mode_1.sh\n")
+    st = os.stat(mode_path)
+    os.chmod(mode_path, st.st_mode | stat.S_IEXEC)
+
+    # All runner
+    all_path = os.path.join(path, "scripts", "all.sh")
+    with open(all_path, "w") as f:
+        f.write("#!/bin/bash\n")
+        for test in ["strong", "weak", "vweak", "mode"]:
+            f.write(f". {path}/scripts/{test}.sh\n")
+    st = os.stat(all_path)
+    os.chmod(all_path, st.st_mode | stat.S_IEXEC)
+
+
+def create_script(path, prefix, account, p, m, k, dataset, d=None, sparse=None, niter=100, gamma=1, c=1, r=2, basic=False, convergence=False):
+    """
+    This function accepts either a single value or list for
+    m, d, k, dataset, and sparse. If a list is supplied, the
+    script will perform one srun for each value.
+    """
+
+    # TODO: Sparse threshold selection
+    if sparse is None:
+        sparse = int(True)
+
+    basic = int(basic)
+    convergence = int(convergence)
+    nodes = math.ceil(p /4)
+
+    log_dir = os.path.join(path, "logs")
+    results_dir = os.path.join(path, "results")
+    scripts_dir = os.path.join(path, "scripts")
+
+    os.makedirs(log_dir, exist_ok=True)
+    os.makedirs(results_dir, exist_ok=True)
+    os.makedirs(scripts_dir, exist_ok=True)
+
+    fname = f"{prefix}_{p}"
+    script_fname = os.path.join(scripts_dir, fname+".sh")
+    log_fname = os.path.join(log_dir, fname)
+
+    # TODO: Compute test time dynamically
+    with open(script_fname, "w") as f:
+        f.writelines([
+            "#!/bin/bash\n",
+            f"#SBATCH --nodes={nodes}\n",
+            f"#SBATCH --gpus={p}\n",
+            f"#SBATCH --time=00:10:00\n",
+            "#SBATCH --constraint=gpu&hbm80g\n",
+            "#SBATCH --qos=regular\n",
+            f"#SBATCH --account={account}\n",
+            f"#SBATCH --output={log_fname}_%a\n",
+            "export DVS_MAXNODES=1__\n",
+            "module load cudatoolkit/12.2\n",
+        ])
+
+        # If individual values supplied, these must be
+        # converted to a list for script generation.
+        if not isinstance(m, list):
+            m = [m]
+        if not isinstance(d, list):
+            d = [d]
+        if not isinstance(k, list):
+            k = [k]
+        if not isinstance(dataset, list):
+            dataset = [dataset]
+        if not isinstance(sparse, list):
+            sparse = [sparse]
+
+        for _m in m:
+            for _d in d:
+                for _k in k:
+                    for _dataset in dataset:
+                        for _sparse in sparse:
+                            dataset_fname = _dataset["bin_fname"]
+                            dataset_label = _dataset["label"].lower()
+                            if d[0] is None:
+                                _d = _dataset["d"]
+                            _m = min(_m, _dataset["m"])
+                            _sparse = int(_sparse)
+
+                            name = f"{prefix}_{p}_{_m}_{_d}_{_k}_{niter}_{_sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{dataset_label}"
+                            log_fname = os.path.join(log_dir, f"{name}_out")
+                            result_fname = os.path.join(results_dir, f"{name}_assignments")
+                            bench_fname = os.path.join(results_dir, f"{name}_time_${{SLURM_ARRAY_TASK_ID}}")
+
+                            f.write(f"srun -N {nodes} --ntasks-per-node {p//nodes} --cpus-per-task 32 --cpu-bind cores -G {p//nodes} $PWD/../build/device_wrapper $PWD/../build/main ") # No newline so params on same line
+                            f.write(f"-i {dataset_fname} -m {_m} -n {_d} --niter {niter} --sparse {_sparse} --gamma {gamma} --c {c} --r {r} --convergence {convergence} -k {_k} -o {result_fname} --benchmark {bench_fname}\n")
 
 
 def get_scaling_data(
@@ -1014,6 +1159,8 @@ if __name__ == "__main__":
     if action == "create_scripts":
         for p in [4, 8, 16, 32, 64, 128, 256]:
             create_file_text(p, "")
+        # TODO:
+        # create_scripts("m4341")
         print("Generated scripts in experiments/scripts/ directory.")
     if action == "create_random":
         create_random()
