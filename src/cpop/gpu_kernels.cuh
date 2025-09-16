@@ -44,6 +44,8 @@ void launch_argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
                           float* local_k_means_objective_delta,
                           float* prev_point_to_cluster_distances);
 
+void launch_argmin_kernel_simple(int64_t k, int64_t t, float* dE, float* dc,
+                          int* local_assignments, int* local_cluster_sizes);
 /**
  * @brief Launches the reinit kernel, which computes V = 1 / cluster_size
  * 

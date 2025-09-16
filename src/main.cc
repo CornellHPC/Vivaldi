@@ -47,12 +47,20 @@ int cluster2d(ArgParse args, MPI_Comm comm)
   /** Initialize handle */
   Handle handle(args.s);
 
+  /** Initialize process grid */
+  int world_size;
+  MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+  int grid_size = std::floor(std::sqrt(world_size));
+  std::shared_ptr<ProcessGrid> grid = std::make_shared<ProcessGrid>(grid_size, grid_size);
+
   /** Initialize V matrix */
 #ifndef BASIC
   auto vi_start = hrc::now();
 #endif
 
-  auto V = DistV2D::initialize_v(handle, args.m, args.k, comm);
+
+  DistV2D V(args.m, args.k, grid);
+
 
 #ifndef BASIC
   MPI_Barrier(comm);
@@ -64,18 +72,24 @@ int cluster2d(ArgParse args, MPI_Comm comm)
   auto k_start = hrc::now();
 #endif
 
-  DnMat_t K(V.local_cols, V.local_cols, compute_kernel_matrix2d(handle, PT, args.gamma, args.c, args.r, false));
+
+  DistDnMat_t K({new DnMat_t(V.cols, V.cols, compute_kernel_matrix2d(handle, PT, args.gamma, args.c, args.r, false)),
+                 grid});
   PT.releaseWorkspace();
+
 
 #ifndef BASIC
   MPI_Barrier(comm);
   timer.k_elapsed = get_time_elapsed(k_start);
 #endif
 
+
   /** Initialize E, z, and c */
-  DnMat_t E(V.local_rows, V.local_cols);
-  DnVec_t z(V.local_rows);
-  DnVec_t c(args.k);
+  DistDnMat_t E({new DnMat_t(V.rows, V.cols), 
+                 grid});
+  DistDnVec_t z({new DnVec_t(V.cols)});
+  DistDnVec_t c({new DnVec_t(V.rows)});
+
 
 #ifndef BASIC
   timer.dead_proc_counts =
@@ -110,16 +124,16 @@ int cluster2d(ArgParse args, MPI_Comm comm)
     auto c_computation_start = hrc::now();
 #endif
 
-    //spmv(handle, V, z, c);  // SpMV: c = Vz using local V
-                            //
+    spmv(handle, V, *z.vec, *c.vec);  // SpMV: c = Vz using local V
+
 #ifndef BASIC
     MPI_Barrier(comm);
     timer.c_computation += get_time_elapsed(c_computation_start);
     auto c_mpi_start = hrc::now();
 #endif
 
-    sum_vec2d(c, comm);  // Calculate global c by summing across ranks
-                       //
+    sum_vec2d(c);  // Calculate global c by summing across ranks
+
 #ifndef BASIC
     MPI_Barrier(comm);
     timer.c_mpi += get_time_elapsed(c_mpi_start);
@@ -135,7 +149,7 @@ int cluster2d(ArgParse args, MPI_Comm comm)
     vr_computation_start = hrc::now();
 #endif
 
-    set_V_from_assignments2d(E, c, V);  // Reinitialize V based on D matrix
+    //set_V_from_assignments2d(E, c, V);  // Reinitialize V based on D matrix
                                       
 #ifndef BASIC
     MPI_Barrier(comm);

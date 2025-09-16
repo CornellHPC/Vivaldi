@@ -94,6 +94,35 @@ __global__ void argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
   }
 }
 
+__global__ void argmin_kernel_simple(int64_t k, int64_t t, float* dE, float* dc, int* local_assignments, int* local_cluster_sizes)
+{
+  for (int64_t point = blockIdx.x * blockDim.x + threadIdx.x; point < k;
+       point += blockDim.x * gridDim.x) {
+    local_cluster_sizes[point] = 0;
+  }
+
+  for (int64_t point = blockIdx.x * blockDim.x + threadIdx.x; point < t;
+       point += blockDim.x * gridDim.x) {
+    // printf("Argmin kernel started with point %lld\n", point);
+    float min = FLT_MAX;
+    int min_cluster = 0;
+    for (int cluster = 0; cluster < k; ++cluster) {
+      float value = dc[cluster] - 2 * dE[cluster * t + point];
+      // printf("C %f E %f (idx %lld) -> Value %f\n", dc[cluster],
+      //        dE[cluster * t + point], cluster * t + point, value);
+      if (value < min) {
+        min = value;
+        min_cluster = cluster;
+      }
+    }
+
+
+    // update assignment and cluster sizes
+    local_assignments[point] = min_cluster;
+    atomicAdd(&local_cluster_sizes[min_cluster], 1);
+  }
+}
+
 __global__ void reinit_kernel(float* V_global_values, int* global_assignments,
                               int* global_cluster_sizes, int64_t k, int64_t m,
                               bool sparse) {
@@ -172,6 +201,21 @@ void launch_argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
       local_k_means_objective_score, local_k_means_objective_delta,
       prev_point_to_cluster_distances);
 }
+
+void launch_argmin_kernel_simple(int64_t k, int64_t t, float* dE, float* dc, int* local_assignments, int* local_cluster_sizes)
+{
+  if (k == 0 || t == 0)
+    return;
+
+  // 1024 max threads for current CUDA compute capability (<= 7.5)
+  // 16x16 blocks, with upwards round for more coverage
+  // block cap is set to prevent overflow
+  int nthreads = 256;
+  int nblocks = std::min(int64_t(1048576), (t + nthreads - 1) / nthreads);
+  argmin_kernel_simple<<<nblocks, nthreads>>>(
+      k, t, dE, dc, local_assignments, local_cluster_sizes);
+}
+
 
 void launch_reinit_kernel(float* V_global_values, int* global_assignments,
                           int* global_cluster_sizes, int64_t k, int64_t m,
