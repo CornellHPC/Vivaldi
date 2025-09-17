@@ -15,14 +15,9 @@ using namespace cpop;
 using hrc = std::chrono::high_resolution_clock;
 using ms = std::chrono::milliseconds;
 
-int cluster_15d(ArgParse args, MPI_Comm comm) 
+int cluster_2d(ArgParse args, MPI_Comm comm) 
 {
-    //TODO
-}
-
-int cluster2d(ArgParse args, MPI_Comm comm) 
-{
-  Timer timer;
+     Timer timer;
   int rank, size;
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
@@ -87,8 +82,8 @@ int cluster2d(ArgParse args, MPI_Comm comm)
   /** Initialize E, z, and c */
   DistDnMat_t E({new DnMat_t(V.rows, V.cols), 
                  grid});
-  DistDnVec_t z({new DnVec_t(V.cols)});
-  DistDnVec_t c({new DnVec_t(V.rows)});
+  DistDnVec_t z({new DnVec_t(V.cols), grid});
+  DistDnVec_t c({new DnVec_t(V.rows), grid});
 
 
 #ifndef BASIC
@@ -150,6 +145,165 @@ int cluster2d(ArgParse args, MPI_Comm comm)
 #endif
 
     set_V_from_assignments2d(V);  // Reinitialize V based on D matrix
+                                      
+#ifndef BASIC
+    MPI_Barrier(comm);
+    timer.vr_computation += get_time_elapsed(vr_computation_start);
+    timer.vr_elapsed += get_time_elapsed(vr_start);
+#endif
+
+  }
+
+  /** Save and exit */
+  MPI_Barrier(comm);
+  timer.elapsed = get_time_elapsed(start);
+  //timer.save_all(args.benchmark.c_str(), compute_cluster_score(K, E, c, V));
+  //V.save(args.output.c_str());
+  return EXIT_SUCCESS;
+}
+
+int cluster15d(ArgParse args, MPI_Comm comm) 
+{
+  Timer timer;
+  int rank, size;
+  MPI_Comm_rank(comm, &rank);
+  MPI_Comm_size(comm, &size);
+  wake_gpus(rank);
+  slate::gpu_aware_mpi(true);
+
+  /** Load Data (IO) */
+#ifndef BASIC
+  auto io_start = hrc::now();
+#endif
+
+  auto PT = load_matrix2d(args.path.c_str(), args.m, args.n, comm);
+
+#ifndef BASIC
+  MPI_Barrier(comm);
+  timer.io = get_time_elapsed(io_start);
+#endif
+
+  /** IO done, start the main timer! */
+  auto start = hrc::now();
+
+  /** Initialize handle */
+  Handle handle(args.s);
+
+  /** Initialize process grid */
+  int world_size;
+  MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+  int grid_size = std::floor(std::sqrt(world_size));
+  std::shared_ptr<ProcessGrid> grid2d = std::make_shared<ProcessGrid>(grid_size, grid_size);
+  std::shared_ptr<ProcessGrid> grid1d = std::make_shared<ProcessGrid>(grid_size, 1);
+
+  /** Initialize V matrix */
+#ifndef BASIC
+  auto vi_start = hrc::now();
+#endif
+
+
+  DistV1D V(args.m, args.k, args.s, grid1d);
+
+
+#ifndef BASIC
+  MPI_Barrier(comm);
+  timer.vi_elapsed = get_time_elapsed(vi_start);
+#endif
+
+/** Initialize K matrix */
+#ifndef BASIC
+  auto k_start = hrc::now();
+#endif
+
+
+  DistDnMat_t K({new DnMat_t(V.local_v->t*grid_size, 
+                             V.local_v->t*grid_size, 
+                             compute_kernel_matrix2d(handle, 
+                                                     PT, 
+                                                     args.gamma, 
+                                                     args.c, 
+                                                     args.r, 
+                                                     false)),
+                 grid2d});
+  PT.releaseWorkspace();
+
+
+#ifndef BASIC
+  MPI_Barrier(comm);
+  timer.k_elapsed = get_time_elapsed(k_start);
+#endif
+
+
+  /** Initialize E, z, and c */
+  int64_t row_tile_size = tile_dim(grid2d->col_comm, V.local_v->k_);
+  DistDnMat_t E({new DnMat_t(V.local_v->k_, V.local_v->t), 
+                 grid1d});
+  DistDnMat_t E_p({new DnMat_t(row_tile_size, V.local_v->t), 
+                  grid2d});
+  DistDnVec_t z({new DnVec_t(V.local_v->t), grid1d});
+  DistDnVec_t c({new DnVec_t(V.local_v->k_), grid1d});
+
+
+#ifndef BASIC
+  timer.dead_proc_counts =
+      (int*)calloc(args.niter, sizeof(int));  // initialize dead process counts
+#endif
+
+  /** K-Means Loop */
+  for (int i = 0; i < args.niter; ++i) {
+    timer.niter += 1;  // Increment iteration counter
+
+#ifndef BASIC
+    auto e_start = hrc::now();
+#endif
+
+
+    spmm15d(handle, V, K, E, E_p);  
+
+
+#ifndef BASIC
+    MPI_Barrier(comm);
+    timer.e_elapsed += get_time_elapsed(e_start);
+    auto z_start = hrc::now();
+#endif
+
+    compute_z(*V.local_v, *E.mat, *z.vec);  // Calculate z from the mask of local V on ET
+
+
+#ifndef BASIC
+    MPI_Barrier(comm);
+    timer.z_elapsed += get_time_elapsed(z_start);
+    auto c_start = hrc::now();
+    auto c_computation_start = hrc::now();
+#endif
+
+    spmv(handle, *V.local_v, *z.vec, *c.vec);  // SpMV: c = Vz using local V
+
+#ifndef BASIC
+    MPI_Barrier(comm);
+    timer.c_computation += get_time_elapsed(c_computation_start);
+    auto c_mpi_start = hrc::now();
+#endif
+
+    sum_vec(*c.vec, grid1d->world_comm);  // Calculate global c by summing across ranks
+
+#ifndef BASIC
+    MPI_Barrier(comm);
+    timer.c_mpi += get_time_elapsed(c_mpi_start);
+    timer.c_elapsed += get_time_elapsed(c_start);
+    auto vr_start = hrc::now();
+    auto vr_computation_start = hrc::now();
+#endif
+
+    argmin(*E.mat, *c.vec, *V.local_v);  // Argmin kernel (compute D matrix)
+
+
+#ifndef BASIC
+    vr_computation_start = hrc::now();
+#endif
+
+    //set_V_from_assignments2d(V);  // Reinitialize V based on D matrix
+    set_V_from_assignments15d(V);  // Reinitialize V based on D matrix
                                       
 #ifndef BASIC
     MPI_Barrier(comm);

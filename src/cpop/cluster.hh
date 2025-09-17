@@ -124,6 +124,7 @@ struct V_t {
    */
   V_t(int64_t m, int64_t k, bool sparse, MPI_Comm comm);
 
+
   /**
    * @brief Saves the cluster assignments to disk
    *
@@ -150,6 +151,13 @@ struct V_t {
 };
 
 
+struct DistV1D {
+  std::shared_ptr<ProcessGrid> grid;
+  V_t * local_v;
+  DistV1D(int64_t m, int64_t k, bool sparse, std::shared_ptr<ProcessGrid> grid);
+
+};
+
 
 /**
  * @brief Computes E by SpMM routine
@@ -162,6 +170,7 @@ struct V_t {
  */
 int spmm(Handle& handle, V_t& V, DnMat_t& K, DnMat_t& E);
 int spmm2d(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E);
+int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMat_t& E_p);
 
 /**
  * @brief Computes z based on the local V matrix and E (i.e. using the masking strategy)
@@ -240,6 +249,7 @@ int gather_assignments(DnMat_t& E, DnVec_t& c, V_t& V, int convergence);
  */
 int set_V_from_assignments(DnMat_t& E, DnVec_t& c, V_t& V);
 int set_V_from_assignments2d(DistV2D& V);
+int set_V_from_assignments15d(DistV1D& V);
 
 /**
  * @brief Reinitializes V based on the distances matrix (computed from E and c)

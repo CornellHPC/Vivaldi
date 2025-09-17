@@ -210,6 +210,14 @@ V_t::~V_t() {
   }
 }
 
+
+DistV1D::DistV1D(int64_t m, int64_t k, bool sparse, std::shared_ptr<ProcessGrid> grid)
+{
+    this->local_v = new V_t(m, k, sparse, grid->world_comm);
+    this->grid = grid;
+}
+
+
 DnMat_t::DnMat_t(int64_t h, int64_t w) {
   CHECK_CUDA(cudaMalloc(&dM, h * w * sizeof(float)));
   CHECK_CUSPARSE(
@@ -365,6 +373,79 @@ int spmm2d(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E)
 }
 
 
+int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMat_t& E_p)
+{
+    auto grid2d = K.grid;
+    auto grid1d = V.grid;
+    int sqrtp = grid2d->row_size;
+    int p = grid2d->world_size;
+
+    V_t * loc_v = V.local_v;
+    DnMat_t * loc_k = K.mat;
+    DnMat_t * loc_e = E.mat;
+    DnMat_t * loc_e_p = E_p.mat;
+
+    assert(loc_v->sparse && "1.5D only works with sparse V for now");
+
+    // Allgather local V along process rows of grid2d
+    // We only have to communicate the rowinds array
+    // Other stuff can be implicitly determined
+    
+    int * d_rowinds;
+    CHECK_CUDA(cudaMalloc(&d_rowinds, sizeof(int) * sqrtp * loc_v->t));
+
+    MPI_Allgather(loc_v->local_assignments, loc_v->t, MPI_INT,
+                  d_rowinds, loc_v->t, MPI_INT,
+                  grid2d->row_comm);
+
+    float * d_vals;
+    int * d_colptrs;
+    CHECK_CUDA(cudaMalloc(&d_vals, sizeof(float) * sqrtp * loc_v->t));
+    CHECK_CUDA(cudaMalloc(&d_colptrs, sizeof(int) * sqrtp * loc_v->t));
+
+    // Set the values and colptrs arrays
+    // TODO: Kernel to do this
+
+    cusparseSpMatDescr_t v_gather;
+    CHECK_CUSPARSE(cusparseCreateCsc(&v_gather,
+                                     loc_v->k_,
+                                     sqrtp*loc_v->t,
+                                     sqrtp*loc_v->t,
+                                     d_colptrs,
+                                     d_rowinds,
+                                     d_vals,
+                                     CUSPARSE_INDEX_32I,
+                                     CUSPARSE_INDEX_32I,
+                                     CUSPARSE_INDEX_BASE_ZERO,
+                                     CUDA_R_32F));
+
+    float alpha = 1.0f;
+    float beta = 0.0f;
+    size_t buffer_size;
+    void* buffer;
+    CHECK_CUSPARSE(cusparseSpMM_bufferSize(
+        handle.sh(), CUSPARSE_OPERATION_NON_TRANSPOSE,
+        CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, v_gather, loc_k->M, &beta, loc_e_p->M,
+        CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, &buffer_size));
+    CHECK_CUDA(cudaMalloc(&buffer, buffer_size));
+
+    // Perform SpMM
+    CHECK_CUSPARSE(cusparseSpMM(
+        handle.sh(), CUSPARSE_OPERATION_NON_TRANSPOSE,
+        CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, v_gather, loc_k->M, &beta, loc_e_p->M,
+        CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, &buffer_size));
+
+    // Clean up
+    CHECK_CUDA(cudaFree(buffer));
+    CHECK_CUSPARSE(cusparseDestroySpMat(v_gather));
+
+    // Transpose local E partial sum
+
+    // Reduce scatter along process columns into E to redistribute to 1D
+
+}
+
+
 int spmm(Handle& handle, V_t& V, DnMat_t& K, DnMat_t& E) {
   // Define constants
   float alpha = 1.0f;
@@ -410,7 +491,7 @@ int compute_z(V_t& V, DnMat_t& E, DnVec_t& z) {
 
 int compute_z2d(DistV2D& V, DistDnMat_t& E, DistDnVec_t& z) 
 {
-    launch_z_kernel(z.vec->size, z.vec->dz, V.d_colptrs, E.mat->dM);
+    launch_z_kernel(z.vec->size, z.vec->dz, V.d_rowinds, E.mat->dM);
     cudaDeviceSynchronize();
     return EXIT_SUCCESS;
 }
@@ -651,6 +732,11 @@ int set_V_from_assignments2d(DistV2D& V) {
 
   // Finally, inclusive prefix scan sets colptrs
   return EXIT_SUCCESS;
+}
+
+int set_V_from_assignments15d(DistV1D& V)
+{
+    return EXIT_SUCCESS;
 }
 
 int reinit_V(DnMat_t& E, DnVec_t& c, V_t& V) {
