@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 project(cpop LANGUAGES C CXX CUDA)
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CUDA_ARCHITECTURES "80")
 
 # OpenMP
 find_package(OpenMP REQUIRED)
@@ -17,9 +18,9 @@ set(CMAKE_CXX_COMPILER ${MPI_CXX_COMPILER})
 
 # CUDA
 find_package(CUDA REQUIRED)
-if(NOT CUDA_FOUND)
-  message(FATAL_ERROR "Could not find CUDA.")
-endif()
+#if(NOT CUDA_FOUND)
+#  message(FATAL_ERROR "Could not find CUDA.")
+#endif()
 
 # SLATE
 option(SLATE_INSTALL "Path to SLATE installation directory.")
@@ -31,7 +32,7 @@ if(NOT IS_DIRECTORY "${SLATE_INSTALL}")
 endif()
 
 # Executable
-file(GLOB SOURCES "main.cc" "**/*.cu" "**/*.cc" "cpop/**/*.cu" "cpop/**/*.cc")
+file(GLOB SOURCES "main.cu" "**/*.cu" "**/*.cc" "cpop/**/*.cu" "cpop/**/*.cc")
 add_executable(main ${SOURCES})
 
 # Compile definitions

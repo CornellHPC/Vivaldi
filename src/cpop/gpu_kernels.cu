@@ -94,7 +94,7 @@ __global__ void argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
   }
 }
 
-__global__ void argmin_kernel_simple(int64_t k, int64_t t, float* dE, float* dc, int* local_assignments, int* local_cluster_sizes)
+__global__ void argmin_kernel_simple(int64_t k, int64_t t, float* dE, float* dc, int* local_assignments, int* local_cluster_sizes, cpop::FloatI32 * local_minpairs)
 {
   for (int64_t point = blockIdx.x * blockDim.x + threadIdx.x; point < k;
        point += blockDim.x * gridDim.x) {
@@ -118,9 +118,27 @@ __global__ void argmin_kernel_simple(int64_t k, int64_t t, float* dE, float* dc,
 
 
     // update assignment and cluster sizes
-    local_assignments[point] = min_cluster;
+    local_minpairs[point] = {min, min_cluster};
     atomicAdd(&local_cluster_sizes[min_cluster], 1);
   }
+}
+
+__global__ void reinit_kernel2d(float* d_values, int * d_rowinds, int * d_colptrs, int * d_mininds, int * d_cluster_sizes, 
+                                int64_t k, int64_t m, int64_t nnz, 
+                                cpop::IsMine& op)
+{
+    for (int64_t i = blockIdx.x * blockDim.x + threadIdx.x; i < m;
+         i += blockDim.x * gridDim.x) 
+    {
+        d_colptrs[i+1] = (int)op(d_mininds[i]);
+
+    }
+    for (int64_t i = blockIdx.x * blockDim.x + threadIdx.x; i < nnz;
+         i += blockDim.x * gridDim.x) 
+    {
+        d_values[i] = 1.0f / d_cluster_sizes[d_rowinds[i]];
+        d_rowinds[i] = d_rowinds[i] % k; // map to local rowinds
+    }
 }
 
 __global__ void reinit_kernel(float* V_global_values, int* global_assignments,
@@ -155,6 +173,15 @@ __global__ void score_kernel(float* local_scores, float* dK, float* dE,
     int a = local_assignments[i];
     local_scores[i] = dK[t * i + i] - 2 * dE[t * a + i] + dc[a];
   }
+}
+
+__global__ void mininds_kernel(cpop::FloatI32 * d_minpairs, int * d_mininds, int cols)
+{
+  for (int64_t i = blockIdx.x * blockDim.x + threadIdx.x; i < cols; i += blockDim.x * gridDim.x)
+  {
+      d_mininds[i] = d_minpairs[i].i;
+  }
+
 }
 
 namespace cpop {
@@ -202,7 +229,8 @@ void launch_argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
       prev_point_to_cluster_distances);
 }
 
-void launch_argmin_kernel_simple(int64_t k, int64_t t, float* dE, float* dc, int* local_assignments, int* local_cluster_sizes)
+
+void launch_argmin_kernel_simple(int64_t k, int64_t t, float* dE, float* dc, int* local_assignments, int* local_cluster_sizes, FloatI32 * local_minpairs)
 {
   if (k == 0 || t == 0)
     return;
@@ -213,7 +241,7 @@ void launch_argmin_kernel_simple(int64_t k, int64_t t, float* dE, float* dc, int
   int nthreads = 256;
   int nblocks = std::min(int64_t(1048576), (t + nthreads - 1) / nthreads);
   argmin_kernel_simple<<<nblocks, nthreads>>>(
-      k, t, dE, dc, local_assignments, local_cluster_sizes);
+      k, t, dE, dc, local_assignments, local_cluster_sizes, local_minpairs);
 }
 
 
@@ -232,6 +260,27 @@ void launch_reinit_kernel(float* V_global_values, int* global_assignments,
                                        global_cluster_sizes, k, m, sparse);
 }
 
+void launch_reinit_kernel2d(float * d_values, int * d_rowinds, int * d_colptrs, int * d_mininds, int * d_cluster_sizes, int64_t k, int64_t m, int64_t nnz, IsMine& op)
+{
+  if (k == 0 || m == 0 || nnz == 0)
+    return;
+
+  // 1024 max threads for current CUDA compute capability (<= 7.5)
+  // 16x16 blocks, with upwards round for more coverage
+  // block cap is set to prevent overflow
+  int nthreads = 256;
+  int nblocks = std::min(int64_t(1048576), (m + nthreads - 1) / nthreads);
+  reinit_kernel2d<<<nblocks, nthreads>>>(d_values, 
+                                         d_rowinds,
+                                         d_colptrs,
+                                         d_mininds,
+                                         d_cluster_sizes,
+                                         k, m, nnz, 
+                                         op);
+}
+
+
+
 void launch_score_kernel(float* local_scores, float* dK, float* dE, float* dc,
                          int* local_assignments, int64_t t) {
   if (t == 0)
@@ -244,6 +293,26 @@ void launch_score_kernel(float* local_scores, float* dK, float* dE, float* dc,
   int nblocks = std::min(int64_t(1048576), (t + nthreads - 1) / nthreads);
   score_kernel<<<nblocks, nthreads>>>(local_scores, dK, dE, dc,
                                       local_assignments, t);
+}
+
+void launch_mininds_kernel(FloatI32 * d_minpairs, int * d_mininds, int64_t cols)
+{
+  if (cols == 0)
+    return;
+
+  // 1024 max threads for current CUDA compute capability (<= 7.5)
+  // 16x16 blocks, with upwards round for more coverage
+  // block cap is set to prevent overflow
+  int nthreads = 256;
+  int nblocks = std::min(int64_t(1048576), (cols + nthreads - 1) / nthreads);
+  mininds_kernel<<<nblocks, nthreads>>>(d_minpairs, d_mininds, cols);
+}
+
+void launch_inclusive_scan(int * d_in, int * d_out, int64_t n)
+{
+  thrust::inclusive_scan(thrust::device_pointer_cast(d_in),
+                         thrust::device_pointer_cast(d_in) + n,
+                         thrust::device_pointer_cast(d_out));
 }
 
 bool test_convergence_equality(int* assignments, int* prev_assignments,

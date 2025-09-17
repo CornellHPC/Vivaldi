@@ -151,7 +151,7 @@ int64_t get_time_elapsed(std::chrono::_V2::system_clock::time_point start);
 int* compute_tile_sizes(int m, int nprocs);
 
 
-std::vector<std::vector<std::array<int, 2>>> compute_tile_sizes2d(int m, int nprocs);
+//std::vector<std::vector<std::array<int, 2>>> compute_tile_sizes2d(int m, int nprocs);
 
 
 int square_grid_dim(MPI_Comm comm);

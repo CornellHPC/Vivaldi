@@ -105,7 +105,7 @@ int cluster2d(ArgParse args, MPI_Comm comm)
 #endif
 
 
-    spmm2d(handle, V, K, E);  // SpMM: ET = VK using global V
+    spmm2d(handle, V, K, E);  
 
 
 #ifndef BASIC
@@ -149,7 +149,7 @@ int cluster2d(ArgParse args, MPI_Comm comm)
     vr_computation_start = hrc::now();
 #endif
 
-    //set_V_from_assignments2d(E, c, V);  // Reinitialize V based on D matrix
+    set_V_from_assignments2d(V);  // Reinitialize V based on D matrix
                                       
 #ifndef BASIC
     MPI_Barrier(comm);

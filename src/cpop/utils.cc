@@ -212,41 +212,41 @@ int* compute_tile_sizes(int m, int nprocs) {
   return t_sizes;
 }
 
-std::vector<std::vector<std::array<int, 2>>> compute_tile_sizes2d(int m, int nprocs) 
-{
-  int nprocs_root = std::floor(std::sqrt(nprocs));
-
-  std::vector<std::vector<std::array<int, 2>>> result;
-  for (int i=0; i<nprocs_root; i++)
-  {
-      result.emplace_back(nprocs_root);
-  }
-
-  int t = tile_dim2(nprocs_root, m);//m / nprocs + (m > nprocs * nprocs && m % nprocs > 0);
-  for (int i = 0; i < nprocs_root; ++i) {
-    for (int j=0; j<nprocs_root; j++)
-    {
-        if (i == nprocs_root - 1)
-        {
-            result[i][j][0] = m - (nprocs_root - 1) * t;
-        }
-        else
-        {
-            result[i][j][0] = t;
-        }
-
-        if (j == nprocs_root - 1)
-        {
-            result[i][j][1] = m - (nprocs_root - 1) * t;
-        }
-        else
-        {
-            result[i][j][1] = t;
-        }
-    }
-  }
-  return result;
-}
+//std::vector<std::vector<std::array<int, 2>>> compute_tile_sizes2d(int m, int nprocs) 
+//{
+//  int nprocs_root = std::floor(std::sqrt(nprocs));
+//
+//  std::vector<std::vector<std::array<int, 2>>> result;
+//  for (int i=0; i<nprocs_root; i++)
+//  {
+//      result.emplace_back(nprocs_root);
+//  }
+//
+//  int t = tile_dim2(nprocs_root, m);//m / nprocs + (m > nprocs * nprocs && m % nprocs > 0);
+//  for (int i = 0; i < nprocs_root; ++i) {
+//    for (int j=0; j<nprocs_root; j++)
+//    {
+//        if (i == nprocs_root - 1)
+//        {
+//            result[i][j][0] = m - (nprocs_root - 1) * t;
+//        }
+//        else
+//        {
+//            result[i][j][0] = t;
+//        }
+//
+//        if (j == nprocs_root - 1)
+//        {
+//            result[i][j][1] = m - (nprocs_root - 1) * t;
+//        }
+//        else
+//        {
+//            result[i][j][1] = t;
+//        }
+//    }
+//  }
+//  return result;
+//}
 
 
 int square_grid_dim(MPI_Comm comm) {

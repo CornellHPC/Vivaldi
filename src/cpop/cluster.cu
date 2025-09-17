@@ -481,7 +481,6 @@ int sum_vec(DnVec_t& c, MPI_Comm comm) {
 
 
 int sum_vec2d(DistDnVec_t& c) {
-
     MPI_Allreduce(MPI_IN_PLACE, c.vec->dz, c.vec->size, MPI_FLOAT, MPI_SUM, c.grid->row_comm);
     return EXIT_SUCCESS;
 }
@@ -509,11 +508,15 @@ int argmin2d(DistDnMat_t& E, DistDnVec_t& c, DistV2D& V)
 {
 
   launch_argmin_kernel_simple(
-      V.rows, V.cols, E.mat->dM, c.vec->dz, V.d_colptrs, V.d_cluster_sizes);
+      V.rows, V.cols, E.mat->dM, c.vec->dz, V.d_colptrs, V.d_cluster_sizes,
+      V.d_minpairs);
   cudaDeviceSynchronize();
 
-  // TODO: MPI_Reduce along rows to get minloc
+  MPI_Allreduce(MPI_IN_PLACE, V.d_minpairs, V.cols, MPI_FLOAT_INT, MPI_MINLOC, V.grid->col_comm);
+  MPI_Allreduce(MPI_IN_PLACE, V.d_cluster_sizes, V.global_rows, MPI_INT, MPI_SUM, V.grid->world_comm);
 
+
+  return EXIT_SUCCESS;
 }
 
 int gather_assignments(DnMat_t& E, DnVec_t& c, V_t& V, int convergence) {
@@ -615,7 +618,39 @@ int set_V_from_assignments(DnMat_t& E, DnVec_t& c, V_t& V) {
   return EXIT_SUCCESS;
 }
 
-int set_V_from_assignments2d(DnMat_t& E, DnVec_t& c, DistV2D& V) {
+int set_V_from_assignments2d(DistV2D& V) {
+
+  // Annoying
+  launch_mininds_kernel(V.d_minpairs, V.d_mininds, V.cols);
+  CHECK_CUDA(cudaDeviceSynchronize());
+
+  int lower = V.tile_cols[0] * V.grid->row_rank;
+  int upper = lower + V.cols;
+
+  // Which points belong to my chunk of the clusters
+  IsMine op{lower, upper};
+
+  int64_t nnz_next = launch_countif(V.d_mininds, V.cols, op);
+  V.nnz = nnz_next;
+
+  CHECK_CUDA(cudaFree(V.d_vals));
+  CHECK_CUDA(cudaFree(V.d_rowinds));
+  CHECK_CUDA(cudaMemset(V.d_colptrs, 0, sizeof(int) * (V.cols + 1)));
+  CHECK_CUDA(cudaMalloc(&(V.d_vals), sizeof(float) * nnz_next));
+  CHECK_CUDA(cudaMalloc(&(V.d_rowinds), sizeof(int) * nnz_next));
+
+  launch_copyif(V.d_mininds, V.d_rowinds, V.cols, op);
+
+  launch_reinit_kernel2d(V.d_vals, V.d_rowinds, V.d_colptrs, 
+                         V.d_mininds, V.d_cluster_sizes,
+                         V.tile_rows[0], V.nnz, V.cols, 
+                         op);
+  CHECK_CUDA(cudaDeviceSynchronize());
+
+  launch_inclusive_scan(V.d_colptrs + 1, V.d_colptrs + 1, V.cols);
+
+  // Finally, inclusive prefix scan sets colptrs
+  return EXIT_SUCCESS;
 }
 
 int reinit_V(DnMat_t& E, DnVec_t& c, V_t& V) {

@@ -150,7 +150,7 @@ float* compute_kernel_matrix2d(Handle& handle, slate::Matrix<float>& PT, float g
   // Create local K buffer
   float* data;
   int64_t rows = PT.n();
-  auto t_sizes = compute_tile_sizes2d(rows, grid_dim);
+  //auto t_sizes = compute_tile_sizes2d(rows, grid_dim);
   //int64_t loc_rows = rows / grid_dim;
   //CHECK_CUDA(cudaMalloc(&data, t_sizes[row_rank][col_rank][0] * t_sizes[row_rank][col_rank][1] * sizeof(float)));
   CHECK_CUDA(cudaMalloc(&data, (rows/grid_dim) * (rows/grid_dim) * sizeof(float)));

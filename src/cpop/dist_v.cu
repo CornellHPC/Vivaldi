@@ -25,12 +25,12 @@ ProcessGrid::ProcessGrid(int p, int q)
 DistV2D::DistV2D(int64_t m, int64_t k, std::shared_ptr<ProcessGrid> grid)
 {
     this->grid = grid;
-    global_rows = m;
-    global_cols = k;
+    global_cols = m;
+    global_rows = k;
     global_nnz = m;
 
-    tile_rows = compute_tile_sizes(m, grid->row_size);
-    tile_cols = compute_tile_sizes(k, grid->col_size);
+    tile_rows = compute_tile_sizes(k, grid->row_size);
+    tile_cols = compute_tile_sizes(m, grid->col_size);
     tile_nnz = new int64_t[grid->world_size];
     memset(tile_nnz, 0, sizeof(int64_t) * grid->world_size);
 
@@ -98,6 +98,9 @@ DistV2D::DistV2D(int64_t m, int64_t k, std::shared_ptr<ProcessGrid> grid)
     CHECK_CUDA(cudaMemcpy(d_rowinds, h_rowinds, sizeof(int) * nnz, cudaMemcpyHostToDevice));
     CHECK_CUDA(cudaMemcpy(d_vals, h_values, sizeof(float) * nnz, cudaMemcpyHostToDevice));
 
+    CHECK_CUDA(cudaMalloc(&d_minpairs, sizeof(FloatI32) * cols));
+    CHECK_CUDA(cudaMalloc(&d_minpairs, sizeof(int) * cols));
+
     delete[] h_colptrs;
     delete[] h_rowinds;
     delete[] h_values;
@@ -123,6 +126,12 @@ DistV2D::~DistV2D()
     }
     if (this->d_cluster_sizes!= nullptr) {
         cudaFree(this->d_cluster_sizes);
+    }
+    if (this->d_minpairs!= nullptr) {
+        cudaFree(this->d_minpairs);
+    }
+    if (this->d_mininds!= nullptr) {
+        cudaFree(this->d_mininds);
     }
 
     delete[] tile_rows;

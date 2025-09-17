@@ -149,6 +149,8 @@ struct V_t {
   ~V_t();
 };
 
+
+
 /**
  * @brief Computes E by SpMM routine
  * 
@@ -237,7 +239,7 @@ int gather_assignments(DnMat_t& E, DnVec_t& c, V_t& V, int convergence);
  * @return int
  */
 int set_V_from_assignments(DnMat_t& E, DnVec_t& c, V_t& V);
-int set_V_from_assignments2d(DnMat_t& E, DnVec_t& c, DistV2D& V);
+int set_V_from_assignments2d(DistV2D& V);
 
 /**
  * @brief Reinitializes V based on the distances matrix (computed from E and c)

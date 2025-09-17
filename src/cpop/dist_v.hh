@@ -11,6 +11,7 @@
 #include <cusparse_v2.h>
 
 #include "utils.hh"
+#include "gpu_kernels.cuh"
 
 
 namespace cpop {
@@ -31,6 +32,8 @@ struct DistV2D {
   int * d_colptrs;
   int * d_rowinds;
   int * d_cluster_sizes;
+  int * d_mininds;
+  FloatI32 * d_minpairs;
 
   int * tile_rows;
   int * tile_cols;
