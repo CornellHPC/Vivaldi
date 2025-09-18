@@ -51,6 +51,7 @@ struct ArgParse {
   std::string benchmark;
   int niter;
   int convergence;
+  std::string alg;
 
   ArgParse(int argc, char* argv[]);
 };

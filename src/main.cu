@@ -15,7 +15,7 @@ using namespace cpop;
 using hrc = std::chrono::high_resolution_clock;
 using ms = std::chrono::milliseconds;
 
-int cluster_2d(ArgParse args, MPI_Comm comm) 
+int cluster2d(ArgParse args, MPI_Comm comm) 
 {
      Timer timer;
   int rank, size;
@@ -244,6 +244,10 @@ int cluster15d(ArgParse args, MPI_Comm comm)
   DistDnVec_t c({new DnVec_t(V.local_v->k_), grid1d});
 
 
+  /** Temporary buffer */
+  float * d_tmp;
+  CHECK_CUDA(cudaMalloc(&d_tmp, sizeof(float) * V.local_v->k_ * E_p.mat->w_));
+
 #ifndef BASIC
   timer.dead_proc_counts =
       (int*)calloc(args.niter, sizeof(int));  // initialize dead process counts
@@ -258,7 +262,7 @@ int cluster15d(ArgParse args, MPI_Comm comm)
 #endif
 
 
-    spmm15d(handle, V, K, E, E_p);  
+    spmm15d(handle, V, K, E, E_p, d_tmp);  
 
 
 #ifndef BASIC
@@ -302,7 +306,6 @@ int cluster15d(ArgParse args, MPI_Comm comm)
     vr_computation_start = hrc::now();
 #endif
 
-    //set_V_from_assignments2d(V);  // Reinitialize V based on D matrix
     set_V_from_assignments15d(V);  // Reinitialize V based on D matrix
                                       
 #ifndef BASIC
@@ -312,6 +315,8 @@ int cluster15d(ArgParse args, MPI_Comm comm)
 #endif
 
   }
+
+  CHECK_CUDA(cudaFree(d_tmp));
 
   /** Save and exit */
   MPI_Barrier(comm);
@@ -492,7 +497,13 @@ int main(int argc, char* argv[]) {
   ArgParse args(argc, argv);
 
   /** Cluster */
-  cluster1d(args, comm);
+  if (args.alg.compare("1d")) {
+      cluster1d(args, comm);
+  } else if (args.alg.compare("15d")) {
+      cluster15d(args, comm);
+  } else if (args.alg.compare("2d")) {
+      cluster2d(args, comm);
+  }
 
   /** Exit */
   MPI_Finalize();

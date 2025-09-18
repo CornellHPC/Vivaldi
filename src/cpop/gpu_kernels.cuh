@@ -84,6 +84,7 @@ void launch_reinit_kernel(float* V_global_values, int* global_assignments,
                           int* global_cluster_sizes, int64_t k, int64_t m,
                           bool sparse);
 void launch_reinit_kernel2d(float * d_values, int * d_rowinds, int * d_colptrs, int * d_mininds, int * d_cluster_sizes, int64_t k, int64_t m, int64_t nnz, IsMine& op);
+void launch_init_from_rowinds_kernel(int * d_rowinds, int * d_colptrs, int * d_cluster_sizes, float * d_vals, int64_t nnz, int64_t m);
 
 /**
   * @brief Launches the cluster score kernel, which computes the sum of squared distance

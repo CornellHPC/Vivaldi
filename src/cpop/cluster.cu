@@ -373,7 +373,7 @@ int spmm2d(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E)
 }
 
 
-int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMat_t& E_p)
+int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMat_t& E_p, float * d_tmp)
 {
     auto grid2d = K.grid;
     auto grid1d = V.grid;
@@ -401,10 +401,12 @@ int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMa
     float * d_vals;
     int * d_colptrs;
     CHECK_CUDA(cudaMalloc(&d_vals, sizeof(float) * sqrtp * loc_v->t));
+    //TODO: Technically we can initialize only once and reuse d_colptrs
     CHECK_CUDA(cudaMalloc(&d_colptrs, sizeof(int) * sqrtp * loc_v->t));
+    CHECK_CUDA(cudaMemsetAsync(d_colptrs,0,sizeof(int)));
 
     // Set the values and colptrs arrays
-    // TODO: Kernel to do this
+    launch_init_from_rowinds_kernel(d_rowinds, d_colptrs, loc_v->global_cluster_sizes, d_vals, sqrtp * loc_v->t, sqrtp * loc_v->t);
 
     cusparseSpMatDescr_t v_gather;
     CHECK_CUSPARSE(cusparseCreateCsc(&v_gather,
@@ -434,15 +436,36 @@ int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMa
         handle.sh(), CUSPARSE_OPERATION_NON_TRANSPOSE,
         CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, v_gather, loc_k->M, &beta, loc_e_p->M,
         CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, &buffer_size));
+    CHECK_CUDA(cudaDeviceSynchronize());
 
     // Clean up
     CHECK_CUDA(cudaFree(buffer));
     CHECK_CUSPARSE(cusparseDestroySpMat(v_gather));
+    CHECK_CUDA(cudaFree(d_vals));
+    CHECK_CUDA(cudaFree(d_colptrs));
+    CHECK_CUDA(cudaFree(d_rowinds));
+
 
     // Transpose local E partial sum
+    CHECK_CUBLAS(cublasSgeam(handle.dh(),
+                             CUBLAS_OP_T, 
+                             CUBLAS_OP_N,
+                             loc_e->w_, loc_v->k_,
+                             &alpha, loc_e_p->dM,
+                             loc_v->k_,
+                             &beta,
+                             d_tmp, loc_e_p->w_,
+                             d_tmp, loc_e_p->w_));
+    CHECK_CUDA(cudaDeviceSynchronize());
+
 
     // Reduce scatter along process columns into E to redistribute to 1D
+    std::vector<int> recvcounts(grid2d->col_size);
+    std::fill(recvcounts.begin(), recvcounts.end(), loc_v->k_ * loc_e->w_);
+    MPI_Reduce_scatter(d_tmp, loc_e->dM, recvcounts.data(), MPI_FLOAT,
+                       MPI_SUM, grid2d->col_comm);
 
+    return EXIT_SUCCESS;
 }
 
 
@@ -736,7 +759,19 @@ int set_V_from_assignments2d(DistV2D& V) {
 
 int set_V_from_assignments15d(DistV1D& V)
 {
-    return EXIT_SUCCESS;
+
+  V_t * loc_v = V.local_v;
+  
+  MPI_Allreduce(loc_v->local_cluster_sizes, loc_v->global_cluster_sizes, loc_v->k_, MPI_INT,
+                MPI_SUM, MPI_COMM_WORLD);
+
+  launch_init_from_rowinds_kernel(loc_v->local_ptr_to_assignments,
+                                  loc_v->local_csc_col_offsets,
+                                  loc_v->local_cluster_sizes,
+                                  loc_v->local_ptr_to_values,
+                                  loc_v->t, loc_v->t);
+  cudaDeviceSynchronize();
+  return EXIT_SUCCESS;
 }
 
 int reinit_V(DnMat_t& E, DnVec_t& c, V_t& V) {

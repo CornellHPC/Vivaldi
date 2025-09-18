@@ -166,6 +166,15 @@ __global__ void reinit_kernel(float* V_global_values, int* global_assignments,
   }
 }
 
+__global__ void init_from_rowinds_kernel(int * d_rowinds, int * d_cluster_sizes, float * d_vals, int64_t nnz)
+{
+  for (int64_t i = blockIdx.x * blockDim.x + threadIdx.x; i < nnz;
+       i += blockDim.x * gridDim.x) 
+  {
+    d_vals[i] = d_cluster_sizes[d_rowinds[i]];
+  }
+}
+
 __global__ void score_kernel(float* local_scores, float* dK, float* dE,
                              float* dc, int* local_assignments, int64_t t) {
   for (int64_t i = blockIdx.x * blockDim.x + threadIdx.x; i < t;
@@ -277,6 +286,24 @@ void launch_reinit_kernel2d(float * d_values, int * d_rowinds, int * d_colptrs, 
                                          d_cluster_sizes,
                                          k, m, nnz, 
                                          op);
+}
+
+
+void launch_init_from_rowinds_kernel(int * d_rowinds, int * d_colptrs, int * d_cluster_sizes, float * d_vals, int64_t nnz, int64_t m)
+{
+    if (nnz == 0)
+    {
+        return;
+    }
+
+    // Set the colptrs array
+    launch_inclusive_scan(d_colptrs+1, d_colptrs+1, m);
+
+    // Set values
+    int nthreads = 256;
+    int nblocks = std::min(int64_t(1048576), (nnz + nthreads - 1) / nthreads);
+    init_from_rowinds_kernel<<<nblocks, nthreads>>>(d_rowinds, d_cluster_sizes, d_vals, nnz);
+
 }
 
 
