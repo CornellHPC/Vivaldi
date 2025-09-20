@@ -475,7 +475,7 @@ def read_data(formatted_txt_file) -> np.ndarray:
     return np.array(data)
 
 
-def create_scripts(account, path=os.getcwd(), n_trials=5, base_m=200000, max_m=1600000):
+def create_scripts(account, path=os.getcwd(), n_trials=5, base_m=131072, max_m=1600000):
     P = [2**i for i in range(2,9)]
 
     for p in P:
@@ -580,8 +580,8 @@ def create_script(path, prefix, account, p, m, k, dataset, d=None, sparse=None, 
     if not isinstance(sparse, list):
         sparse = [sparse]
 
-    # Ten seconds for one trial estimated through experiments
-    total_time_seconds = 10*len(m)*len(d)*len(k)*len(dataset)*len(sparse)
+    # Five seconds for one trial estimated through experiments
+    total_time_seconds = 5*len(m)*len(d)*len(k)*len(dataset)*len(sparse)
     timestamp = str(datetime.timedelta(seconds=total_time_seconds))
 
     with open(script_fname, "w") as f:
