@@ -1,4 +1,4 @@
-import urllib.request, bz2, lzma, math, os, re, stat, sys
+import urllib.request, bz2, datetime, lzma, math, os, re, stat, sys
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker
@@ -475,27 +475,27 @@ def read_data(formatted_txt_file) -> np.ndarray:
     return np.array(data)
 
 
-def create_scripts(account, path=os.getcwd(), n_trials=5, base_m=128000, max_m=1200000):
+def create_scripts(account, path=os.getcwd(), n_trials=5, base_m=200000, max_m=1600000):
     P = [2**i for i in range(2,9)]
 
     for p in P:
         k = [2, 5, 10, 50, 100]
 
         # Strong scaling
-        m = int(min(4*base_m, max_m))
+        m = int(min(base_m, max_m))
         create_script(path, "strong", account, p, m, k, DATASETS)
 
         # Weak scaling
-        m = int(min(2*base_m*math.sqrt(p), max_m))
+        m = int(min(base_m*math.sqrt(p)/2, max_m))
         create_script(path, "weak", account, p, m, k, DATASETS)
 
         # Variant weak scaling
-        m = int(min(2*base_m*math.sqrt(p), max_m))
+        m = int(min(base_m*math.sqrt(p)/2, max_m))
         create_script(path, "vweak", account, p, m, k, RANDOM_DATASET, d=p*4)
 
     # Mode test
     p = 1
-    m = [32000, 64000, 128000]
+    m = [25000, 50000, 100000]
     k = [10, 20, 30, 40, 50, 60]
     create_script(path, "mode", account, p, m, k, RANDOM_DATASET, sparse=[True, False])
 
@@ -551,10 +551,6 @@ def create_script(path, prefix, account, p, m, k, dataset, d=None, sparse=None, 
     script will perform one srun for each value.
     """
 
-    # TODO: Sparse threshold selection
-    if sparse is None:
-        sparse = int(True)
-
     basic = int(basic)
     convergence = int(convergence)
     nodes = math.ceil(p /4)
@@ -571,13 +567,29 @@ def create_script(path, prefix, account, p, m, k, dataset, d=None, sparse=None, 
     script_fname = os.path.join(scripts_dir, fname+".sh")
     log_fname = os.path.join(log_dir, fname)
 
-    # TODO: Compute test time dynamically
+    # If individual values supplied, these must be
+    # converted to a list for script generation.
+    if not isinstance(m, list):
+        m = [m]
+    if not isinstance(d, list):
+        d = [d]
+    if not isinstance(k, list):
+        k = [k]
+    if not isinstance(dataset, list):
+        dataset = [dataset]
+    if not isinstance(sparse, list):
+        sparse = [sparse]
+
+    # Ten seconds for one trial estimated through experiments
+    total_time_seconds = 10*len(m)*len(d)*len(k)*len(dataset)*len(sparse)
+    timestamp = str(datetime.timedelta(seconds=total_time_seconds))
+
     with open(script_fname, "w") as f:
         f.writelines([
             "#!/bin/bash\n",
             f"#SBATCH --nodes={nodes}\n",
             f"#SBATCH --gpus={p}\n",
-            f"#SBATCH --time=00:10:00\n",
+            f"#SBATCH --time={timestamp}\n",
             "#SBATCH --constraint=gpu&hbm80g\n",
             "#SBATCH --qos=regular\n",
             f"#SBATCH --account={account}\n",
@@ -585,19 +597,6 @@ def create_script(path, prefix, account, p, m, k, dataset, d=None, sparse=None, 
             "export DVS_MAXNODES=1__\n",
             "module load cudatoolkit/12.2\n",
         ])
-
-        # If individual values supplied, these must be
-        # converted to a list for script generation.
-        if not isinstance(m, list):
-            m = [m]
-        if not isinstance(d, list):
-            d = [d]
-        if not isinstance(k, list):
-            k = [k]
-        if not isinstance(dataset, list):
-            dataset = [dataset]
-        if not isinstance(sparse, list):
-            sparse = [sparse]
 
         for _m in m:
             for _d in d:
@@ -608,6 +607,8 @@ def create_script(path, prefix, account, p, m, k, dataset, d=None, sparse=None, 
                             dataset_label = _dataset["label"].lower()
                             if d[0] is None:
                                 _d = _dataset["d"]
+                            if sparse[0] is None:
+                                _sparse = int(_k > 32)
                             _m = min(_m, _dataset["m"])
                             _sparse = int(_sparse)
 
@@ -660,7 +661,7 @@ def get_scaling_data(
 
 
 def get_threshold_data(path="results"):
-    filenames = [x for x in os.listdir(path) if x.startswith("_m") and "time" in x]
+    filenames = [x for x in os.listdir(path) if x.startswith("mode") and "time" in x]
     pattern = re.compile(r"Elapsed: (\d+)")
 
     data = {}
@@ -671,9 +672,9 @@ def get_threshold_data(path="results"):
             match = pattern.search(text)
             elapsed = int(match.group(1))
         elems = filename.split("_")
-        m = int(elems[3])
-        k = int(elems[5])
-        sp = "sp" if elems[7] == "1" else "dn"
+        m = int(elems[2])
+        k = int(elems[4])
+        sp = "sp" if elems[6] == "1" else "dn"
         data.setdefault(m, {}).setdefault(sp, {}).setdefault(k, []).append(elapsed)
 
     out = {}
@@ -706,6 +707,7 @@ def construct_graphs():
     plt.legend(loc="upper right")
     plt.savefig(f"graphs/mode.png")
     plt.clf()
+    return
 
     # construct strong scaling graph
     for base_m in BASE_M:
@@ -1157,10 +1159,10 @@ if __name__ == "__main__":
         print(f"Invalid action. Must be one of {usage_legal}")
         sys.exit(1)
     if action == "create_scripts":
-        for p in [4, 8, 16, 32, 64, 128, 256]:
-            create_file_text(p, "")
+        # for p in [4, 8, 16, 32, 64, 128, 256]:
+            # create_file_text(p, "")
         # TODO:
-        # create_scripts("m4341")
+        create_scripts("m4341")
         print("Generated scripts in experiments/scripts/ directory.")
     if action == "create_random":
         create_random()
