@@ -483,14 +483,17 @@ def create_scripts(account, path=os.getcwd(), n_trials=5, base_m=131072, max_m=1
 
         # Strong scaling
         m = int(min(base_m, max_m))
+        m -= m % p
         create_script(path, "strong", account, p, m, k, DATASETS)
 
         # Weak scaling
         m = int(min(base_m*math.sqrt(p)/2, max_m))
+        m -= m % p
         create_script(path, "weak", account, p, m, k, DATASETS)
 
         # Variant weak scaling
         m = int(min(base_m*math.sqrt(p)/2, max_m))
+        m -= m % p
         create_script(path, "vweak", account, p, m, k, RANDOM_DATASET, d=p*4)
 
     # Mode test
