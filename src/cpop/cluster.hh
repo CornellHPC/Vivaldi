@@ -225,7 +225,7 @@ int compute_c(Handle& handle, V_t& V, DnVec_t& z, DnVec_t& c, MPI_Comm comm);
  * @param V The V matrix
  * @return int
  */
-int argmin(DnMat_t& E, DnVec_t& c, V_t& V);
+int argmin(DnMat_t& E, DnVec_t& c, V_t& V, bool ptr=false);
 int argmin2d(DistDnMat_t& E, DistDnVec_t& c, DistV2D& V);
 
 /**

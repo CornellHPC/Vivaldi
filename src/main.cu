@@ -46,7 +46,7 @@ int cluster2d(ArgParse args, MPI_Comm comm)
   int world_size;
   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
   int grid_size = std::floor(std::sqrt(world_size));
-  std::shared_ptr<ProcessGrid> grid = std::make_shared<ProcessGrid>(grid_size, grid_size);
+  std::shared_ptr<ProcessGrid> grid = std::make_shared<ProcessGrid>(grid_size, grid_size, true);
 
   /** Initialize V matrix */
 #ifndef BASIC
@@ -194,7 +194,7 @@ int cluster15d(ArgParse args, MPI_Comm comm)
   int world_size;
   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
   int grid_size = std::floor(std::sqrt(world_size));
-  std::shared_ptr<ProcessGrid> grid2d = std::make_shared<ProcessGrid>(grid_size, grid_size, false);
+  std::shared_ptr<ProcessGrid> grid2d = std::make_shared<ProcessGrid>(grid_size, grid_size, true);
   std::shared_ptr<ProcessGrid> grid1d = std::make_shared<ProcessGrid>(world_size, 1, false);
 
   /** Initialize V matrix */
@@ -304,7 +304,7 @@ int cluster15d(ArgParse args, MPI_Comm comm)
     auto vr_computation_start = hrc::now();
 #endif
 
-    argmin(*E.mat, *c.vec, *V.local_v);  // Argmin kernel (compute D matrix)
+    argmin(*E.mat, *c.vec, *V.local_v, true);  // Argmin kernel (compute D matrix)
 
 
 #ifndef BASIC

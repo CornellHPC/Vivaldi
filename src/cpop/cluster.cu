@@ -416,14 +416,6 @@ int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMa
                 grid2dcolmaj->row_rank, grid2dcolmaj->col_comm);
     MPI_Bcast(d_rowinds, loc_v->t*sqrtp, MPI_INT, grid2dcolmaj->col_rank, grid2dcolmaj->row_comm);
 
-    //MPI_Allgather(loc_v->local_ptr_to_assignments, loc_v->t, MPI_INT,
-    //              d_rowinds, loc_v->t, MPI_INT,
-    //              grid2d->row_comm);
-    //
-    MPI_Barrier(MPI_COMM_WORLD);
-    print_phase("d_rowinds");
-    print_device_matrix(d_rowinds, 1, loc_v->t*sqrtp);
-    MPI_Barrier(MPI_COMM_WORLD);
 
     float * d_vals;
     int * d_colptrs;
@@ -488,28 +480,10 @@ int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMa
                              d_tmp, loc_e_p->h_));
     CHECK_CUDA(cudaDeviceSynchronize());
 
-    CHECK_CUDA(cudaMemset(loc_e_p->dM, 0,sizeof(float) * loc_e_p->h_ * loc_e_p->w_))
+    //CHECK_CUDA(cudaMemset(loc_e_p->dM, 0,sizeof(float) * loc_e_p->h_ * loc_e_p->w_))
 
-
-    // Reduce scatter along process columns into E to redistribute to 1D
-    // Maybe not the best way to do this -- alltoall then reduce likely better
-    //int root = grid2d->row_rank;
-    //MPI_Reduce(d_tmp, loc_e_p->dM, loc_e_p->h_ * loc_e_p->w_, MPI_FLOAT, MPI_SUM, root, grid2d->col_comm);
-    //MPI_Barrier(MPI_COMM_WORLD);
-    //root = grid2d->col_rank;
-    //MPI_Scatter(loc_e_p->dM, loc_e->h_* loc_e->w_, MPI_FLOAT, d_tmp2, loc_e->h_ * loc_e->w_, MPI_FLOAT, root, grid2d->row_comm);
 
     MPI_Reduce_scatter_block(d_tmp, d_tmp2, loc_e->h_ * loc_e->w_, MPI_FLOAT, MPI_SUM, grid2dcolmaj->col_comm);
-    //float * d_tmp3;
-    //cudaMalloc(&d_tmp3, sizeof(float ) * loc_e_p->w_ * loc_e_p->h_ * sqrtp);
-    //MPI_Allreduce(d_tmp, d_tmp3, loc_e_p->w_ * loc_e_p->h_, MPI_FLOAT, MPI_SUM, grid2dcolmaj->col_comm);
-    //cudaMemcpy(d_tmp2, d_tmp3 + (loc_e->w_ * loc_e->h_) * grid2dcolmaj->col_rank,
-    //            sizeof(float) * (loc_e->w_ * loc_e->h_),
-    //            cudaMemcpyDeviceToDevice);
-    //MPI_Alltoall(d_tmp, loc_e_p->h_ * loc_e_p->w_, MPI_FLOAT, 
-    //             d_tmp2, loc_e->h_ * loc_e->w_, MPI_FLOAT,
-    //             grid2dcolmaj->col_comm);
-
 
 
     // Need another transpose so output is row major
@@ -524,10 +498,6 @@ int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMa
                              loc_e->dM, loc_e->w_));
     CHECK_CUDA(cudaDeviceSynchronize());
 
-    //cudaMemcpy(loc_e->dM, d_tmp2, sizeof(float) * loc_e->h_*loc_e->w_, cudaMemcpyDeviceToDevice);
-    MPI_Barrier(MPI_COMM_WORLD);
-    print_phase("loc_e");
-    print_device_matrix(loc_e->dM, loc_e->h_, loc_e->w_);
     MPI_Barrier(MPI_COMM_WORLD);
     return EXIT_SUCCESS;
 }
@@ -659,15 +629,25 @@ int compute_c(Handle& handle, V_t& V, DnVec_t& z, DnVec_t& c, MPI_Comm comm) {
   return EXIT_SUCCESS;
 }
 
-int argmin(DnMat_t& E, DnVec_t& c, V_t& V) {
+int argmin(DnMat_t& E, DnVec_t& c, V_t& V, bool ptr) {
   bool t = true;
   cudaMemcpy(V.converged, &t, sizeof(bool), cudaMemcpyHostToDevice);
   cudaMemset(V.local_k_means_objective_score, 0, sizeof(float));
   cudaMemset(V.local_k_means_objective_delta, 0, sizeof(float));
-  launch_argmin_kernel(
-      V.k_, V.t, E.dM, c.dz, V.local_assignments, V.local_cluster_sizes,
-      V.converged, V.local_k_means_objective_score,
-      V.local_k_means_objective_delta, V.prev_point_to_cluster_distances);
+  if (ptr)
+  {
+      launch_argmin_kernel(
+          V.k_, V.t, E.dM, c.dz, V.local_ptr_to_assignments, V.local_cluster_sizes,
+          V.converged, V.local_k_means_objective_score,
+          V.local_k_means_objective_delta, V.prev_point_to_cluster_distances);
+  }
+  else
+  {
+      launch_argmin_kernel(
+          V.k_, V.t, E.dM, c.dz, V.local_assignments, V.local_cluster_sizes,
+          V.converged, V.local_k_means_objective_score,
+          V.local_k_means_objective_delta, V.prev_point_to_cluster_distances);
+  }
   CHECK_CUDA(cudaDeviceSynchronize());
   return EXIT_SUCCESS;
 }
@@ -831,7 +811,7 @@ int set_V_from_assignments15d(DistV1D& V)
 
   launch_init_from_rowinds_kernel(loc_v->local_ptr_to_assignments,
                                   loc_v->local_csc_col_offsets,
-                                  loc_v->local_cluster_sizes,
+                                  loc_v->global_cluster_sizes,
                                   loc_v->local_ptr_to_values,
                                   loc_v->t, loc_v->t);
   cudaDeviceSynchronize();

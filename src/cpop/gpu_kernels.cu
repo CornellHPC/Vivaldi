@@ -296,6 +296,7 @@ void launch_init_from_rowinds_kernel(int * d_rowinds, int * d_colptrs, int * d_c
     }
 
     // Set the colptrs array
+    // TODO: Have option to remove this if it is already initialized
     thrust::fill( thrust::device_pointer_cast(d_colptrs) + 1,
                     thrust::device_pointer_cast(d_colptrs) + m + 1,
                     1);
@@ -305,7 +306,6 @@ void launch_init_from_rowinds_kernel(int * d_rowinds, int * d_colptrs, int * d_c
     // Set values
     int nthreads = 256;
     int nblocks = std::min(int64_t(1048576), (nnz + nthreads - 1) / nthreads);
-    std::cout<<nthreads<<","<<nblocks<<std::endl;
     init_from_rowinds_kernel<<<nblocks, nthreads>>>(d_rowinds, d_cluster_sizes, d_vals, nnz);
 
 }

@@ -103,6 +103,9 @@ int main(int argc, char* argv[]) {
                  grid1d});
   DistDnMat_t E_p({new DnMat_t(Vdist.local_v->k_, K2D.mat->w_), 
                   grid2dcolmaj});
+  DistDnVec_t z({new DnVec_t(Vdist.local_v->t), grid1d});
+  DistDnVec_t c({new DnVec_t(Vdist.local_v->k_), grid1d});
+
 
   DnMat_t Ecorrect(k, t);
   DnVec_t zcorrect(t);
@@ -115,28 +118,30 @@ int main(int argc, char* argv[]) {
 
   spmm(handle, V, K1D, Ecorrect);
   spmm15d(handle, Vdist, K2D, E, E_p, d_tmp, d_tmp2);
+
   check_e(Ecorrect, *E.mat, rank, logfile_path);
   print_phase("E1 correct");
 
-  compute_z(V, E, z);
 
-  spmv(handle, V, z, c);
-  sum_vec(c, comm);
+  compute_z(V, Ecorrect, zcorrect);
+  compute_z(*Vdist.local_v, *E.mat, *z.vec);
 
-  reinit_V(E, c, V);
+  spmv(handle, V, zcorrect, ccorrect);
+  sum_vec(ccorrect, comm);
 
-  spmm(handle, V, K, E);
-  //check_e(E, rank);
+  spmv(handle, *Vdist.local_v, *z.vec, *c.vec);
+  sum_vec(*c.vec, comm);
 
-  //compute_z(V, E, z);
-  //check_z2(z, rank);
 
-  //spmv(handle, V, z, c);
-  //sum_vec(c, comm);
-  //check_c2(c);
+  reinit_V(Ecorrect, ccorrect, V);
+  argmin(*E.mat, *c.vec, *Vdist.local_v, true);  
 
-  //reinit_V(E, c, V);
-  //check_v2(V);
+  set_V_from_assignments15d(Vdist);
+  spmm(handle, V, K1D, Ecorrect);
+  spmm15d(handle, Vdist, K2D, E, E_p, d_tmp, d_tmp2);
+  check_e(Ecorrect, *E.mat, rank, logfile_path);
+  print_phase("E2 correct");
+
 
   cudaFree(d_tmp);
   cudaFree(d_tmp2);
