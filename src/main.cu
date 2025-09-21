@@ -17,7 +17,7 @@ using ms = std::chrono::milliseconds;
 
 int cluster2d(ArgParse args, MPI_Comm comm) 
 {
-     Timer timer;
+  Timer timer;
   int rank, size;
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
@@ -137,6 +137,7 @@ int cluster2d(ArgParse args, MPI_Comm comm)
     auto vr_computation_start = hrc::now();
 #endif
 
+
     argmin2d(E, c, V);  // Argmin kernel (compute D matrix)
 
 
@@ -216,15 +217,14 @@ int cluster15d(ArgParse args, MPI_Comm comm)
 #endif
 
 
-  DistDnMat_t K({new DnMat_t(V.local_v->t*grid_size, 
-                             V.local_v->t*grid_size, 
+  DistDnMat_t K({new DnMat_t(V.local_v->t*grid_size, V.local_v->t*grid_size, 
                              compute_kernel_matrix2d(handle, 
                                                      PT, 
                                                      args.gamma, 
                                                      args.c, 
                                                      args.r, 
                                                      false)),
-                 grid2d});
+                             grid2d});
   PT.releaseWorkspace();
 
 
@@ -270,6 +270,7 @@ int cluster15d(ArgParse args, MPI_Comm comm)
     timer.e_elapsed += get_time_elapsed(e_start);
     auto z_start = hrc::now();
 #endif
+
 
     compute_z(*V.local_v, *E.mat, *z.vec);  // Calculate z from the mask of local V on ET
 
@@ -322,7 +323,7 @@ int cluster15d(ArgParse args, MPI_Comm comm)
   MPI_Barrier(comm);
   timer.elapsed = get_time_elapsed(start);
   //timer.save_all(args.benchmark.c_str(), compute_cluster_score(K, E, c, V));
-  //V.save(args.output.c_str());
+  V.local_v->save(args.output.c_str());
   return EXIT_SUCCESS;
 }
 
@@ -352,6 +353,7 @@ int cluster1d(ArgParse args, MPI_Comm comm)
 #else
   auto PT = load_matrix(args.path.c_str(), args.m, args.n, comm);
 #endif
+
 
 #ifndef BASIC
   MPI_Barrier(comm);
@@ -409,6 +411,7 @@ int cluster1d(ArgParse args, MPI_Comm comm)
     auto e_start = hrc::now();
 #endif
     spmm(handle, V, K, E);  // SpMM: ET = VK using global V
+    CHECK_CUDA(cudaDeviceSynchronize());
 #ifndef BASIC
     MPI_Barrier(comm);
     timer.e_elapsed += get_time_elapsed(e_start);
@@ -416,6 +419,7 @@ int cluster1d(ArgParse args, MPI_Comm comm)
 #endif
 
     compute_z(V, E, z);  // Calculate z from the mask of local V on ET
+
 #ifndef BASIC
     MPI_Barrier(comm);
     timer.z_elapsed += get_time_elapsed(z_start);
@@ -424,7 +428,8 @@ int cluster1d(ArgParse args, MPI_Comm comm)
 #endif
 
     spmv(handle, V, z, c);  // SpMV: c = Vz using local V
-                            //
+    CHECK_CUDA(cudaDeviceSynchronize());
+
 #ifndef BASIC
     MPI_Barrier(comm);
     timer.c_computation += get_time_elapsed(c_computation_start);
@@ -432,7 +437,7 @@ int cluster1d(ArgParse args, MPI_Comm comm)
 #endif
 
     sum_vec(c, comm);  // Calculate global c by summing across ranks
-                       //
+    CHECK_CUDA(cudaDeviceSynchronize());
 #ifndef BASIC
     MPI_Barrier(comm);
     timer.c_mpi += get_time_elapsed(c_mpi_start);
@@ -459,9 +464,6 @@ int cluster1d(ArgParse args, MPI_Comm comm)
     timer.vr_mpi += get_time_elapsed(vr_mpi_start);
 #endif
 
-    if (args.convergence && done)
-      break;  // All processes are dead, so quit
-
 #ifndef BASIC
     vr_computation_start = hrc::now();
 #endif
@@ -479,7 +481,12 @@ int cluster1d(ArgParse args, MPI_Comm comm)
   /** Save and exit */
   MPI_Barrier(comm);
   timer.elapsed = get_time_elapsed(start);
-  timer.save_all(args.benchmark.c_str(), compute_cluster_score(K, E, c, V));
+  float score = compute_cluster_score(K, E, c, V);
+  timer.save_all(args.benchmark.c_str(), score);
+  if (rank==0)
+  {
+      std::cout<<"K-means score: "<<score<<std::endl;
+  }
   V.save(args.output.c_str());
   return EXIT_SUCCESS;
 }
@@ -497,11 +504,11 @@ int main(int argc, char* argv[]) {
   ArgParse args(argc, argv);
 
   /** Cluster */
-  if (args.alg.compare("1d")) {
+  if (args.alg.compare("1d")==0) {
       cluster1d(args, comm);
-  } else if (args.alg.compare("15d")) {
+  } else if (args.alg.compare("15d")==0) {
       cluster15d(args, comm);
-  } else if (args.alg.compare("2d")) {
+  } else if (args.alg.compare("2d")==0) {
       cluster2d(args, comm);
   }
 

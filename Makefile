@@ -67,9 +67,7 @@ alloc:
 
 test:
 	source /opt/cray/pe/lmod/lmod/init/bash && \
-	module load cudatoolkit/12.2 && \
 	cd build && \
-	salloc -N 1 -q interactive -t 00:01:00 -C gpu -G 4 -A $(ACCOUNT) \
 	srun -N 1 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 4 \
 	device_wrapper ctest --output-on-failure -O /tmp/output test_exe
 
@@ -98,9 +96,8 @@ svmguide1:
 letter:
 	source /opt/cray/pe/lmod/lmod/init/bash && \
 	module load cudatoolkit/12.2 && \
-	salloc -N 4 -q interactive -t 00:01:00 -C gpu -G 16 -A $(ACCOUNT) \
 	srun -N 4 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 16 \
-	build/device_wrapper build/main -i data/letter -m 15000 -n 5000 -k 26
+	build/device_wrapper build/main -i data/letter -m 15000 -n 5000 -k 26 -a 1d
 
 letter_combblas:
 	source /opt/cray/pe/lmod/lmod/init/bash && \

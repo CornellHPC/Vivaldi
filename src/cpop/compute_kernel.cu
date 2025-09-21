@@ -69,8 +69,6 @@ slate::Matrix<float> load_matrix2d(const char* fname, int64_t rows, int64_t cols
   int grid_dim = square_grid_dim(comm);
   int cols_per_block = tile_dim(comm, cols);
   int rows_per_block = tile_dim(comm, rows);
-  std::cout<<cols_per_block<<","<<rows_per_block<<","<<grid_dim<<std::endl;
-  sleep(1);
   auto M = slate::Matrix<float>(cols, rows, cols_per_block, rows_per_block, grid_dim, grid_dim, comm);
   M.insertLocalTiles(slate::Target::Devices);
 
@@ -105,7 +103,7 @@ float* compute_kernel_matrix(slate::Matrix<float>& PT, float gamma, float c,
   MPI_Comm_rank(PT.mpiComm(), &rank);
   MPI_Comm_size(PT.mpiComm(), &size);
 
-  assert(PT.n() > size * size && "TODO: Handle case with remainder.");
+  //assert(PT.n() > size * size && "TODO: Handle case with remainder.");
 
   // Create local K buffer
   float* data;
@@ -145,15 +143,15 @@ float* compute_kernel_matrix2d(Handle& handle, slate::Matrix<float>& PT, float g
   int row_rank = rank % grid_dim;
   int col_rank = rank / grid_dim;
 
-  assert(PT.n() > size * size && "TODO: Handle case with remainder.");
 
   // Create local K buffer
   float* data;
   int64_t rows = PT.n();
-  //auto t_sizes = compute_tile_sizes2d(rows, grid_dim);
-  //int64_t loc_rows = rows / grid_dim;
-  //CHECK_CUDA(cudaMalloc(&data, t_sizes[row_rank][col_rank][0] * t_sizes[row_rank][col_rank][1] * sizeof(float)));
-  CHECK_CUDA(cudaMalloc(&data, (rows/grid_dim) * (rows/grid_dim) * sizeof(float)));
+  auto t_rows = compute_tile_sizes(rows, grid_dim);
+  auto t_cols = compute_tile_sizes(rows, grid_dim);
+  auto loc_rows = t_rows[row_rank];
+  auto loc_cols = t_cols[col_rank];
+  CHECK_CUDA(cudaMalloc(&data,  loc_rows * loc_cols * sizeof(float)));
 
   int q = tile_dim(MPI_COMM_WORLD, rows);
 
@@ -164,7 +162,7 @@ float* compute_kernel_matrix2d(Handle& handle, slate::Matrix<float>& PT, float g
                                 PT.mpiComm());
 
   // Fill K matrix with tiles using buffer
-  K.tileInsert(row_rank, col_rank, 0, data, (rows/grid_dim));
+  K.tileInsert(row_rank, col_rank, 0, data, loc_rows);
 
   // Compute kernel matrix
   slate::gemm<float>(1.0f, P, PT, 0.0f, K,
@@ -173,8 +171,12 @@ float* compute_kernel_matrix2d(Handle& handle, slate::Matrix<float>& PT, float g
   {
       K.tileLayoutConvertOnDevices(blas::Layout::RowMajor);
   }
+  else
+  {
+      K.tileLayoutConvertOnDevices(blas::Layout::ColMajor);
+  }
 
-  launch_polynomial_kernel((rows/grid_dim), (rows/grid_dim), data, gamma, c, r);
+  launch_polynomial_kernel(loc_rows, loc_cols, data, gamma, c, r);
 
   if (redist)
   {
@@ -212,8 +214,9 @@ float * redistribute_2d_1d(Handle& handle, float * K, const uint64_t m, const ui
     // I have sqrt(P) col blocks
     for (int i=0; i<grid_dim; i++)
     {
-        size_t offset = start_offset + i * (m/size);
-        int owner = offset / (m/size);
+        //size_t offset = start_offset + i * (m/size);
+        //int owner = offset / (m/size);
+        int owner = i + col_rank*grid_dim;
         sendcounts[owner] += slice_size;
     }
 
@@ -238,8 +241,7 @@ float * redistribute_2d_1d(Handle& handle, float * K, const uint64_t m, const ui
 
     for (int i=0; i<grid_dim; i++)
     {
-        size_t offset = start_offset + i * (m/size);
-        int owner = offset / (m/size);
+        int owner = i + col_rank*grid_dim;
         CHECK_CUDA(cudaMemcpyAsync(send_buf + senddispls[owner],
                                   K + i * slice_size,
                                   sizeof(float) * slice_size,

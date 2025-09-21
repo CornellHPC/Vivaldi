@@ -35,6 +35,8 @@ V_t::V_t(int64_t m, int64_t k, bool sparse, MPI_Comm comm) {
   CHECK_CUDA(cudaMalloc(&local_assignments, t * sizeof(int)));
   CHECK_CUDA(cudaMalloc(&local_cluster_sizes, k * sizeof(int)));
 
+  print_line();
+
   // round robin initialization (todo: GPU)
   int* init_global_cluster_sizes = (int*)calloc(k, sizeof(int));
   for (int i = 0; i < k; ++i)
@@ -42,6 +44,7 @@ V_t::V_t(int64_t m, int64_t k, bool sparse, MPI_Comm comm) {
   CHECK_CUDA(cudaMemcpy(global_cluster_sizes, init_global_cluster_sizes,
                         k * sizeof(int), cudaMemcpyHostToDevice));
 
+  print_line();
   // round robin initialization (todo: GPU)
   int* init_assignments = (int*)calloc(m, sizeof(int));
   for (int i = 0; i < m; ++i)
@@ -49,6 +52,7 @@ V_t::V_t(int64_t m, int64_t k, bool sparse, MPI_Comm comm) {
   CHECK_CUDA(cudaMemcpy(global_assignments, init_assignments, m * sizeof(int),
                         cudaMemcpyHostToDevice));
 
+  print_line();
   // set assignment pointers
   local_ptr_to_assignments = global_assignments + displs[rank];
   previous_global_assignments = nullptr;
@@ -64,6 +68,7 @@ V_t::V_t(int64_t m, int64_t k, bool sparse, MPI_Comm comm) {
   previous_local_k_means_objective_score =
       1e-6f;  // a very small number to start
 
+  print_line();
   // Implementation-specific initialization
   if (sparse) {
     CHECK_CUDA(cudaMalloc(&values, m * sizeof(float)));
@@ -93,6 +98,7 @@ V_t::V_t(int64_t m, int64_t k, bool sparse, MPI_Comm comm) {
                                      global_assignments, values,
                                      CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I,
                                      CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));
+    print_line();
 
     // the local partition of V in CSC is found by slicing the global partition at [displs[rank]:displs[rank] + t]
     // (since displs[rank] is the displacement of this rank's first point)
@@ -121,6 +127,7 @@ V_t::V_t(int64_t m, int64_t k, bool sparse, MPI_Comm comm) {
   // Clean up
   free(init_global_cluster_sizes);
   free(init_assignments);
+  print_phase("Done");
 }
 
 
@@ -604,7 +611,7 @@ int argmin(DnMat_t& E, DnVec_t& c, V_t& V) {
       V.k_, V.t, E.dM, c.dz, V.local_assignments, V.local_cluster_sizes,
       V.converged, V.local_k_means_objective_score,
       V.local_k_means_objective_delta, V.prev_point_to_cluster_distances);
-  cudaDeviceSynchronize();
+  CHECK_CUDA(cudaDeviceSynchronize());
   return EXIT_SUCCESS;
 }
 

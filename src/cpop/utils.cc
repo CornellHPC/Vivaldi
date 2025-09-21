@@ -55,7 +55,7 @@ ArgParse::ArgParse(int argc, char* argv[]) {
       "niter", po::value<int>()->default_value(100), "number of iterations")(
       "convergence", po::value<int>()->default_value(0),
       "enable convergence check (1 for basic, 2 for "
-      "process-exclusion-based-convergence)"),
+      "process-exclusion-based-convergence)")
       ("alg,a", po::value<std::string>(), "clustering algorithm to use (1d, 15d, 2d)");
 
   // Parse command line arguments
