@@ -140,8 +140,8 @@ float* compute_kernel_matrix2d(Handle& handle, slate::Matrix<float>& PT, float g
   MPI_Comm_size(PT.mpiComm(), &size);
 
   int grid_dim = square_grid_dim(PT.mpiComm());
-  int row_rank = rank % grid_dim;
-  int col_rank = rank / grid_dim;
+  int row_rank = rank / grid_dim;
+  int col_rank = rank % grid_dim;
 
 
   // Create local K buffer
@@ -158,11 +158,11 @@ float* compute_kernel_matrix2d(Handle& handle, slate::Matrix<float>& PT, float g
   // Initialize matrices
   auto P = slate::transpose(PT);
   auto K = slate::Matrix<float>(P.m(), P.m(), P.tileMb(0), P.tileMb(0), 
-                                P.mt(), P.nt(),
+                                grid_dim, grid_dim,
                                 PT.mpiComm());
 
   // Fill K matrix with tiles using buffer
-  K.tileInsert(row_rank, col_rank, 0, data, loc_rows);
+  K.tileInsert(col_rank, row_rank, 0, data, loc_rows);
 
   // Compute kernel matrix
   slate::gemm<float>(1.0f, P, PT, 0.0f, K,

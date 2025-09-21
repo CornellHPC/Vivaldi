@@ -203,13 +203,25 @@ void print_device_matrix(T* mat, size_t h, size_t w) {
   T* temp = (T*)malloc(h * w * sizeof(T));
   cudaMemcpy(temp, mat, h * w * sizeof(T), cudaMemcpyDeviceToHost);
 
-  for (int i = 0; i < h; ++i) {
-    for (int j = 0; j < w; ++j) {
-      std::cout << temp[i * w + j] << " ";
-    }
-    std::cout << "\n";
+  int rank, size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+  for (int p=0; p<size; p++)
+  {
+      if (p==rank)
+      {
+          std::cout << "--Process "<<p<<"--"<<std::endl;
+          for (int i = 0; i < h; ++i) {
+            for (int j = 0; j < w; ++j) {
+              std::cout << temp[i * w + j] << " ";
+            }
+            std::cout << "\n";
+          }
+          std::cout << std::flush;
+      }
+      MPI_Barrier(MPI_COMM_WORLD);
   }
-  std::cout << std::flush;
 
   free(temp);
 }

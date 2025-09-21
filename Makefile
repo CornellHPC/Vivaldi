@@ -95,9 +95,8 @@ svmguide1:
 
 letter:
 	source /opt/cray/pe/lmod/lmod/init/bash && \
-	module load cudatoolkit/12.2 && \
-	srun -N 4 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 16 \
-	build/device_wrapper build/main -i data/letter -m 15000 -n 5000 -k 26 -a 1d
+	srun -N 1 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 4 \
+	build/device_wrapper build/main -i data/letter -m 15000 -n 5000 -k 26 -a 15d
 
 letter_combblas:
 	source /opt/cray/pe/lmod/lmod/init/bash && \

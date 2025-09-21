@@ -8,6 +8,7 @@
 #include "mpio.h"
 
 #include "cluster.hh"
+#include "utils.hh"
 #include "gpu_kernels.cuh"
 
 namespace cpop {
@@ -35,8 +36,6 @@ V_t::V_t(int64_t m, int64_t k, bool sparse, MPI_Comm comm) {
   CHECK_CUDA(cudaMalloc(&local_assignments, t * sizeof(int)));
   CHECK_CUDA(cudaMalloc(&local_cluster_sizes, k * sizeof(int)));
 
-  print_line();
-
   // round robin initialization (todo: GPU)
   int* init_global_cluster_sizes = (int*)calloc(k, sizeof(int));
   for (int i = 0; i < k; ++i)
@@ -44,7 +43,6 @@ V_t::V_t(int64_t m, int64_t k, bool sparse, MPI_Comm comm) {
   CHECK_CUDA(cudaMemcpy(global_cluster_sizes, init_global_cluster_sizes,
                         k * sizeof(int), cudaMemcpyHostToDevice));
 
-  print_line();
   // round robin initialization (todo: GPU)
   int* init_assignments = (int*)calloc(m, sizeof(int));
   for (int i = 0; i < m; ++i)
@@ -52,7 +50,6 @@ V_t::V_t(int64_t m, int64_t k, bool sparse, MPI_Comm comm) {
   CHECK_CUDA(cudaMemcpy(global_assignments, init_assignments, m * sizeof(int),
                         cudaMemcpyHostToDevice));
 
-  print_line();
   // set assignment pointers
   local_ptr_to_assignments = global_assignments + displs[rank];
   previous_global_assignments = nullptr;
@@ -68,7 +65,6 @@ V_t::V_t(int64_t m, int64_t k, bool sparse, MPI_Comm comm) {
   previous_local_k_means_objective_score =
       1e-6f;  // a very small number to start
 
-  print_line();
   // Implementation-specific initialization
   if (sparse) {
     CHECK_CUDA(cudaMalloc(&values, m * sizeof(float)));
@@ -98,7 +94,6 @@ V_t::V_t(int64_t m, int64_t k, bool sparse, MPI_Comm comm) {
                                      global_assignments, values,
                                      CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I,
                                      CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));
-    print_line();
 
     // the local partition of V in CSC is found by slicing the global partition at [displs[rank]:displs[rank] + t]
     // (since displs[rank] is the displacement of this rank's first point)
@@ -127,7 +122,6 @@ V_t::V_t(int64_t m, int64_t k, bool sparse, MPI_Comm comm) {
   // Clean up
   free(init_global_cluster_sizes);
   free(init_assignments);
-  print_phase("Done");
 }
 
 
@@ -380,9 +374,18 @@ int spmm2d(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E)
 }
 
 
-int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMat_t& E_p, float * d_tmp)
+/*
+ * Options:
+ *  1. Allgatherv along rows -- reduce scatter along columns
+ *  2. sqrt(P) bcasts along rows -- reduce scatter along columns 
+ *  3. Allgather along rows, then -- reduce + scatter along columns
+ *  4. Allgather along rows, then -- alltoallv + local reduction along columns
+ */
+
+int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMat_t& E_p, float * d_tmp, float * d_tmp2)
 {
     auto grid2d = K.grid;
+    auto grid2dcolmaj = E_p.grid;
     auto grid1d = V.grid;
     int sqrtp = grid2d->row_size;
     int p = grid2d->world_size;
@@ -401,19 +404,39 @@ int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMa
     int * d_rowinds;
     CHECK_CUDA(cudaMalloc(&d_rowinds, sizeof(int) * sqrtp * loc_v->t));
 
-    MPI_Allgather(loc_v->local_assignments, loc_v->t, MPI_INT,
-                  d_rowinds, loc_v->t, MPI_INT,
-                  grid2d->row_comm);
+    if (grid2dcolmaj->row_rank == grid2dcolmaj->col_rank)
+    {
+        cudaMemcpy(d_rowinds + grid2dcolmaj->row_rank*loc_v->t, loc_v->local_ptr_to_assignments,
+                    sizeof(float) * loc_v->t,
+                    cudaMemcpyDeviceToDevice);
+    }
+
+    MPI_Gather(loc_v->local_ptr_to_assignments, loc_v->t, MPI_INT,
+                d_rowinds, loc_v->t, MPI_INT,
+                grid2dcolmaj->row_rank, grid2dcolmaj->col_comm);
+    MPI_Bcast(d_rowinds, loc_v->t*sqrtp, MPI_INT, grid2dcolmaj->col_rank, grid2dcolmaj->row_comm);
+
+    //MPI_Allgather(loc_v->local_ptr_to_assignments, loc_v->t, MPI_INT,
+    //              d_rowinds, loc_v->t, MPI_INT,
+    //              grid2d->row_comm);
+    //
+    MPI_Barrier(MPI_COMM_WORLD);
+    print_phase("d_rowinds");
+    print_device_matrix(d_rowinds, 1, loc_v->t*sqrtp);
+    MPI_Barrier(MPI_COMM_WORLD);
 
     float * d_vals;
     int * d_colptrs;
     CHECK_CUDA(cudaMalloc(&d_vals, sizeof(float) * sqrtp * loc_v->t));
     //TODO: Technically we can initialize only once and reuse d_colptrs
-    CHECK_CUDA(cudaMalloc(&d_colptrs, sizeof(int) * sqrtp * loc_v->t));
-    CHECK_CUDA(cudaMemsetAsync(d_colptrs,0,sizeof(int)));
+    CHECK_CUDA(cudaMalloc(&d_colptrs, sizeof(int) * (sqrtp * loc_v->t + 1)));
+    CHECK_CUDA(cudaMemset(d_colptrs,0,sizeof(int)*(sqrtp*loc_v->t + 1)));
+
 
     // Set the values and colptrs arrays
     launch_init_from_rowinds_kernel(d_rowinds, d_colptrs, loc_v->global_cluster_sizes, d_vals, sqrtp * loc_v->t, sqrtp * loc_v->t);
+    CHECK_CUDA(cudaDeviceSynchronize());
+
 
     cusparseSpMatDescr_t v_gather;
     CHECK_CUSPARSE(cusparseCreateCsc(&v_gather,
@@ -442,7 +465,7 @@ int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMa
     CHECK_CUSPARSE(cusparseSpMM(
         handle.sh(), CUSPARSE_OPERATION_NON_TRANSPOSE,
         CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, v_gather, loc_k->M, &beta, loc_e_p->M,
-        CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, &buffer_size));
+        CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, buffer));
     CHECK_CUDA(cudaDeviceSynchronize());
 
     // Clean up
@@ -457,21 +480,55 @@ int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMa
     CHECK_CUBLAS(cublasSgeam(handle.dh(),
                              CUBLAS_OP_T, 
                              CUBLAS_OP_N,
-                             loc_e->w_, loc_v->k_,
+                             loc_e_p->h_, loc_e_p->w_,
                              &alpha, loc_e_p->dM,
-                             loc_v->k_,
+                             loc_e_p->w_,
                              &beta,
-                             d_tmp, loc_e_p->w_,
-                             d_tmp, loc_e_p->w_));
+                             d_tmp, loc_e_p->h_,
+                             d_tmp, loc_e_p->h_));
     CHECK_CUDA(cudaDeviceSynchronize());
+
+    CHECK_CUDA(cudaMemset(loc_e_p->dM, 0,sizeof(float) * loc_e_p->h_ * loc_e_p->w_))
 
 
     // Reduce scatter along process columns into E to redistribute to 1D
-    std::vector<int> recvcounts(grid2d->col_size);
-    std::fill(recvcounts.begin(), recvcounts.end(), loc_v->k_ * loc_e->w_);
-    MPI_Reduce_scatter(d_tmp, loc_e->dM, recvcounts.data(), MPI_FLOAT,
-                       MPI_SUM, grid2d->col_comm);
+    // Maybe not the best way to do this -- alltoall then reduce likely better
+    //int root = grid2d->row_rank;
+    //MPI_Reduce(d_tmp, loc_e_p->dM, loc_e_p->h_ * loc_e_p->w_, MPI_FLOAT, MPI_SUM, root, grid2d->col_comm);
+    //MPI_Barrier(MPI_COMM_WORLD);
+    //root = grid2d->col_rank;
+    //MPI_Scatter(loc_e_p->dM, loc_e->h_* loc_e->w_, MPI_FLOAT, d_tmp2, loc_e->h_ * loc_e->w_, MPI_FLOAT, root, grid2d->row_comm);
 
+    MPI_Reduce_scatter_block(d_tmp, d_tmp2, loc_e->h_ * loc_e->w_, MPI_FLOAT, MPI_SUM, grid2dcolmaj->col_comm);
+    //float * d_tmp3;
+    //cudaMalloc(&d_tmp3, sizeof(float ) * loc_e_p->w_ * loc_e_p->h_ * sqrtp);
+    //MPI_Allreduce(d_tmp, d_tmp3, loc_e_p->w_ * loc_e_p->h_, MPI_FLOAT, MPI_SUM, grid2dcolmaj->col_comm);
+    //cudaMemcpy(d_tmp2, d_tmp3 + (loc_e->w_ * loc_e->h_) * grid2dcolmaj->col_rank,
+    //            sizeof(float) * (loc_e->w_ * loc_e->h_),
+    //            cudaMemcpyDeviceToDevice);
+    //MPI_Alltoall(d_tmp, loc_e_p->h_ * loc_e_p->w_, MPI_FLOAT, 
+    //             d_tmp2, loc_e->h_ * loc_e->w_, MPI_FLOAT,
+    //             grid2dcolmaj->col_comm);
+
+
+
+    // Need another transpose so output is row major
+    CHECK_CUBLAS(cublasSgeam(handle.dh(),
+                             CUBLAS_OP_T, 
+                             CUBLAS_OP_N,
+                             loc_e->w_, loc_e->h_,
+                             &alpha, d_tmp2,
+                             loc_e->h_,
+                             &beta,
+                             loc_e->dM, loc_e->w_,
+                             loc_e->dM, loc_e->w_));
+    CHECK_CUDA(cudaDeviceSynchronize());
+
+    //cudaMemcpy(loc_e->dM, d_tmp2, sizeof(float) * loc_e->h_*loc_e->w_, cudaMemcpyDeviceToDevice);
+    MPI_Barrier(MPI_COMM_WORLD);
+    print_phase("loc_e");
+    print_device_matrix(loc_e->dM, loc_e->h_, loc_e->w_);
+    MPI_Barrier(MPI_COMM_WORLD);
     return EXIT_SUCCESS;
 }
 

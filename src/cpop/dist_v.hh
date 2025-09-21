@@ -22,7 +22,7 @@ struct ProcessGrid
     int world_size, row_size, col_size;
     int world_rank, row_rank, col_rank;
 
-    ProcessGrid(int p, int q);
+    ProcessGrid(int p, int q, bool colmaj);
 };
 
 struct DistV2D {

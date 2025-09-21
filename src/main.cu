@@ -194,8 +194,8 @@ int cluster15d(ArgParse args, MPI_Comm comm)
   int world_size;
   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
   int grid_size = std::floor(std::sqrt(world_size));
-  std::shared_ptr<ProcessGrid> grid2d = std::make_shared<ProcessGrid>(grid_size, grid_size);
-  std::shared_ptr<ProcessGrid> grid1d = std::make_shared<ProcessGrid>(grid_size, 1);
+  std::shared_ptr<ProcessGrid> grid2d = std::make_shared<ProcessGrid>(grid_size, grid_size, false);
+  std::shared_ptr<ProcessGrid> grid1d = std::make_shared<ProcessGrid>(world_size, 1, false);
 
   /** Initialize V matrix */
 #ifndef BASIC
@@ -238,7 +238,7 @@ int cluster15d(ArgParse args, MPI_Comm comm)
   int64_t row_tile_size = tile_dim(grid2d->col_comm, V.local_v->k_);
   DistDnMat_t E({new DnMat_t(V.local_v->k_, V.local_v->t), 
                  grid1d});
-  DistDnMat_t E_p({new DnMat_t(row_tile_size, V.local_v->t), 
+  DistDnMat_t E_p({new DnMat_t(V.local_v->k_, K.mat->w_), 
                   grid2d});
   DistDnVec_t z({new DnVec_t(V.local_v->t), grid1d});
   DistDnVec_t c({new DnVec_t(V.local_v->k_), grid1d});
@@ -246,7 +246,11 @@ int cluster15d(ArgParse args, MPI_Comm comm)
 
   /** Temporary buffer */
   float * d_tmp;
+  //TODO: This actually overallocates a bit
   CHECK_CUDA(cudaMalloc(&d_tmp, sizeof(float) * V.local_v->k_ * E_p.mat->w_));
+
+  float * d_tmp2;
+  CHECK_CUDA(cudaMalloc(&d_tmp2, sizeof(float) * V.local_v->k_ * E.mat->w_));
 
 #ifndef BASIC
   timer.dead_proc_counts =
@@ -262,7 +266,7 @@ int cluster15d(ArgParse args, MPI_Comm comm)
 #endif
 
 
-    spmm15d(handle, V, K, E, E_p, d_tmp);  
+    spmm15d(handle, V, K, E, E_p, d_tmp, d_tmp2);  
 
 
 #ifndef BASIC
@@ -318,11 +322,12 @@ int cluster15d(ArgParse args, MPI_Comm comm)
   }
 
   CHECK_CUDA(cudaFree(d_tmp));
+  CHECK_CUDA(cudaFree(d_tmp2));
 
   /** Save and exit */
   MPI_Barrier(comm);
   timer.elapsed = get_time_elapsed(start);
-  //timer.save_all(args.benchmark.c_str(), compute_cluster_score(K, E, c, V));
+  timer.save_all(args.benchmark.c_str(), 0.0); //TODO: cluster score computation
   V.local_v->save(args.output.c_str());
   return EXIT_SUCCESS;
 }

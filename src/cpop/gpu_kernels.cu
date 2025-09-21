@@ -168,10 +168,9 @@ __global__ void reinit_kernel(float* V_global_values, int* global_assignments,
 
 __global__ void init_from_rowinds_kernel(int * d_rowinds, int * d_cluster_sizes, float * d_vals, int64_t nnz)
 {
-  for (int64_t i = blockIdx.x * blockDim.x + threadIdx.x; i < nnz;
-       i += blockDim.x * gridDim.x) 
+  for (int64_t i = blockIdx.x * blockDim.x + threadIdx.x; i < nnz; i += blockDim.x * gridDim.x) 
   {
-    d_vals[i] = d_cluster_sizes[d_rowinds[i]];
+    d_vals[i] = 1.0f/d_cluster_sizes[d_rowinds[i]];
   }
 }
 
@@ -297,11 +296,16 @@ void launch_init_from_rowinds_kernel(int * d_rowinds, int * d_colptrs, int * d_c
     }
 
     // Set the colptrs array
+    thrust::fill( thrust::device_pointer_cast(d_colptrs) + 1,
+                    thrust::device_pointer_cast(d_colptrs) + m + 1,
+                    1);
+    cudaDeviceSynchronize();
     launch_inclusive_scan(d_colptrs+1, d_colptrs+1, m);
 
     // Set values
     int nthreads = 256;
     int nblocks = std::min(int64_t(1048576), (nnz + nthreads - 1) / nthreads);
+    std::cout<<nthreads<<","<<nblocks<<std::endl;
     init_from_rowinds_kernel<<<nblocks, nthreads>>>(d_rowinds, d_cluster_sizes, d_vals, nnz);
 
 }

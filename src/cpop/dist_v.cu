@@ -7,17 +7,24 @@
 namespace cpop
 {
 
-ProcessGrid::ProcessGrid(int p, int q)
+ProcessGrid::ProcessGrid(int p, int q, bool colmaj)
 {
-    assert(p==q);
     world_size = p*q;
     row_size = p;
     col_size = q;
     world_comm = MPI_COMM_WORLD;
     MPI_Comm_rank(world_comm, &world_rank);
 
-    row_rank = world_rank / p;
-    col_rank = world_rank % p;
+    if (colmaj)
+    {
+        row_rank = world_rank / q;
+        col_rank = world_rank % q;
+    }
+    else
+    {
+        row_rank = world_rank % p;
+        col_rank = world_rank / p;
+    }
     MPI_Comm_split(world_comm, row_rank, col_rank, &col_comm);
     MPI_Comm_split(world_comm, col_rank, row_rank, &row_comm);
 }

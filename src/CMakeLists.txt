@@ -45,6 +45,7 @@ endif()
 
 # Test
 enable_testing()
+
 file(GLOB SOURCES "test.cc"  "**/*.cu" "**/*.cc" "cpop/**/*.cu" "cpop/**/*.cc")
 add_executable(test_exe ${SOURCES})
 add_test(cluster_test test_exe)
@@ -53,10 +54,15 @@ file(GLOB SOURCES "test_redist.cc"  "**/*.cu" "**/*.cc" "cpop/**/*.cu" "cpop/**/
 add_executable(test_redist_exe ${SOURCES})
 add_test(2d1d_redist_test test_redist_exe)
 
+file(GLOB SOURCES "test_15d.cc"  "**/*.cu" "**/*.cc" "cpop/**/*.cu" "cpop/**/*.cc")
+add_executable(test_15d_exe ${SOURCES})
+add_test(15d_cluster_test test_15d_exe)
+
 # Compiler options
 set(CMAKE_CXX_FLAGS "-lboost_program_options")
 target_compile_options(test_exe PRIVATE -g -O0 $<$<COMPILE_LANGUAGE:CUDA>:-G>)
 target_compile_options(test_redist_exe PRIVATE -g -O0 $<$<COMPILE_LANGUAGE:CUDA>:-G>)
+target_compile_options(test_15d_exe PRIVATE -g -O0 $<$<COMPILE_LANGUAGE:CUDA>:-G>)
 
 # Sanitizers
 if(SANITIZE)
@@ -72,6 +78,7 @@ target_compile_options(main PRIVATE -O3)
 target_include_directories(main PRIVATE "${SLATE_INSTALL}/include")
 target_include_directories(test_exe PRIVATE "${SLATE_INSTALL}/include")
 target_include_directories(test_redist_exe PRIVATE "${SLATE_INSTALL}/include")
+target_include_directories(test_15d_exe PRIVATE "${SLATE_INSTALL}/include")
 
 # Libraries
 target_link_directories(main PRIVATE "${SLATE_INSTALL}/lib")
@@ -80,3 +87,5 @@ target_link_directories(test_exe PRIVATE "${SLATE_INSTALL}/lib")
 target_link_libraries(test_exe gomp cublas cusparse cusolver blaspp lapackpp slate)
 target_link_directories(test_redist_exe PRIVATE "${SLATE_INSTALL}/lib")
 target_link_libraries(test_redist_exe gomp cublas cusparse cusolver blaspp lapackpp slate)
+target_link_directories(test_15d_exe PRIVATE "${SLATE_INSTALL}/lib")
+target_link_libraries(test_15d_exe gomp cublas cusparse cusolver blaspp lapackpp slate)
