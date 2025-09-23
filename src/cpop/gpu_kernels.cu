@@ -51,6 +51,14 @@ __global__ void z_vector_kernel(int64_t t, float* z, int* assignments,
   }
 }
 
+__global__ void z_vector_kernel2d(int64_t nnz, int64_t cols, float* z, int* assignments, int * colptrs, float* ET) {
+  for (int64_t i = blockIdx.x * blockDim.x + threadIdx.x; i < cols; i += blockDim.x * gridDim.x) 
+  {
+    int diff = colptrs[i+1] - colptrs[i];
+    z[i] = (diff == 0) ? 0.0f : ET[cols * assignments[colptrs[i]] + i];
+  }
+}
+
 __global__ void argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
                               int* local_assignments, int* local_cluster_sizes,
                               bool* converged,
@@ -216,6 +224,17 @@ void launch_z_kernel(int64_t t, float* z, int* assignments, float* ET) {
   int nblocks = std::min(int64_t(1048576), (t + nthreads - 1) / nthreads);
 
   z_vector_kernel<<<nblocks, nthreads>>>(t, z, assignments, ET);
+}
+
+void launch_z_kernel2d(int64_t nnz, int64_t cols, float* z, int* assignments,  int * colptrs, float* ET) 
+{
+  // 1024 max threads for current CUDA compute capability (<= 7.5)
+  // 16x16 blocks, with upwards round for more coverage
+  // block cap is set to prevent overflow
+  int nthreads = 256;
+  int nblocks = std::min(int64_t(1048576), (cols + nthreads - 1) / nthreads);
+
+  z_vector_kernel2d<<<nblocks, nthreads>>>(nnz, cols, z, assignments, colptrs, ET);
 }
 
 void launch_argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,

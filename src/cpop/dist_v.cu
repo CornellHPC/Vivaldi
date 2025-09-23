@@ -3,6 +3,7 @@
 #include <cusparse.h>
 #include <cassert>
 #include <cstring>
+#include <fstream>
 
 namespace cpop
 {
@@ -68,16 +69,13 @@ DistV2D::DistV2D(int64_t m, int64_t k, std::shared_ptr<ProcessGrid> grid)
         int owner = map2d(j, i);
         if (owner == grid->world_rank)
         {
-            h_rowinds[offset] = j;
+            h_rowinds[offset] = j % rows;
             h_colptrs[i%cols + 1] = 1;
             h_values[offset++] = 1.0/(float)row_sizes[j];
         }
     }
+
     assert(offset==nnz);
-    sleep(1);
-    std::cout<<"Process "<<grid->world_rank<<" has "<<nnz<<" nonzeros "<<std::endl;
-    MPI_Barrier(MPI_COMM_WORLD);
-    sleep(1);
 
     CHECK_CUDA(cudaMalloc(&d_cluster_sizes, sizeof(int) * k));
     CHECK_CUDA(cudaMemcpy(d_cluster_sizes, row_sizes, sizeof(int) * k,
@@ -88,26 +86,27 @@ DistV2D::DistV2D(int64_t m, int64_t k, std::shared_ptr<ProcessGrid> grid)
         h_colptrs[i] = h_colptrs[i-1] + h_colptrs[i];
     }
 
-    // CSC init
-    CHECK_CUDA(cudaMalloc(&d_colptrs, sizeof(int) * (cols+1)));
-    CHECK_CUDA(cudaMalloc(&d_rowinds, sizeof(int) * nnz));
-    CHECK_CUDA(cudaMalloc(&d_vals, sizeof(float) * nnz));
+    assert(h_colptrs[cols]==nnz);
 
-    cusparseCreateCsc(&this->csc_mat,
-                      rows,     // number of rows
-                      cols,     // number of columns
-                      nnz,                  // number of non-zeros
-                      this->d_colptrs,      // CSC column pointers
-                      this->d_rowinds,      // CSC row indices
-                      this->d_vals,         // CSC values
-                      CUSPARSE_INDEX_32I,   // column pointer type
-                      CUSPARSE_INDEX_32I,   // row index type
-                      CUSPARSE_INDEX_BASE_ZERO, // index base
-                      CUDA_R_32F);          // data type for values
+    //std::ofstream ofs;
+    //ofs.open(std::string("log_rank_")+std::to_string(grid->world_rank)+".out");
+    //for (int i=0; i<cols+1; i++)
+    //{
+    //    ofs<<h_colptrs[i]<<std::endl;
+    //}
+    //ofs.close();
+
+    // CSC init
+    int64_t max_nnz = cols; // At most 1 nnz per column
+    CHECK_CUDA(cudaMalloc(&d_colptrs, sizeof(int) * (cols+1)));
+    CHECK_CUDA(cudaMalloc(&d_rowinds, sizeof(int) * max_nnz)); // avoid reallocating later
+    CHECK_CUDA(cudaMalloc(&d_vals, sizeof(float) * max_nnz));
 
     CHECK_CUDA(cudaMemcpy(d_colptrs, h_colptrs, sizeof(int) * (cols+1), cudaMemcpyHostToDevice));
     CHECK_CUDA(cudaMemcpy(d_rowinds, h_rowinds, sizeof(int) * nnz, cudaMemcpyHostToDevice));
     CHECK_CUDA(cudaMemcpy(d_vals, h_values, sizeof(float) * nnz, cudaMemcpyHostToDevice));
+
+    this->init_cusparse_csc();
 
     CHECK_CUDA(cudaMalloc(&d_minpairs, sizeof(FloatI32) * cols));
     CHECK_CUDA(cudaMalloc(&d_mininds, sizeof(int) * cols));
@@ -116,6 +115,22 @@ DistV2D::DistV2D(int64_t m, int64_t k, std::shared_ptr<ProcessGrid> grid)
     delete[] h_rowinds;
     delete[] h_values;
     delete[] row_sizes;
+}
+
+void DistV2D::init_cusparse_csc()
+{
+    CHECK_CUSPARSE(cusparseCreateCsc(
+                      &(this->csc_mat),
+                      this->rows,     // number of rows
+                      this->cols,     // number of columns
+                      this->nnz,                  // number of non-zeros
+                      this->d_colptrs,      // CSC column pointers
+                      this->d_rowinds,      // CSC row indices
+                      this->d_vals,         // CSC values
+                      CUSPARSE_INDEX_32I,   // column pointer type
+                      CUSPARSE_INDEX_32I,   // row index type
+                      CUSPARSE_INDEX_BASE_ZERO, // index base
+                      CUDA_R_32F));          // data type for values
 }
 
 DistV2D::~DistV2D()

@@ -45,6 +45,7 @@ struct DistV2D {
   cusparseSpMatDescr_t csc_mat;
 
   DistV2D(int64_t m, int64_t k, std::shared_ptr<ProcessGrid> grid);
+  void init_cusparse_csc();
   ~DistV2D();
   int map2d(int64_t rid, int64_t cid);
 

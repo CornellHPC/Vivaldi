@@ -49,6 +49,7 @@ void launch_polynomial_kernel(int64_t m, int64_t n, float* B, float gamma,
  * @param ET This process's ET partial/submatrix (ET is k-by-t in row-major)
  */
 void launch_z_kernel(int64_t t, float* z, int* assignments, float* ET);
+void launch_z_kernel2d(int64_t nnz, int64_t cols, float* z, int* assignments,  int * colptrs, float* ET);
 
 /**
  * @brief Launches the argmin kernel, which computes D = -2E + c followed by a

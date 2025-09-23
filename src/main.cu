@@ -15,6 +15,10 @@ using namespace cpop;
 using hrc = std::chrono::high_resolution_clock;
 using ms = std::chrono::milliseconds;
 
+/****************
+ * 2D Clustering
+ * **************/
+
 int cluster2d(ArgParse args, MPI_Comm comm) 
 {
   Timer timer;
@@ -53,7 +57,9 @@ int cluster2d(ArgParse args, MPI_Comm comm)
   auto vi_start = hrc::now();
 #endif
 
+#ifdef DEBUG2D
   print_phase("Making V");
+#endif
 
   DistV2D V(args.m, args.k, grid);
 
@@ -68,7 +74,9 @@ int cluster2d(ArgParse args, MPI_Comm comm)
   auto k_start = hrc::now();
 #endif
 
+#ifdef DEBUG2D
   print_phase("Making K");
+#endif
 
   DistDnMat_t K({new DnMat_t(V.cols, V.cols, compute_kernel_matrix2d(handle, PT, args.gamma, args.c, args.r, false)),
                  grid});
@@ -102,7 +110,10 @@ int cluster2d(ArgParse args, MPI_Comm comm)
 #endif
 
 
+#ifdef DEBUG2D
     print_phase("SpMM");
+#endif
+
     spmm2d(handle, V, K, E);  
 
 
@@ -113,7 +124,10 @@ int cluster2d(ArgParse args, MPI_Comm comm)
 #endif
 
 
+#ifdef DEBUG2D
     print_phase("Z");
+#endif
+
     compute_z2d(V, E, z);  // Calculate z from the mask of local V on ET
 
 
@@ -124,7 +138,10 @@ int cluster2d(ArgParse args, MPI_Comm comm)
     auto c_computation_start = hrc::now();
 #endif
 
+#ifdef DEBUG2D
     print_phase("SpMV");
+#endif
+
     spmv(handle, V, *z.vec, *c.vec);  // SpMV: c = Vz using local V
 
 #ifndef BASIC
@@ -133,7 +150,10 @@ int cluster2d(ArgParse args, MPI_Comm comm)
     auto c_mpi_start = hrc::now();
 #endif
 
+#ifdef DEBUG2D
     print_phase("Sum");
+#endif
+
     sum_vec2d(c);  // Calculate global c by summing across ranks
 
 #ifndef BASIC
@@ -145,7 +165,10 @@ int cluster2d(ArgParse args, MPI_Comm comm)
 #endif
 
 
+#ifdef DEBUG2D
     print_phase("Argmin");
+#endif
+
     argmin2d(E, c, V);  // Argmin kernel (compute D matrix)
 
 
@@ -153,7 +176,10 @@ int cluster2d(ArgParse args, MPI_Comm comm)
     vr_computation_start = hrc::now();
 #endif
 
+#ifdef DEBUG2D
     print_phase("Reinit");
+#endif
+
     set_V_from_assignments2d(V);  // Reinitialize V based on D matrix
                                       
 #ifndef BASIC
@@ -164,13 +190,24 @@ int cluster2d(ArgParse args, MPI_Comm comm)
 
   }
 
+  if (rank==0)
+  {
+      std::cout<<"Done 2D clustering"<<std::endl;
+  }
+
   /** Save and exit */
   MPI_Barrier(comm);
   timer.elapsed = get_time_elapsed(start);
-  //timer.save_all(args.benchmark.c_str(), compute_cluster_score(K, E, c, V));
-  //V.save(args.output.c_str());
+  float score = 0.0f; //TODO -- 2d cluster score
+  timer.save_all(args.benchmark.c_str(), score);
   return EXIT_SUCCESS;
 }
+
+
+
+/****************
+ * 1.5D Clustering
+ * **************/
 
 int cluster15d(ArgParse args, MPI_Comm comm) 
 {
@@ -333,6 +370,11 @@ int cluster15d(ArgParse args, MPI_Comm comm)
   CHECK_CUDA(cudaFree(d_tmp));
   CHECK_CUDA(cudaFree(d_tmp2));
 
+  if (rank==0)
+  {
+      std::cout<<"Done 1.5D clustering"<<std::endl;
+  }
+
   /** Save and exit */
   MPI_Barrier(comm);
   timer.elapsed = get_time_elapsed(start);
@@ -341,6 +383,11 @@ int cluster15d(ArgParse args, MPI_Comm comm)
   return EXIT_SUCCESS;
 }
 
+
+
+/****************
+ * 1D Clustering
+ * **************/
 /**
  * @brief Cluster the data using the popcorn kernel k-means algorithm.
  * 
@@ -492,6 +539,11 @@ int cluster1d(ArgParse args, MPI_Comm comm)
 
   }
 
+  if (rank==0)
+  {
+      std::cout<<"Done 1D clustering"<<std::endl;
+  }
+
   /** Save and exit */
   MPI_Barrier(comm);
   timer.elapsed = get_time_elapsed(start);
@@ -516,6 +568,13 @@ int main(int argc, char* argv[]) {
 
   /** Argument Parsing */
   ArgParse args(argc, argv);
+
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if (rank==0)
+  {
+      std::cout<<"Running clusterpop "<<args.alg<<" mode."<<std::endl;
+  }
 
   /** Cluster */
   if (args.alg.compare("1d")==0) {

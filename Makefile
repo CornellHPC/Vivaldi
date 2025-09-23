@@ -45,7 +45,7 @@ build:
 
 blasbuild:
 	source /opt/cray/pe/lmod/lmod/init/bash && \
-	module load cudatoolkit/12.2 && \
+	module load cudatoolkit/12.9 && \
 	module load gcc-native/12.3 && \
 	rm -rf blasbuild && \
 	mkdir blasbuild && \
@@ -73,7 +73,7 @@ test:
 
 debug:
 	source /opt/cray/pe/lmod/lmod/init/bash && \
-	module load cudatoolkit/12.2 && \
+	module load cudatoolkit/12.9 && \
 	cd build && \
 	salloc -N 1 -q interactive -t 01:00:00 -C gpu -G 4 -A $(ACCOUNT) \
 	srun -N 1 --ntasks-per-node 1 --cpus-per-task 32 --cpu-bind cores -G 1 \
@@ -86,7 +86,7 @@ australian:
 
 svmguide1:
 	source /opt/cray/pe/lmod/lmod/init/bash && \
-	module load cudatoolkit/12.2 && \
+	module load cudatoolkit/12.9 && \
 	salloc -N 4 -q interactive -t 00:01:00 -C gpu -G 16 -A $(ACCOUNT) \
 	srun -N 4 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 16 \
 	build/device_wrapper build/main -i data/svmguide1 -m 3089 -n 4 -k 2
@@ -98,21 +98,21 @@ letter:
 
 letter_combblas:
 	source /opt/cray/pe/lmod/lmod/init/bash && \
-	module load cudatoolkit/12.2 && \
+	module load cudatoolkit/12.9 && \
 	salloc -N 4 -q interactive -t 00:02:00 -C gpu -G 16 -A $(ACCOUNT) \
 	srun -N 4 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 16 \
 	blasbuild/device_wrapper blasbuild/main data/letter 15000 5000 26
 
 rand:
 	source /opt/cray/pe/lmod/lmod/init/bash && \
-	module load cudatoolkit/12.2 && \
+	module load cudatoolkit/12.9 && \
 	salloc -N 1 -q interactive -t 00:01:00 -C gpu -G 4 -A $(ACCOUNT) \
 	srun -N 1 --ntasks-per-node 1 --cpus-per-task 32 --cpu-bind cores -G 4 \
 	build/device_wrapper build/main -i data/rand -m 70000 -n 64 -k 128
 
 profile:
 	source /opt/cray/pe/lmod/lmod/init/bash && \
-	module load cudatoolkit/12.2 && \
+	module load cudatoolkit/12.9 && \
 	salloc -N 1 -q interactive -t 00:01:00 -C gpu -G 4 -A $(ACCOUNT) \
 	srun -N 1 --ntasks-per-node 1 --cpus-per-task 32 --cpu-bind cores -G 1 \
 	nsys profile --stats=true --cuda-memory-usage=true --trace=cuda,cublas,cusparse --output=/tmp/report \

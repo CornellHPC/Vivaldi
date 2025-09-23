@@ -290,6 +290,11 @@ int spmm2d(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E)
 
     for (int i=0; i<niters; i++)
     {
+
+#ifdef DEBUG2D
+        par_print("Iteration %d\n", i);
+#endif
+
         if (i == grid->col_rank)
         {
             K_send = K.mat->dM;
@@ -555,7 +560,7 @@ int compute_z(V_t& V, DnMat_t& E, DnVec_t& z) {
 
 int compute_z2d(DistV2D& V, DistDnMat_t& E, DistDnVec_t& z) 
 {
-    launch_z_kernel(z.vec->size, z.vec->dz, V.d_rowinds, E.mat->dM);
+    launch_z_kernel2d(V.nnz, V.cols, z.vec->dz, V.d_rowinds, V.d_colptrs, E.mat->dM);
     cudaDeviceSynchronize();
     return EXIT_SUCCESS;
 }
@@ -594,7 +599,8 @@ int spmv(Handle& handle, V_t& V, DnVec_t& z, DnVec_t& c) {
 }
 
 
-int spmv(Handle& handle, DistV2D& V, DnVec_t& z, DnVec_t& c) {
+int spmv(Handle& handle, DistV2D& V, DnVec_t& z, DnVec_t& c) 
+{
   float alpha = 1.0f;
   float beta = 0.0f;
 
@@ -604,6 +610,7 @@ int spmv(Handle& handle, DistV2D& V, DnVec_t& z, DnVec_t& c) {
   CHECK_CUSPARSE(cusparseSpMV_bufferSize(
       handle.sh(), CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, V.csc_mat, z.z, &beta,
       c.z, CUDA_R_32F, CUSPARSE_SPMV_ALG_DEFAULT, &bufferSize));
+  CHECK_CUDA(cudaDeviceSynchronize());
   CHECK_CUDA(cudaMalloc(&dBuffer, bufferSize));
 
   // execute SpMV
@@ -614,7 +621,7 @@ int spmv(Handle& handle, DistV2D& V, DnVec_t& z, DnVec_t& c) {
   // cleanup
   CHECK_CUDA(cudaFree(dBuffer));
 
-  cudaDeviceSynchronize();
+  CHECK_CUDA(cudaDeviceSynchronize());
   return EXIT_SUCCESS;
 }
 
@@ -667,13 +674,10 @@ int argmin2d(DistDnMat_t& E, DistDnVec_t& c, DistV2D& V)
       V.d_minpairs);
   cudaDeviceSynchronize();
 
-  par_print("Done with argmin\n");
 
   MPI_Allreduce(MPI_IN_PLACE, V.d_minpairs, V.cols, MPI_FLOAT_INT, MPI_MINLOC, V.grid->col_comm);
-  par_print("Done with allreduce1\n");
 
   MPI_Allreduce(MPI_IN_PLACE, V.d_cluster_sizes, V.global_rows, MPI_INT, MPI_SUM, V.grid->world_comm);
-  par_print("Done with allreduce2\n");
 
 
   return EXIT_SUCCESS;
@@ -778,7 +782,9 @@ int set_V_from_assignments(DnMat_t& E, DnVec_t& c, V_t& V) {
   return EXIT_SUCCESS;
 }
 
-int set_V_from_assignments2d(DistV2D& V) {
+
+int set_V_from_assignments2d(DistV2D& V) 
+{
 
   // Annoying
   launch_mininds_kernel(V.d_minpairs, V.d_mininds, V.cols);
@@ -793,25 +799,31 @@ int set_V_from_assignments2d(DistV2D& V) {
   int64_t nnz_next = launch_countif(V.d_mininds, V.cols, op);
   V.nnz = nnz_next;
 
-  CHECK_CUDA(cudaFree(V.d_vals));
-  CHECK_CUDA(cudaFree(V.d_rowinds));
+  //CHECK_CUDA(cudaFree(V.d_vals));
+  //CHECK_CUDA(cudaFree(V.d_rowinds));
   CHECK_CUDA(cudaMemset(V.d_colptrs, 0, sizeof(int) * (V.cols + 1)));
-  CHECK_CUDA(cudaMalloc(&(V.d_vals), sizeof(float) * nnz_next));
-  CHECK_CUDA(cudaMalloc(&(V.d_rowinds), sizeof(int) * nnz_next));
+  //CHECK_CUDA(cudaMalloc(&(V.d_vals), sizeof(float) * nnz_next));
+  //CHECK_CUDA(cudaMalloc(&(V.d_rowinds), sizeof(int) * nnz_next));
 
   launch_copyif(V.d_mininds, V.d_rowinds, V.cols, op);
 
   launch_reinit_kernel2d(V.d_vals, V.d_rowinds, V.d_colptrs, 
                          V.d_mininds, V.d_cluster_sizes,
-                         V.tile_rows[0], V.nnz, V.cols, 
+                         V.rows, V.nnz, V.cols, 
                          op);
   CHECK_CUDA(cudaDeviceSynchronize());
 
+  // Finally, inclusive prefix scan sets colptrs
   launch_inclusive_scan(V.d_colptrs + 1, V.d_colptrs + 1, V.cols);
 
-  // Finally, inclusive prefix scan sets colptrs
+  // Reinit cusparse csc
+  cusparseDestroySpMat(V.csc_mat);
+  V.init_cusparse_csc();
+
+
   return EXIT_SUCCESS;
 }
+
 
 int set_V_from_assignments15d(DistV1D& V)
 {
