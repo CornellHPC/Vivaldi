@@ -53,6 +53,7 @@ int cluster2d(ArgParse args, MPI_Comm comm)
   auto vi_start = hrc::now();
 #endif
 
+  print_phase("Making V");
 
   DistV2D V(args.m, args.k, grid);
 
@@ -67,6 +68,7 @@ int cluster2d(ArgParse args, MPI_Comm comm)
   auto k_start = hrc::now();
 #endif
 
+  print_phase("Making K");
 
   DistDnMat_t K({new DnMat_t(V.cols, V.cols, compute_kernel_matrix2d(handle, PT, args.gamma, args.c, args.r, false)),
                  grid});
@@ -100,6 +102,7 @@ int cluster2d(ArgParse args, MPI_Comm comm)
 #endif
 
 
+    print_phase("SpMM");
     spmm2d(handle, V, K, E);  
 
 
@@ -109,6 +112,8 @@ int cluster2d(ArgParse args, MPI_Comm comm)
     auto z_start = hrc::now();
 #endif
 
+
+    print_phase("Z");
     compute_z2d(V, E, z);  // Calculate z from the mask of local V on ET
 
 
@@ -119,6 +124,7 @@ int cluster2d(ArgParse args, MPI_Comm comm)
     auto c_computation_start = hrc::now();
 #endif
 
+    print_phase("SpMV");
     spmv(handle, V, *z.vec, *c.vec);  // SpMV: c = Vz using local V
 
 #ifndef BASIC
@@ -127,6 +133,7 @@ int cluster2d(ArgParse args, MPI_Comm comm)
     auto c_mpi_start = hrc::now();
 #endif
 
+    print_phase("Sum");
     sum_vec2d(c);  // Calculate global c by summing across ranks
 
 #ifndef BASIC
@@ -138,6 +145,7 @@ int cluster2d(ArgParse args, MPI_Comm comm)
 #endif
 
 
+    print_phase("Argmin");
     argmin2d(E, c, V);  // Argmin kernel (compute D matrix)
 
 
@@ -145,6 +153,7 @@ int cluster2d(ArgParse args, MPI_Comm comm)
     vr_computation_start = hrc::now();
 #endif
 
+    print_phase("Reinit");
     set_V_from_assignments2d(V);  // Reinitialize V based on D matrix
                                       
 #ifndef BASIC

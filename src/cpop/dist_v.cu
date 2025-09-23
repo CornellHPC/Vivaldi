@@ -36,8 +36,8 @@ DistV2D::DistV2D(int64_t m, int64_t k, std::shared_ptr<ProcessGrid> grid)
     global_rows = k;
     global_nnz = m;
 
-    tile_rows = compute_tile_sizes(k, grid->row_size);
-    tile_cols = compute_tile_sizes(m, grid->col_size);
+    tile_rows = compute_tile_sizes(k, grid->col_size);
+    tile_cols = compute_tile_sizes(m, grid->row_size);
     tile_nnz = new int64_t[grid->world_size];
     memset(tile_nnz, 0, sizeof(int64_t) * grid->world_size);
 
@@ -53,13 +53,13 @@ DistV2D::DistV2D(int64_t m, int64_t k, std::shared_ptr<ProcessGrid> grid)
         row_sizes[j]++;
     }
     nnz = tile_nnz[grid->world_rank];
-    rows = tile_rows[grid->world_rank];
-    cols = tile_cols[grid->world_rank];
+    rows = tile_rows[grid->col_rank];
+    cols = tile_cols[grid->row_rank];
 
     float * h_values = new float[nnz];
     int * h_rowinds = new int[nnz];
     int * h_colptrs = new int[cols+1];
-    h_colptrs[0] = 0;
+    memset(h_colptrs, 0, sizeof(int) * (cols+1));
 
     int64_t offset = 0;
     for (int64_t i=0; i<m; i++)
@@ -69,11 +69,15 @@ DistV2D::DistV2D(int64_t m, int64_t k, std::shared_ptr<ProcessGrid> grid)
         if (owner == grid->world_rank)
         {
             h_rowinds[offset] = j;
-            h_colptrs[i%tile_cols[0] + 1] = 1;
+            h_colptrs[i%cols + 1] = 1;
             h_values[offset++] = 1.0/(float)row_sizes[j];
         }
     }
     assert(offset==nnz);
+    sleep(1);
+    std::cout<<"Process "<<grid->world_rank<<" has "<<nnz<<" nonzeros "<<std::endl;
+    MPI_Barrier(MPI_COMM_WORLD);
+    sleep(1);
 
     CHECK_CUDA(cudaMalloc(&d_cluster_sizes, sizeof(int) * k));
     CHECK_CUDA(cudaMemcpy(d_cluster_sizes, row_sizes, sizeof(int) * k,
@@ -106,7 +110,7 @@ DistV2D::DistV2D(int64_t m, int64_t k, std::shared_ptr<ProcessGrid> grid)
     CHECK_CUDA(cudaMemcpy(d_vals, h_values, sizeof(float) * nnz, cudaMemcpyHostToDevice));
 
     CHECK_CUDA(cudaMalloc(&d_minpairs, sizeof(FloatI32) * cols));
-    CHECK_CUDA(cudaMalloc(&d_minpairs, sizeof(int) * cols));
+    CHECK_CUDA(cudaMalloc(&d_mininds, sizeof(int) * cols));
 
     delete[] h_colptrs;
     delete[] h_rowinds;

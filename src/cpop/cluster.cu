@@ -269,9 +269,12 @@ int spmm2d(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E)
     auto grid = V.grid;
 
     const int niters = grid->row_size;
-    int * recv_nnz = new int[niters];
+    int64_t * recv_nnz = new int64_t[niters];
+    memset(recv_nnz, 0, sizeof(int64_t) * niters);
     recv_nnz[grid->row_rank] = V.nnz;
-    MPI_Alltoall(MPI_IN_PLACE, 1, MPI_INT, recv_nnz, 1, MPI_INT, grid->row_comm);
+
+    MPI_Allreduce(MPI_IN_PLACE, recv_nnz, niters, MPI_INT64_T, MPI_SUM, grid->row_comm);
+
 
     float * K_recv; 
     float * K_send;
@@ -295,6 +298,7 @@ int spmm2d(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E)
         {
             K_send = K_recv;
         }
+
         MPI_Bcast(K_send, K.mat->h_ * K.mat->w_, MPI_FLOAT, i, grid->col_comm);
 
         if (i == grid->row_rank)
@@ -307,15 +311,15 @@ int spmm2d(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E)
         {
             CHECK_CUDA(cudaMalloc(&d_vals_send, sizeof(float) * recv_nnz[i]));
             CHECK_CUDA(cudaMalloc(&d_rowinds_send, sizeof(int) * recv_nnz[i]));
-            CHECK_CUDA(cudaMalloc(&d_colptrs_send, sizeof(int) * V.tile_cols[i]));
+            CHECK_CUDA(cudaMalloc(&d_colptrs_send, sizeof(int) * (V.tile_cols[i] + 1)));
         }
         
         MPI_Bcast(d_vals_send, recv_nnz[i], MPI_FLOAT, i, grid->row_comm);
         MPI_Bcast(d_rowinds_send, recv_nnz[i], MPI_INT, i, grid->row_comm);
-        MPI_Bcast(d_colptrs_send, V.tile_cols[i], MPI_INT, i, grid->row_comm);
+        MPI_Bcast(d_colptrs_send, V.tile_cols[i] + 1, MPI_INT, i, grid->row_comm);
 
         CHECK_CUSPARSE(cusparseCreateCsc(&loc_V, V.tile_rows[i], V.tile_cols[i],
-                          V.tile_nnz[i],
+                          recv_nnz[i],
                           d_colptrs_send, 
                           d_rowinds_send,
                           d_vals_send, 
@@ -331,9 +335,9 @@ int spmm2d(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E)
                             K_send,
                             CUDA_R_32F,
                             CUSPARSE_ORDER_ROW));
+        CHECK_CUDA(cudaDeviceSynchronize());
 
         float alpha = 1.0;
-
         float beta = (i==0) ? 0.0 : 1.0;
 
         // Buffer size 
@@ -344,12 +348,14 @@ int spmm2d(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E)
             CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, loc_V, loc_K, &beta, E.mat->M,
             CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, &buffer_size));
         CHECK_CUDA(cudaMalloc(&buffer, buffer_size));
+        CHECK_CUDA(cudaDeviceSynchronize());
 
         // Perform SpMM
         CHECK_CUSPARSE(cusparseSpMM(
             handle.sh(), CUSPARSE_OPERATION_NON_TRANSPOSE,
             CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, loc_V, loc_K, &beta, E.mat->M,
             CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, buffer));
+        CHECK_CUDA(cudaDeviceSynchronize());
 
         // Clean up
         CHECK_CUDA(cudaFree(buffer));
@@ -365,10 +371,11 @@ int spmm2d(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E)
         }
 
         CHECK_CUDA(cudaDeviceSynchronize());
+        MPI_Barrier(MPI_COMM_WORLD);
 
     }
 
-    CHECK_CUDA(cudaFree(K_send));
+    CHECK_CUDA(cudaFree(K_recv));
 
     return EXIT_SUCCESS;
 }
@@ -660,8 +667,13 @@ int argmin2d(DistDnMat_t& E, DistDnVec_t& c, DistV2D& V)
       V.d_minpairs);
   cudaDeviceSynchronize();
 
+  par_print("Done with argmin\n");
+
   MPI_Allreduce(MPI_IN_PLACE, V.d_minpairs, V.cols, MPI_FLOAT_INT, MPI_MINLOC, V.grid->col_comm);
+  par_print("Done with allreduce1\n");
+
   MPI_Allreduce(MPI_IN_PLACE, V.d_cluster_sizes, V.global_rows, MPI_INT, MPI_SUM, V.grid->world_comm);
+  par_print("Done with allreduce2\n");
 
 
   return EXIT_SUCCESS;

@@ -1,6 +1,7 @@
 #ifndef CPOP_UTILS_HH
 #define CPOP_UTILS_HH
 #include <vector>
+#include "unistd.h"
 
 #define CHECK_CUDA(func)                                                   \
   {                                                                        \
@@ -226,6 +227,20 @@ void print_device_matrix(T* mat, size_t h, size_t w) {
   free(temp);
 }
 
+
+template <typename... Args>
+void par_print(const char * str, Args... args)
+{
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Barrier(MPI_COMM_WORLD);
+    fprintf(stdout, "---Process %d---\n", rank);
+    fprintf(stdout, str, args...);
+    fprintf(stdout, "----------------\n");
+    fflush(stdout);
+    sleep(1);
+    MPI_Barrier(MPI_COMM_WORLD);
+}
 
 
 }  // namespace cpop
