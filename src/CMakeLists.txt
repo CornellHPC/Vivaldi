@@ -64,6 +64,7 @@ add_test(2d_cluster_test test_2d_exe)
 
 # Compiler options
 set(CMAKE_CXX_FLAGS "-lboost_program_options")
+target_compile_options(main PRIVATE -O3)
 target_compile_options(test_exe PRIVATE -g -O0 $<$<COMPILE_LANGUAGE:CUDA>:-G>)
 target_compile_options(test_redist_exe PRIVATE -g -O0 $<$<COMPILE_LANGUAGE:CUDA>:-G>)
 target_compile_options(test_15d_exe PRIVATE -g -O0 $<$<COMPILE_LANGUAGE:CUDA>:-G>)

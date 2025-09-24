@@ -105,10 +105,8 @@ letter_combblas:
 
 rand:
 	source /opt/cray/pe/lmod/lmod/init/bash && \
-	module load cudatoolkit/12.9 && \
-	salloc -N 1 -q interactive -t 00:01:00 -C gpu -G 4 -A $(ACCOUNT) \
-	srun -N 1 --ntasks-per-node 1 --cpus-per-task 32 --cpu-bind cores -G 4 \
-	build/device_wrapper build/main -i data/rand -m 70000 -n 64 -k 128
+	srun -N 4 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 16 \
+	build/device_wrapper build/main -i data/rand -m 70000 -n 64 -k 128 -a 1d
 
 profile:
 	source /opt/cray/pe/lmod/lmod/init/bash && \

@@ -178,11 +178,21 @@ float* compute_kernel_matrix2d(Handle& handle, slate::Matrix<float>& PT, float g
 
   launch_polynomial_kernel(loc_rows, loc_cols, data, gamma, c, r);
 
+
+
+#ifndef BASIC
+  auto r_start = hrc::now();
+#endif
+
   if (redist)
   {
       assert( (P.m() % size)==0 && "Redistribution only works without remainder for now");
       data = redistribute_2d_1d(handle, data, P.m(), P.tileMb(0));
   }
+
+#ifndef BASIC
+  timer.k_redist = get_time_elapsed(r_start);
+#endif
 
 
   // Clean up and return

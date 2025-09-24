@@ -306,7 +306,13 @@ int spmm2d(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E)
             K_send = K_recv;
         }
 
+#ifndef BASIC
+        auto bcast_start = hrc::now();
+#endif
         MPI_Bcast(K_send, K.mat->h_ * K.mat->w_, MPI_FLOAT, i, grid->col_comm);
+#ifndef BASIC
+        timer.e_mpi += get_time_elapsed(bcast_start);
+#endif
 
         if (i == grid->row_rank)
         {
@@ -321,10 +327,19 @@ int spmm2d(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E)
             CHECK_CUDA(cudaMalloc(&d_colptrs_send, sizeof(int) * (V.tile_cols[i] + 1)));
         }
         
+#ifndef BASIC
+        bcast_start = hrc::now();
+#endif
         MPI_Bcast(d_vals_send, recv_nnz[i], MPI_FLOAT, i, grid->row_comm);
         MPI_Bcast(d_rowinds_send, recv_nnz[i], MPI_INT, i, grid->row_comm);
         MPI_Bcast(d_colptrs_send, V.tile_cols[i] + 1, MPI_INT, i, grid->row_comm);
+#ifndef BASIC
+        timer.e_mpi += get_time_elapsed(bcast_start);
+#endif
 
+#ifndef BASIC
+        auto comp_start = hrc::now();
+#endif
         CHECK_CUSPARSE(cusparseCreateCsc(&loc_V, V.tile_rows[i], V.tile_cols[i],
                           recv_nnz[i],
                           d_colptrs_send, 
@@ -368,6 +383,10 @@ int spmm2d(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E)
         CHECK_CUDA(cudaFree(buffer));
         CHECK_CUSPARSE(cusparseDestroySpMat(loc_V));
         CHECK_CUSPARSE(cusparseDestroyDnMat(loc_K));
+
+#ifndef BASIC
+        timer.e_spmm += get_time_elapsed(comp_start);
+#endif
 
 
         if (i != grid->row_rank)
@@ -415,6 +434,10 @@ int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMa
     // We only have to communicate the rowinds array
     // Other stuff can be implicitly determined
     
+#ifndef BASIC
+    auto e_mpi_start = hrc::now();
+#endif
+    
     int * d_rowinds;
     CHECK_CUDA(cudaMalloc(&d_rowinds, sizeof(int) * sqrtp * loc_v->t));
 
@@ -430,6 +453,9 @@ int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMa
                 grid2dcolmaj->row_rank, grid2dcolmaj->col_comm);
     MPI_Bcast(d_rowinds, loc_v->t*sqrtp, MPI_INT, grid2dcolmaj->col_rank, grid2dcolmaj->row_comm);
 
+#ifndef BASIC
+    timer.e_mpi += get_time_elapsed(e_mpi_start);
+#endif
 
     float * d_vals;
     int * d_colptrs;
@@ -438,6 +464,9 @@ int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMa
     CHECK_CUDA(cudaMalloc(&d_colptrs, sizeof(int) * (sqrtp * loc_v->t + 1)));
     CHECK_CUDA(cudaMemset(d_colptrs,0,sizeof(int)*(sqrtp*loc_v->t + 1)));
 
+#ifndef BASIC
+    auto e_spmm_start = hrc::now();
+#endif
 
     // Set the values and colptrs arrays
     launch_init_from_rowinds_kernel(d_rowinds, d_colptrs, loc_v->global_cluster_sizes, d_vals, sqrtp * loc_v->t, sqrtp * loc_v->t);
@@ -481,6 +510,13 @@ int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMa
     CHECK_CUDA(cudaFree(d_colptrs));
     CHECK_CUDA(cudaFree(d_rowinds));
 
+#ifndef BASIC
+    timer.e_spmm += get_time_elapsed(e_spmm_start);
+#endif
+
+#ifndef BASIC
+    auto e_trans_start = hrc::now();
+#endif
 
     // Transpose local E partial sum
     CHECK_CUBLAS(cublasSgeam(handle.dh(),
@@ -494,11 +530,25 @@ int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMa
                              d_tmp, loc_e_p->h_));
     CHECK_CUDA(cudaDeviceSynchronize());
 
+#ifndef BASIC
+    timer.e_transpose += get_time_elapsed(e_trans_start);
+#endif
+
     //CHECK_CUDA(cudaMemset(loc_e_p->dM, 0,sizeof(float) * loc_e_p->h_ * loc_e_p->w_))
 
+#ifndef BASIC
+    e_mpi_start = hrc::now();
+#endif
 
     MPI_Reduce_scatter_block(d_tmp, d_tmp2, loc_e->h_ * loc_e->w_, MPI_FLOAT, MPI_SUM, grid2dcolmaj->col_comm);
 
+#ifndef BASIC
+    timer.e_mpi += get_time_elapsed(e_mpi_start);
+#endif
+
+#ifndef BASIC
+    e_trans_start = hrc::now();
+#endif
 
     // Need another transpose so output is row major
     CHECK_CUBLAS(cublasSgeam(handle.dh(),
@@ -512,6 +562,10 @@ int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMa
                              loc_e->dM, loc_e->w_));
     CHECK_CUDA(cudaDeviceSynchronize());
 
+#ifndef BASIC
+    timer.e_transpose += get_time_elapsed(e_trans_start);
+#endif
+
     MPI_Barrier(MPI_COMM_WORLD);
     return EXIT_SUCCESS;
 }
@@ -521,6 +575,10 @@ int spmm(Handle& handle, V_t& V, DnMat_t& K, DnMat_t& E) {
   // Define constants
   float alpha = 1.0f;
   float beta = 0.0f;
+
+#ifndef BASIC
+  auto e_spmm_start = hrc::now();
+#endif
 
   if (handle.isSparse()) {
     // Allocate workspace buffer
@@ -549,6 +607,9 @@ int spmm(Handle& handle, V_t& V, DnMat_t& K, DnMat_t& E) {
   }
 
   cudaDeviceSynchronize();
+#ifndef BASIC
+  timer.e_spmm += get_time_elapsed(e_spmm_start);
+#endif
   return EXIT_SUCCESS;
 }
 

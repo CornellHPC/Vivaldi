@@ -1,5 +1,4 @@
 #include <cassert>
-#include <chrono>
 #include <cmath>
 #include <cstdlib>
 
@@ -12,16 +11,12 @@
 
 using namespace cpop;
 
-using hrc = std::chrono::high_resolution_clock;
-using ms = std::chrono::milliseconds;
-
 /****************
  * 2D Clustering
  * **************/
 
 int cluster2d(ArgParse args, MPI_Comm comm) 
 {
-  Timer timer;
   int rank, size;
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
@@ -60,6 +55,7 @@ int cluster2d(ArgParse args, MPI_Comm comm)
 #ifdef DEBUG2D
   print_phase("Making V");
 #endif
+
 
   DistV2D V(args.m, args.k, grid);
 
@@ -211,7 +207,6 @@ int cluster2d(ArgParse args, MPI_Comm comm)
 
 int cluster15d(ArgParse args, MPI_Comm comm) 
 {
-  Timer timer;
   int rank, size;
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
@@ -397,7 +392,6 @@ int cluster15d(ArgParse args, MPI_Comm comm)
  */
 int cluster1d(ArgParse args, MPI_Comm comm) 
 {
-  Timer timer;
   int rank, size;
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
@@ -471,8 +465,10 @@ int cluster1d(ArgParse args, MPI_Comm comm)
 #ifndef BASIC
     auto e_start = hrc::now();
 #endif
+
     spmm(handle, V, K, E);  // SpMM: ET = VK using global V
     CHECK_CUDA(cudaDeviceSynchronize());
+
 #ifndef BASIC
     MPI_Barrier(comm);
     timer.e_elapsed += get_time_elapsed(e_start);
@@ -512,17 +508,17 @@ int cluster1d(ArgParse args, MPI_Comm comm)
 #ifndef BASIC
     MPI_Barrier(comm);
     timer.vr_computation += get_time_elapsed(vr_computation_start);
-    auto vr_mpi_start = hrc::now();
+    auto e_mpi_start = hrc::now();
 #endif
     // Gather assignments and clusters
     int dead_process_count = gather_assignments(E, c, V, args.convergence);
     // Record dead process count at iteration
     timer.dead_proc_counts[i] = dead_process_count;
-    bool done = (dead_process_count == V.n_procs);
+    //bool done = (dead_process_count == V.n_procs);
 
 #ifndef BASIC
     MPI_Barrier(comm);
-    timer.vr_mpi += get_time_elapsed(vr_mpi_start);
+    timer.e_mpi += get_time_elapsed(e_mpi_start);
 #endif
 
 #ifndef BASIC

@@ -7,7 +7,7 @@
 #include "utils.hh"
 #include "dist_v.hh"
 
-#define GEMM_2D
+//#define GEMM_2D
 
 namespace cpop {
 

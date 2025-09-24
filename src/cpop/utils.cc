@@ -6,6 +6,8 @@
 
 namespace cpop {
 
+Timer timer;
+
 const char* cublasGetErrorString(cublasStatus_t status) {
   switch (status) {
     case CUBLAS_STATUS_SUCCESS:
@@ -141,8 +143,12 @@ void Timer::save_all(const char* path, float score) {
   }
   file << "IO: " << io << std::endl;
   file << "K: " << k_elapsed << std::endl;
+  file << "K Redist: " << k_redist << std::endl;
   file << "VI: " << vi_elapsed << std::endl;
   file << "E: " << e_elapsed << std::endl;
+  file << "E Transpose: " << e_transpose << std::endl;
+  file << "E MPI: " << e_mpi << std::endl;
+  file << "E SpMM: " << e_spmm << std::endl;
   file << "Z: " << z_elapsed << std::endl;
   file << "C: " << c_elapsed << std::endl;
   file << "C MPI: " << c_mpi << std::endl;
@@ -168,8 +174,12 @@ void Timer::save_all(const char* path, float score) {
   std::cout << "-------------------" << std::endl;
   std::cout << "IO: " << io << " ms" << std::endl;
   std::cout << "K: " << k_elapsed << " ms" << std::endl;
+  std::cout << "K Redist: " << k_redist << " ms" << std::endl;
   std::cout << "VI: " << vi_elapsed << " ms" << std::endl;
   std::cout << "E: " << e_elapsed << " ms" << std::endl;
+  std::cout << "E Transpose: " << e_transpose << " ms" <<std::endl;
+  std::cout << "E MPI: " << e_mpi << " ms" <<std::endl;
+  std::cout << "E SpMM: " << e_spmm << " ms" <<std::endl;
   std::cout << "Z: " << z_elapsed << " ms" << std::endl;
   std::cout << "C: " << c_elapsed << " ms" << std::endl;
   std::cout << "C MPI: " << c_mpi << " ms" << std::endl;

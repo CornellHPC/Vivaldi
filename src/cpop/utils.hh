@@ -2,6 +2,11 @@
 #define CPOP_UTILS_HH
 #include <vector>
 #include "unistd.h"
+#include <chrono>
+
+using hrc = std::chrono::high_resolution_clock;
+using ms = std::chrono::milliseconds;
+
 
 #define CHECK_CUDA(func)                                                   \
   {                                                                        \
@@ -67,6 +72,7 @@ struct Timer {
 
   // K
   int64_t k_elapsed = 0;
+  int64_t k_redist = 0;
 
   // Vi
   int64_t vi_elapsed = 0;
@@ -74,6 +80,9 @@ struct Timer {
   // todo: allgather average over ranks
   // E
   int64_t e_elapsed = 0;
+  int64_t e_transpose = 0;
+  int64_t e_mpi = 0;
+  int64_t e_spmm = 0;
 
   // Z
   int64_t z_elapsed = 0;
@@ -242,6 +251,7 @@ void par_print(const char * str, Args... args)
     MPI_Barrier(MPI_COMM_WORLD);
 }
 
+extern Timer timer;
 
 }  // namespace cpop
 
