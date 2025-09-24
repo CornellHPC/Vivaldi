@@ -102,12 +102,8 @@ __global__ void argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
   }
 }
 
-__global__ void argmin_kernel_simple(int64_t k, int64_t t, float* dE, float* dc, int* local_assignments, int* local_cluster_sizes, cpop::FloatI32 * local_minpairs)
+__global__ void argmin_kernel_simple(int64_t k, int64_t t, float* dE, float* dc, int* local_assignments, int* local_cluster_sizes, cpop::FloatI32 * local_minpairs, int offset)
 {
-  for (int64_t point = blockIdx.x * blockDim.x + threadIdx.x; point < k;
-       point += blockDim.x * gridDim.x) {
-    local_cluster_sizes[point] = 0;
-  }
 
   for (int64_t point = blockIdx.x * blockDim.x + threadIdx.x; point < t;
        point += blockDim.x * gridDim.x) {
@@ -120,14 +116,14 @@ __global__ void argmin_kernel_simple(int64_t k, int64_t t, float* dE, float* dc,
       //        dE[cluster * t + point], cluster * t + point, value);
       if (value < min) {
         min = value;
-        min_cluster = cluster;
+        min_cluster = cluster + offset;
       }
     }
 
 
-    // update assignment and cluster sizes
+    // update assignment 
     local_minpairs[point] = {min, min_cluster};
-    atomicAdd(&local_cluster_sizes[min_cluster], 1);
+    //atomicAdd(&local_cluster_sizes[min_cluster], 1);
   }
 }
 
@@ -202,6 +198,13 @@ __global__ void mininds_kernel(cpop::FloatI32 * d_minpairs, int * d_mininds, int
 
 namespace cpop {
 
+std::ostream& operator<<(std::ostream& os, const FloatI32& x)
+{
+    os<<"("<<x.f<<","<<x.i<<")";
+    return os;
+}
+
+
 void launch_polynomial_kernel(int64_t m, int64_t n, float* B, float gamma,
                               float c, float r) {
   if (m == 0 || n == 0)
@@ -257,7 +260,7 @@ void launch_argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
 }
 
 
-void launch_argmin_kernel_simple(int64_t k, int64_t t, float* dE, float* dc, int* local_assignments, int* local_cluster_sizes, FloatI32 * local_minpairs)
+void launch_argmin_kernel_simple(int64_t k, int64_t t, float* dE, float* dc, int* local_assignments, int* local_cluster_sizes, FloatI32 * local_minpairs, int offset)
 {
   if (k == 0 || t == 0)
     return;
@@ -268,7 +271,7 @@ void launch_argmin_kernel_simple(int64_t k, int64_t t, float* dE, float* dc, int
   int nthreads = 256;
   int nblocks = std::min(int64_t(1048576), (t + nthreads - 1) / nthreads);
   argmin_kernel_simple<<<nblocks, nthreads>>>(
-      k, t, dE, dc, local_assignments, local_cluster_sizes, local_minpairs);
+      k, t, dE, dc, local_assignments, local_cluster_sizes, local_minpairs, offset);
 }
 
 

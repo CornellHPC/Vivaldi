@@ -14,6 +14,7 @@ struct FloatI32
 {
     float f;
     int i;
+    friend std::ostream& operator<<(std::ostream& os, const FloatI32& f);
 };
 
 struct IsMine
@@ -22,7 +23,7 @@ struct IsMine
     __host__ __device__
     bool operator()(const int cluster)
     {
-        return (cluster >= lower ) && (cluster <= upper);
+        return (cluster >= lower ) && (cluster < upper);
     }
 };
 
@@ -69,7 +70,7 @@ void launch_argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
                           float* local_k_means_objective_delta,
                           float* prev_point_to_cluster_distances);
 
-void launch_argmin_kernel_simple(int64_t k, int64_t t, float* dE, float* dc, int* local_assignments, int* local_cluster_sizes, FloatI32 * local_minpairs);
+void launch_argmin_kernel_simple(int64_t k, int64_t t, float* dE, float* dc, int* local_assignments, int* local_cluster_sizes, FloatI32 * local_minpairs, int offset);
 
 /**
  * @brief Launches the reinit kernel, which computes V = 1 / cluster_size

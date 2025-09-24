@@ -10,6 +10,8 @@
 #include "cluster.hh"
 #include "utils.hh"
 #include "gpu_kernels.cuh"
+#include <cub/cub.cuh>
+
 
 namespace cpop {
 
@@ -669,15 +671,16 @@ int argmin(DnMat_t& E, DnVec_t& c, V_t& V, bool ptr) {
 int argmin2d(DistDnMat_t& E, DistDnVec_t& c, DistV2D& V) 
 {
 
+  int offset = V.grid->col_rank * V.rows;
+
+
   launch_argmin_kernel_simple(
       V.rows, V.cols, E.mat->dM, c.vec->dz, V.d_colptrs, V.d_cluster_sizes,
-      V.d_minpairs);
+      V.d_minpairs, offset);
   cudaDeviceSynchronize();
 
 
   MPI_Allreduce(MPI_IN_PLACE, V.d_minpairs, V.cols, MPI_FLOAT_INT, MPI_MINLOC, V.grid->col_comm);
-
-  MPI_Allreduce(MPI_IN_PLACE, V.d_cluster_sizes, V.global_rows, MPI_INT, MPI_SUM, V.grid->world_comm);
 
 
   return EXIT_SUCCESS;
@@ -790,8 +793,24 @@ int set_V_from_assignments2d(DistV2D& V)
   launch_mininds_kernel(V.d_minpairs, V.d_mininds, V.cols);
   CHECK_CUDA(cudaDeviceSynchronize());
 
-  int lower = V.tile_cols[0] * V.grid->row_rank;
-  int upper = lower + V.cols;
+  // Compute cluster sizes
+  void * d_tmp = nullptr;
+  size_t tmp_size = 0;
+  CHECK_CUDA(cub::DeviceHistogram::HistogramEven(
+                  d_tmp, tmp_size,
+                  V.d_mininds, V.d_cluster_sizes, V.global_rows+1,
+                  0, (int)V.global_rows, (int)V.cols));
+  CHECK_CUDA(cudaMalloc(&d_tmp, tmp_size));
+  CHECK_CUDA(cub::DeviceHistogram::HistogramEven(
+                  d_tmp, tmp_size,
+                  V.d_mininds, V.d_cluster_sizes, V.global_rows+1,
+                  0, (int)V.global_rows, (int)V.cols));
+  CHECK_CUDA(cudaFree(d_tmp));
+  CHECK_CUDA(cudaDeviceSynchronize());
+  MPI_Allreduce(MPI_IN_PLACE, V.d_cluster_sizes, V.global_rows, MPI_INT, MPI_SUM, V.grid->row_comm);
+
+  int lower = V.rows * V.grid->col_rank;
+  int upper = lower + V.rows;
 
   // Which points belong to my chunk of the clusters
   IsMine op{lower, upper};
@@ -806,15 +825,17 @@ int set_V_from_assignments2d(DistV2D& V)
   //CHECK_CUDA(cudaMalloc(&(V.d_rowinds), sizeof(int) * nnz_next));
 
   launch_copyif(V.d_mininds, V.d_rowinds, V.cols, op);
+  CHECK_CUDA(cudaDeviceSynchronize());
 
   launch_reinit_kernel2d(V.d_vals, V.d_rowinds, V.d_colptrs, 
                          V.d_mininds, V.d_cluster_sizes,
-                         V.rows, V.nnz, V.cols, 
+                         V.rows, V.cols, V.nnz, 
                          op);
   CHECK_CUDA(cudaDeviceSynchronize());
 
   // Finally, inclusive prefix scan sets colptrs
   launch_inclusive_scan(V.d_colptrs + 1, V.d_colptrs + 1, V.cols);
+  CHECK_CUDA(cudaDeviceSynchronize());
 
   // Reinit cusparse csc
   cusparseDestroySpMat(V.csc_mat);

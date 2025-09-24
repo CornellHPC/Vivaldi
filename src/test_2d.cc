@@ -8,6 +8,7 @@
 #include "cpop/dist_v.hh"
 #include "cpop/compute_kernel.hh"
 #include "cpop/utils.hh"
+#include "colors.h"
 
 using namespace cpop;
 
@@ -102,9 +103,9 @@ int main(int argc, char* argv[]) {
 
   /** Const */
   bool s = true;
-  int m = 16;
+  int m = 1024;
   int n = 8;
-  int k = 4;
+  int k = 32;
 
   DistV2D Vdist(m, k, grid2d);
   V_t V(m, k, s, comm);
@@ -134,14 +135,15 @@ int main(int argc, char* argv[]) {
   DnVec_t ccorrect(k);
 
 
-  constexpr int niters = 2;
+  constexpr int niters = 5;
   for (int iter=0; iter<niters; iter++)
   {
       print_phase("Iteration beginning");
 
       spmm(handle, V, K1D, Ecorrect);
       spmm2d(handle, Vdist, K2D, E);
-      print_device_matrix(E.mat->dM, E.mat->h_, E.mat->w_);
+      //print_device_matrix(E.mat->dM, E.mat->h_, E.mat->w_);
+      //print_device_matrix(Ecorrect.dM, Ecorrect.h_, Ecorrect.w_);
       MPI_Barrier(MPI_COMM_WORLD);
 
       compute_z(V, Ecorrect, zcorrect);
@@ -149,13 +151,13 @@ int main(int argc, char* argv[]) {
 
       spmv(handle, V, zcorrect, ccorrect);
       sum_vec(ccorrect, comm);
-      print_device_matrix(ccorrect.dz, 1, k); 
+      //print_device_matrix(ccorrect.dz, 1, ccorrect.size); 
       MPI_Barrier(MPI_COMM_WORLD);
 
 
       spmv(handle, Vdist, *z.vec, *c.vec);
       sum_vec2d(c);
-      print_device_matrix(c.vec->dz, 1, c.vec->size); 
+      //print_device_matrix(c.vec->dz, 1, c.vec->size); 
       MPI_Barrier(MPI_COMM_WORLD);
 
       check_c(c, ccorrect, logfile_path);
@@ -166,12 +168,22 @@ int main(int argc, char* argv[]) {
       argmin2d(E, c, Vdist);  
       set_V_from_assignments2d(Vdist);
 
+      //print_device_matrix(Vdist.d_mininds, 1, Vdist.cols);
+      //print_device_matrix(Vdist.d_minpairs, 1, Vdist.cols);
+      //print_device_matrix(Vdist.d_cluster_sizes, 1, Vdist.global_rows);
+
+      //print_device_matrix(Vdist.d_rowinds, 1, Vdist.nnz);
+      //print_device_matrix(Vdist.d_vals, 1, Vdist.nnz);
+
       check_assignments(Vdist, V, logfile_path);
 
       print_phase("Iteration correct");
   }
 
-  print_phase("All iterations correct");
+  if (rank==0)
+  {
+      std::cout<<GREEN<<"TEST PASSED"<<RESET<<std::endl;
+  }
 
 
   MPI_Finalize();

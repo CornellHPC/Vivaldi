@@ -10,6 +10,8 @@
 #include "cpop/compute_kernel.hh"
 #include "cpop/utils.hh"
 
+#include "colors.h"
+
 using namespace cpop;
 
 float EPSILON = 0.01;
@@ -116,32 +118,37 @@ int main(int argc, char* argv[]) {
   float * d_tmp2;
   CHECK_CUDA(cudaMalloc(&d_tmp2, sizeof(float) * Vdist.local_v->k_ * E.mat->w_));
 
-  spmm(handle, V, K1D, Ecorrect);
-  spmm15d(handle, Vdist, K2D, E, E_p, d_tmp, d_tmp2);
+  constexpr int niters = 5;
+  for (int iter=0; iter<niters; iter++)
+  {
+      print_phase("Iteration beginning");
+      spmm(handle, V, K1D, Ecorrect);
+      spmm15d(handle, Vdist, K2D, E, E_p, d_tmp, d_tmp2);
 
-  check_e(Ecorrect, *E.mat, rank, logfile_path);
-  print_phase("E1 correct");
+      check_e(Ecorrect, *E.mat, rank, logfile_path);
+      print_phase("E correct");
+
+      compute_z(V, Ecorrect, zcorrect);
+      compute_z(*Vdist.local_v, *E.mat, *z.vec);
+
+      spmv(handle, V, zcorrect, ccorrect);
+      sum_vec(ccorrect, comm);
+
+      spmv(handle, *Vdist.local_v, *z.vec, *c.vec);
+      sum_vec(*c.vec, comm);
 
 
-  compute_z(V, Ecorrect, zcorrect);
-  compute_z(*Vdist.local_v, *E.mat, *z.vec);
+      reinit_V(Ecorrect, ccorrect, V);
+      argmin(*E.mat, *c.vec, *Vdist.local_v, true);  
 
-  spmv(handle, V, zcorrect, ccorrect);
-  sum_vec(ccorrect, comm);
+      set_V_from_assignments15d(Vdist);
+      print_phase("Iteration correct");
+  }
 
-  spmv(handle, *Vdist.local_v, *z.vec, *c.vec);
-  sum_vec(*c.vec, comm);
-
-
-  reinit_V(Ecorrect, ccorrect, V);
-  argmin(*E.mat, *c.vec, *Vdist.local_v, true);  
-
-  set_V_from_assignments15d(Vdist);
-  spmm(handle, V, K1D, Ecorrect);
-  spmm15d(handle, Vdist, K2D, E, E_p, d_tmp, d_tmp2);
-  check_e(Ecorrect, *E.mat, rank, logfile_path);
-  print_phase("E2 correct");
-
+  if (rank==0)
+  {
+      std::cout<<GREEN<<"TEST PASSED"<<RESET<<std::endl;
+  }
 
   cudaFree(d_tmp);
   cudaFree(d_tmp2);
