@@ -103,9 +103,9 @@ int main(int argc, char* argv[]) {
 
   /** Const */
   bool s = true;
-  int m = 1024;
+  int m = 2048;
   int n = 8;
-  int k = 32;
+  int k = 128;
 
   DistV2D Vdist(m, k, grid2d);
   V_t V(m, k, s, comm);
@@ -144,7 +144,9 @@ int main(int argc, char* argv[]) {
       spmm2d(handle, Vdist, K2D, E);
       //print_device_matrix(E.mat->dM, E.mat->h_, E.mat->w_);
       //print_device_matrix(Ecorrect.dM, Ecorrect.h_, Ecorrect.w_);
+      //print_phase("SpMM Done");
       MPI_Barrier(MPI_COMM_WORLD);
+
 
       compute_z(V, Ecorrect, zcorrect);
       compute_z2d(Vdist, E, z);
@@ -159,6 +161,7 @@ int main(int argc, char* argv[]) {
       sum_vec2d(c);
       //print_device_matrix(c.vec->dz, 1, c.vec->size); 
       MPI_Barrier(MPI_COMM_WORLD);
+      //print_phase("SpMV Done");
 
       check_c(c, ccorrect, logfile_path);
       print_phase("c vector correct");
@@ -166,7 +169,10 @@ int main(int argc, char* argv[]) {
       reinit_V(Ecorrect, ccorrect, V);
 
       argmin2d(E, c, Vdist);  
+      //print_phase("Argmin Done");
+
       set_V_from_assignments2d(Vdist);
+      //print_phase("Reinit Done");
 
       //print_device_matrix(Vdist.d_mininds, 1, Vdist.cols);
       //print_device_matrix(Vdist.d_minpairs, 1, Vdist.cols);

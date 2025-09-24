@@ -127,9 +127,7 @@ __global__ void argmin_kernel_simple(int64_t k, int64_t t, float* dE, float* dc,
   }
 }
 
-__global__ void reinit_kernel2d(float* d_values, int * d_rowinds, int * d_colptrs, int * d_mininds, int * d_cluster_sizes, 
-                                int64_t k, int64_t m, int64_t nnz, 
-                                cpop::IsMine& op)
+__global__ void reinit_kernel2d(float* d_values, int * d_rowinds, int * d_colptrs, int * d_mininds, int * d_cluster_sizes, int64_t k, int64_t m, int64_t nnz, cpop::IsMine op)
 {
     for (int64_t i = blockIdx.x * blockDim.x + threadIdx.x; i < m;
          i += blockDim.x * gridDim.x) 

@@ -812,6 +812,7 @@ int set_V_from_assignments2d(DistV2D& V)
   int lower = V.rows * V.grid->col_rank;
   int upper = lower + V.rows;
 
+
   // Which points belong to my chunk of the clusters
   IsMine op{lower, upper};
 
@@ -834,6 +835,7 @@ int set_V_from_assignments2d(DistV2D& V)
   CHECK_CUDA(cudaDeviceSynchronize());
 
   // Finally, inclusive prefix scan sets colptrs
+  //print_device_matrix(V.d_colptrs, 1, V.cols+1);
   launch_inclusive_scan(V.d_colptrs + 1, V.d_colptrs + 1, V.cols);
   CHECK_CUDA(cudaDeviceSynchronize());
 

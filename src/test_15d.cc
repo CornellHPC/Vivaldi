@@ -73,7 +73,7 @@ int main(int argc, char* argv[]) {
   bool s = true;
   int m = 128;
   int n = 8;
-  int k = 16;
+  int k = 128;
 
   DistV1D Vdist(m, k, true, grid1d);
   V_t V(m, k, s, comm);
