@@ -403,9 +403,157 @@ int spmm2d(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E)
 
     CHECK_CUDA(cudaFree(K_recv));
 
+    delete[] recv_nnz;
     return EXIT_SUCCESS;
 }
 
+
+// Do not communicate tiles of the kernel matrix 
+int spmm2d_bs(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMat_t& T)
+{
+
+    auto grid = V.grid;
+    const int niters = grid->row_size;
+
+
+    float * d_vals_send;
+    int * d_rowinds_send;
+    int * d_colptrs_send;
+
+    cusparseSpMatDescr_t loc_V;
+
+
+    // Transpose the sparse matrix
+    int tr_rank = (grid->col_rank) * grid->col_size + grid->row_rank;
+    DistV2D V_tr(V.global_cols, V.global_rows, V.tile_nnz[tr_rank], grid);
+    MPI_Sendrecv(V.d_vals, V.nnz, MPI_FLOAT, tr_rank, 100, 
+                 V_tr.d_vals, V_tr.nnz, MPI_FLOAT, tr_rank, 100,
+                 grid->world_comm, MPI_STATUS_IGNORE);
+    MPI_Sendrecv(V.d_rowinds, V.nnz, MPI_INT, tr_rank, 101, 
+                 V_tr.d_rowinds, V_tr.nnz, MPI_INT, tr_rank, 101,
+                 grid->world_comm, MPI_STATUS_IGNORE);
+    MPI_Sendrecv(V.d_colptrs, V.cols+1, MPI_INT, tr_rank, 102, 
+                 V_tr.d_colptrs, V_tr.cols+1, MPI_INT, tr_rank, 102,
+                 grid->world_comm, MPI_STATUS_IGNORE);
+
+
+    int64_t * recv_nnz = new int64_t[niters];
+    memset(recv_nnz, 0, sizeof(int64_t) * niters);
+    recv_nnz[grid->row_rank] = V_tr.nnz;
+    MPI_Allreduce(MPI_IN_PLACE, recv_nnz, niters, MPI_INT64_T, MPI_SUM, grid->row_comm);
+
+
+
+    for (int i=0; i<niters; i++)
+    {
+#ifdef DEBUG2D
+        par_print("Iteration %d\n", i);
+#endif
+
+        if (i == grid->row_rank)
+        {
+            d_vals_send = V_tr.d_vals;
+            d_rowinds_send = V_tr.d_rowinds;
+            d_colptrs_send = V_tr.d_colptrs;
+        }
+        else
+        {
+            CHECK_CUDA(cudaMalloc(&d_vals_send, sizeof(float) * recv_nnz[i]));
+            CHECK_CUDA(cudaMalloc(&d_rowinds_send, sizeof(int) * recv_nnz[i]));
+            CHECK_CUDA(cudaMalloc(&d_colptrs_send, sizeof(int) * (V_tr.tile_cols[i] + 1)));
+        }
+        
+#ifndef BASIC
+        auto bcast_start = hrc::now();
+#endif
+        MPI_Bcast(d_vals_send, recv_nnz[i], MPI_FLOAT, i, grid->row_comm);
+        MPI_Bcast(d_rowinds_send, recv_nnz[i], MPI_INT, i, grid->row_comm);
+        MPI_Bcast(d_colptrs_send, V_tr.tile_cols[i] + 1, MPI_INT, i, grid->row_comm);
+#ifndef BASIC
+        timer.e_mpi += get_time_elapsed(bcast_start);
+#endif
+
+#ifndef BASIC
+        auto comp_start = hrc::now();
+#endif
+        CHECK_CUSPARSE(cusparseCreateCsc(&loc_V, V_tr.tile_rows[i], V_tr.tile_cols[i],
+                          recv_nnz[i],
+                          d_colptrs_send, 
+                          d_rowinds_send,
+                          d_vals_send, 
+                          CUSPARSE_INDEX_32I,   
+                          CUSPARSE_INDEX_32I,   
+                          CUSPARSE_INDEX_BASE_ZERO, 
+                          CUDA_R_32F));          
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        float alpha = 1.0f;
+        float beta = 0.0f;
+
+        // Buffer size 
+        size_t buffer_size;
+        void* buffer;
+        CHECK_CUSPARSE(cusparseSpMM_bufferSize(
+            handle.sh(), CUSPARSE_OPERATION_NON_TRANSPOSE,
+            CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, loc_V, K.mat->M, &beta, T.mat->M,
+            CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, &buffer_size));
+        CHECK_CUDA(cudaMalloc(&buffer, buffer_size));
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        // Perform SpMM
+        CHECK_CUSPARSE(cusparseSpMM(
+            handle.sh(), CUSPARSE_OPERATION_NON_TRANSPOSE,
+            CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, loc_V, K.mat->M, &beta, T.mat->M,
+            CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, buffer));
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        // Clean up
+        CHECK_CUDA(cudaFree(buffer));
+        CHECK_CUSPARSE(cusparseDestroySpMat(loc_V));
+
+#ifndef BASIC
+        timer.e_spmm += get_time_elapsed(comp_start);
+#endif
+
+
+        // Reduce along process columns into the ith rank
+#ifndef BASIC
+        auto reduce_start = hrc::now();
+#endif
+        if (i == grid->col_rank)
+        {
+            MPI_Reduce(MPI_IN_PLACE, T.mat->dM, T.mat->h_ * T.mat->w_, MPI_FLOAT, MPI_SUM, i, grid->col_comm);
+
+            // Overwrite E
+            CHECK_CUDA(cudaMemcpy(E.mat->dM, T.mat->dM, sizeof(float) * E.mat->h_ * E.mat->w_, 
+                                            cudaMemcpyDeviceToDevice));
+        }
+        else
+        {
+            MPI_Reduce(T.mat->dM, nullptr, T.mat->h_ * T.mat->w_, MPI_FLOAT, MPI_SUM, i, grid->col_comm);
+        }
+                    
+
+#ifndef BASIC
+        timer.e_mpi += get_time_elapsed(reduce_start);
+#endif
+
+
+        if (i != grid->row_rank)
+        {
+            CHECK_CUDA(cudaFree(d_vals_send));
+            CHECK_CUDA(cudaFree(d_rowinds_send));
+            CHECK_CUDA(cudaFree(d_colptrs_send));
+        }
+
+        CHECK_CUDA(cudaDeviceSynchronize());
+        MPI_Barrier(MPI_COMM_WORLD);
+
+    }
+
+    delete[] recv_nnz;
+    return EXIT_SUCCESS;
+}
 
 /*
  * Options:
@@ -878,7 +1026,7 @@ int set_V_from_assignments2d(DistV2D& V)
   IsMine op{lower, upper};
 
   int64_t nnz_next = launch_countif(V.d_mininds, V.cols, op);
-  V.nnz = nnz_next;
+  V.update_nnz(nnz_next);
 
   //CHECK_CUDA(cudaFree(V.d_vals));
   //CHECK_CUDA(cudaFree(V.d_rowinds));

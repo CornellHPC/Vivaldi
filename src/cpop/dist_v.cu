@@ -117,6 +117,35 @@ DistV2D::DistV2D(int64_t m, int64_t k, std::shared_ptr<ProcessGrid> grid)
     delete[] row_sizes;
 }
 
+DistV2D::DistV2D(int64_t m, int64_t k, int64_t nnz, std::shared_ptr<ProcessGrid> grid):
+    global_cols(m), global_rows(k), grid(grid), nnz(nnz)
+{
+    MPI_Allreduce(&nnz, &global_nnz, 1, MPI_INT64_T, MPI_SUM, grid->world_comm);
+
+    tile_rows = compute_tile_sizes(k, grid->col_size);
+    tile_cols = compute_tile_sizes(m, grid->row_size);
+
+
+    tile_nnz = new int64_t[grid->world_size];
+    tile_nnz[grid->world_rank] = nnz;
+    memset(tile_nnz, 0, sizeof(int64_t) * grid->world_size);
+
+    MPI_Allreduce(MPI_IN_PLACE, tile_nnz, grid->world_size, MPI_INT64_T, MPI_SUM, grid->world_comm);
+
+    rows = tile_rows[grid->col_rank];
+    cols = tile_cols[grid->row_rank];
+
+    CHECK_CUDA(cudaMalloc(&d_vals, sizeof(float) * nnz));
+    CHECK_CUDA(cudaMalloc(&d_rowinds, sizeof(int) * nnz));
+    CHECK_CUDA(cudaMalloc(&d_colptrs, sizeof(int) * (cols+1)));
+    CHECK_CUDA(cudaMalloc(&d_cluster_sizes, sizeof(int) * k));
+    CHECK_CUDA(cudaMalloc(&d_minpairs, sizeof(FloatI32) * cols));
+    CHECK_CUDA(cudaMalloc(&d_mininds, sizeof(int) * cols));
+
+    this->init_cusparse_csc();
+
+}
+
 void DistV2D::init_cusparse_csc()
 {
     CHECK_CUSPARSE(cusparseCreateCsc(
@@ -131,6 +160,14 @@ void DistV2D::init_cusparse_csc()
                       CUSPARSE_INDEX_32I,   // row index type
                       CUSPARSE_INDEX_BASE_ZERO, // index base
                       CUDA_R_32F));          // data type for values
+}
+
+void DistV2D::update_nnz(int64_t nnz)
+{
+    this->nnz = nnz;
+    memset(this->tile_nnz, 0, sizeof(int64_t) * grid->world_size);
+    this->tile_nnz[grid->world_rank] = nnz;
+    MPI_Allreduce(MPI_IN_PLACE, this->tile_nnz, this->grid->world_size, MPI_INT64_T, MPI_SUM, this->grid->world_comm);
 }
 
 DistV2D::~DistV2D()

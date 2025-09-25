@@ -170,6 +170,7 @@ struct DistV1D {
  */
 int spmm(Handle& handle, V_t& V, DnMat_t& K, DnMat_t& E);
 int spmm2d(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E);
+int spmm2d_bs(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMat_t& T);
 int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMat_t& E_p, float * d_tmp, float * d_tmp2);
 
 /**

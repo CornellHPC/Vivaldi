@@ -85,11 +85,14 @@ int cluster2d(ArgParse args, MPI_Comm comm)
 #endif
 
 
-  /** Initialize E, z, and c */
+  /** Initialize E, z, T, and c */
   DistDnMat_t E({new DnMat_t(V.rows, V.cols), 
+                 grid});
+  DistDnMat_t T({new DnMat_t(V.rows, V.cols), 
                  grid});
   DistDnVec_t z({new DnVec_t(V.cols), grid});
   DistDnVec_t c({new DnVec_t(V.rows), grid});
+
 
 
 #ifndef BASIC
@@ -110,8 +113,7 @@ int cluster2d(ArgParse args, MPI_Comm comm)
     print_phase("SpMM");
 #endif
 
-    spmm2d(handle, V, K, E);  
-
+    spmm2d_bs(handle, V, K, E, T);  
 
 #ifndef BASIC
     MPI_Barrier(comm);

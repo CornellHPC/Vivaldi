@@ -103,9 +103,9 @@ int main(int argc, char* argv[]) {
 
   /** Const */
   bool s = true;
-  int m = 2048;
+  int m = 1024;
   int n = 8;
-  int k = 128;
+  int k = 32;
 
   DistV2D Vdist(m, k, grid2d);
   V_t V(m, k, s, comm);
@@ -126,6 +126,8 @@ int main(int argc, char* argv[]) {
 
   DistDnMat_t E({new DnMat_t(Vdist.rows, Vdist.cols), 
                  grid2d});
+  DistDnMat_t T({new DnMat_t(Vdist.rows, Vdist.cols), 
+                 grid2d});
   DistDnVec_t z({new DnVec_t(Vdist.cols), grid2d});
   DistDnVec_t c({new DnVec_t(Vdist.rows), grid2d});
 
@@ -141,7 +143,8 @@ int main(int argc, char* argv[]) {
       print_phase("Iteration beginning");
 
       spmm(handle, V, K1D, Ecorrect);
-      spmm2d(handle, Vdist, K2D, E);
+      spmm2d_bs(handle, Vdist, K2D, E, T);
+      //spmm2d(handle, Vdist, K2D, E);
       //print_device_matrix(E.mat->dM, E.mat->h_, E.mat->w_);
       //print_device_matrix(Ecorrect.dM, Ecorrect.h_, Ecorrect.w_);
       //print_phase("SpMM Done");
