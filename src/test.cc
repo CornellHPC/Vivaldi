@@ -13,12 +13,14 @@ float EPSILON = 0.01;
 template <typename T>
 void assert_buffer_equal(T* b0, T* b1, int64_t count) {
   bool all_eq = true;
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   for (int i = 0; i < count; ++i) {
     if (std::abs(b0[i] - b1[i]) > EPSILON)
       all_eq = false;
   }
   if (!all_eq) {
-    std::cout << "Buffer mismatch:" << std::endl;
+    std::cout << "Buffer mismatch on rank "<<rank<<":" << std::endl;
     for (int i = 0; i < count; ++i) {
       std::cout << b0[i] << " " << b1[i] << std::endl;
     }
@@ -478,9 +480,10 @@ int main(int argc, char* argv[]) {
 
   Handle handle(s);
 
-  auto PT = load_matrix("../data/randi", m, n, comm);
 
+  auto PT = load_matrix("../data/randi", m, n, comm);
   DnMat_t K(m, t, compute_kernel_matrix(PT, 1.0f, 1.0f, 1.0f));
+
   PT.releaseWorkspace();
   check_k(K, rank);
 

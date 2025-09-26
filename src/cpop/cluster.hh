@@ -5,6 +5,9 @@
 #include "mpi.h"
 
 #include "utils.hh"
+#include "dist_v.hh"
+
+//#define GEMM_2D
 
 namespace cpop {
 
@@ -36,6 +39,17 @@ struct DnMat_t {
   ~DnMat_t();
 };
 
+struct DistDnMat_t
+{
+    DnMat_t * mat;
+    std::shared_ptr<ProcessGrid> grid;
+
+    ~DistDnMat_t()
+    {
+        delete mat;
+    }
+};
+
 struct DnVec_t {
   float* dz;
   cusparseDnVecDescr_t z;
@@ -51,6 +65,16 @@ struct DnVec_t {
   int print();
 
   ~DnVec_t();
+};
+
+struct DistDnVec_t
+{
+    DnVec_t * vec;
+    std::shared_ptr<ProcessGrid> grid;
+    ~DistDnVec_t()
+    {
+        delete vec;
+    }
 };
 
 struct V_t {
@@ -100,6 +124,7 @@ struct V_t {
    */
   V_t(int64_t m, int64_t k, bool sparse, MPI_Comm comm);
 
+
   /**
    * @brief Saves the cluster assignments to disk
    *
@@ -125,6 +150,15 @@ struct V_t {
   ~V_t();
 };
 
+
+struct DistV1D {
+  std::shared_ptr<ProcessGrid> grid;
+  V_t * local_v;
+  DistV1D(int64_t m, int64_t k, bool sparse, std::shared_ptr<ProcessGrid> grid);
+
+};
+
+
 /**
  * @brief Computes E by SpMM routine
  * 
@@ -135,6 +169,9 @@ struct V_t {
  * @return int 
  */
 int spmm(Handle& handle, V_t& V, DnMat_t& K, DnMat_t& E);
+int spmm2d(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E);
+int spmm2d_bs(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMat_t& T);
+int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMat_t& E_p, float * d_tmp, float * d_tmp2);
 
 /**
  * @brief Computes z based on the local V matrix and E (i.e. using the masking strategy)
@@ -145,6 +182,7 @@ int spmm(Handle& handle, V_t& V, DnMat_t& K, DnMat_t& E);
  * @return int 
  */
 int compute_z(V_t& V, DnMat_t& E, DnVec_t& z);
+int compute_z2d(DistV2D& V, DistDnMat_t& E, DistDnVec_t& z);
 
 /**
  * @brief Computes the local c norm vector by SpMV. Used in ``compute_c``.
@@ -156,6 +194,7 @@ int compute_z(V_t& V, DnMat_t& E, DnVec_t& z);
  * @return int
  */
 int spmv(Handle& handle, V_t& V, DnVec_t& z, DnVec_t& c);
+int spmv(Handle& handle, DistV2D& V, DnVec_t& z, DnVec_t& c);
 
 /**
  * @brief Sums the vector across the communicator. Used in ``compute_c``.
@@ -165,6 +204,7 @@ int spmv(Handle& handle, V_t& V, DnVec_t& z, DnVec_t& c);
  * @return int
  */
 int sum_vec(DnVec_t& c, MPI_Comm comm);
+int sum_vec2d(DistDnVec_t& c);
 
 /**
  * @brief Computes the c norm vector by SpMV and sums it across the communicator row
@@ -186,7 +226,8 @@ int compute_c(Handle& handle, V_t& V, DnVec_t& z, DnVec_t& c, MPI_Comm comm);
  * @param V The V matrix
  * @return int
  */
-int argmin(DnMat_t& E, DnVec_t& c, V_t& V);
+int argmin(DnMat_t& E, DnVec_t& c, V_t& V, bool ptr=false);
+int argmin2d(DistDnMat_t& E, DistDnVec_t& c, DistV2D& V);
 
 /**
  * @brief Gathers assignments and clusters. Used in ``reinit_V``.
@@ -208,6 +249,8 @@ int gather_assignments(DnMat_t& E, DnVec_t& c, V_t& V, int convergence);
  * @return int
  */
 int set_V_from_assignments(DnMat_t& E, DnVec_t& c, V_t& V);
+int set_V_from_assignments2d(DistV2D& V);
+int set_V_from_assignments15d(DistV1D& V);
 
 /**
  * @brief Reinitializes V based on the distances matrix (computed from E and c)

@@ -6,6 +6,8 @@
 
 namespace cpop {
 
+Timer timer;
+
 const char* cublasGetErrorString(cublasStatus_t status) {
   switch (status) {
     case CUBLAS_STATUS_SUCCESS:
@@ -55,7 +57,8 @@ ArgParse::ArgParse(int argc, char* argv[]) {
       "niter", po::value<int>()->default_value(100), "number of iterations")(
       "convergence", po::value<int>()->default_value(0),
       "enable convergence check (1 for basic, 2 for "
-      "process-exclusion-based-convergence)");
+      "process-exclusion-based-convergence)")
+      ("alg,a", po::value<std::string>(), "clustering algorithm to use (1d, 15d, 2d)");
 
   // Parse command line arguments
   po::variables_map vm;
@@ -101,6 +104,9 @@ ArgParse::ArgParse(int argc, char* argv[]) {
     benchmark = path + "_time";
 #endif
   }
+
+  alg = vm["alg"].as<std::string>();
+
 }
 
 void Timer::save_elapsed(const char* path) {
@@ -137,8 +143,12 @@ void Timer::save_all(const char* path, float score) {
   }
   file << "IO: " << io << std::endl;
   file << "K: " << k_elapsed << std::endl;
+  file << "K Redist: " << k_redist << std::endl;
   file << "VI: " << vi_elapsed << std::endl;
   file << "E: " << e_elapsed << std::endl;
+  file << "E Transpose: " << e_transpose << std::endl;
+  file << "E MPI: " << e_mpi << std::endl;
+  file << "E SpMM: " << e_spmm << std::endl;
   file << "Z: " << z_elapsed << std::endl;
   file << "C: " << c_elapsed << std::endl;
   file << "C MPI: " << c_mpi << std::endl;
@@ -164,8 +174,12 @@ void Timer::save_all(const char* path, float score) {
   std::cout << "-------------------" << std::endl;
   std::cout << "IO: " << io << " ms" << std::endl;
   std::cout << "K: " << k_elapsed << " ms" << std::endl;
+  std::cout << "K Redist: " << k_redist << " ms" << std::endl;
   std::cout << "VI: " << vi_elapsed << " ms" << std::endl;
   std::cout << "E: " << e_elapsed << " ms" << std::endl;
+  std::cout << "E Transpose: " << e_transpose << " ms" <<std::endl;
+  std::cout << "E MPI: " << e_mpi << " ms" <<std::endl;
+  std::cout << "E SpMM: " << e_spmm << " ms" <<std::endl;
   std::cout << "Z: " << z_elapsed << " ms" << std::endl;
   std::cout << "C: " << c_elapsed << " ms" << std::endl;
   std::cout << "C MPI: " << c_mpi << " ms" << std::endl;
@@ -210,6 +224,90 @@ int* compute_tile_sizes(int m, int nprocs) {
   }
   t_sizes[nprocs - 1] = m - (nprocs - 1) * t;
   return t_sizes;
+}
+
+//std::vector<std::vector<std::array<int, 2>>> compute_tile_sizes2d(int m, int nprocs) 
+//{
+//  int nprocs_root = std::floor(std::sqrt(nprocs));
+//
+//  std::vector<std::vector<std::array<int, 2>>> result;
+//  for (int i=0; i<nprocs_root; i++)
+//  {
+//      result.emplace_back(nprocs_root);
+//  }
+//
+//  int t = tile_dim2(nprocs_root, m);//m / nprocs + (m > nprocs * nprocs && m % nprocs > 0);
+//  for (int i = 0; i < nprocs_root; ++i) {
+//    for (int j=0; j<nprocs_root; j++)
+//    {
+//        if (i == nprocs_root - 1)
+//        {
+//            result[i][j][0] = m - (nprocs_root - 1) * t;
+//        }
+//        else
+//        {
+//            result[i][j][0] = t;
+//        }
+//
+//        if (j == nprocs_root - 1)
+//        {
+//            result[i][j][1] = m - (nprocs_root - 1) * t;
+//        }
+//        else
+//        {
+//            result[i][j][1] = t;
+//        }
+//    }
+//  }
+//  return result;
+//}
+
+
+int square_grid_dim(MPI_Comm comm) {
+  int size;
+  MPI_Comm_size(comm, &size);
+  return std::floor(std::sqrt(size));
+}
+
+bool is_square_grid(MPI_Comm comm) {
+  int size, sr;
+  MPI_Comm_size(comm, &size);
+  sr = square_grid_dim(comm);
+  return sr * sr == size;
+}
+
+int tile_dim(MPI_Comm comm, int x) {
+  int p = square_grid_dim(comm);
+  return (x / p) + ((x % p == 0) ? 0 : 1);
+}
+
+int tile_dim2(int p, int x) {
+  return (x / p) + ((x % p == 0) ? 0 : 1);
+}
+
+void print_phase(const char * name)
+{
+    MPI_Barrier(MPI_COMM_WORLD);
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if (rank==0)
+    {
+        std::cout<<"=========="<<name<<"=========="<<std::endl;
+    }
+    sleep(1);
+    MPI_Barrier(MPI_COMM_WORLD);
+}
+
+void print_line()
+{
+    MPI_Barrier(MPI_COMM_WORLD);
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if (rank==0)
+    {
+        std::cout<<"=========="<<__LINE__<<"=========="<<std::endl;
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
 }
 
 }  // namespace cpop

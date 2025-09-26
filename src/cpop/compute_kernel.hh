@@ -3,6 +3,7 @@
 
 #include "cusparse.h"
 #include "slate/slate.hh"
+#include "utils.hh"
 
 namespace cpop {
 
@@ -17,6 +18,8 @@ namespace cpop {
  * @return the loaded dense matrix.
  */
 slate::Matrix<float> load_matrix(const char* fname, int64_t rows, int64_t cols,
+                                 MPI_Comm comm);
+slate::Matrix<float> load_matrix2d(const char* fname, int64_t rows, int64_t cols,
                                  MPI_Comm comm);
 
 /**
@@ -41,6 +44,8 @@ int64_t extract_kernel_tiles(float** tiles, slate::Matrix<float>& K, int col);
  */
 float* compute_kernel_matrix(slate::Matrix<float>& PT, float gamma, float c,
                              float r);
+float* compute_kernel_matrix2d(Handle& handle, slate::Matrix<float>& PT, float gamma, float c, float r, bool redist);
+float * redistribute_2d_1d(Handle& handle, float * K, const uint64_t m, const uint64_t mb);
 
 }  // namespace cpop
 

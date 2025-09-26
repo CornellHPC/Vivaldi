@@ -1,5 +1,12 @@
 #ifndef CPOP_UTILS_HH
 #define CPOP_UTILS_HH
+#include <vector>
+#include "unistd.h"
+#include <chrono>
+
+using hrc = std::chrono::high_resolution_clock;
+using ms = std::chrono::milliseconds;
+
 
 #define CHECK_CUDA(func)                                                   \
   {                                                                        \
@@ -50,6 +57,7 @@ struct ArgParse {
   std::string benchmark;
   int niter;
   int convergence;
+  std::string alg;
 
   ArgParse(int argc, char* argv[]);
 };
@@ -64,6 +72,7 @@ struct Timer {
 
   // K
   int64_t k_elapsed = 0;
+  int64_t k_redist = 0;
 
   // Vi
   int64_t vi_elapsed = 0;
@@ -71,6 +80,9 @@ struct Timer {
   // todo: allgather average over ranks
   // E
   int64_t e_elapsed = 0;
+  int64_t e_transpose = 0;
+  int64_t e_mpi = 0;
+  int64_t e_spmm = 0;
 
   // Z
   int64_t z_elapsed = 0;
@@ -113,19 +125,13 @@ class Handle {
  public:
   Handle(bool sparse) {
     this->sparse = sparse;
-    if (sparse) {
-      cusparseCreate(&s_handle);
-    } else {
-      cublasCreate_v2(&d_handle);
-    }
+    cusparseCreate(&s_handle);
+    cublasCreate_v2(&d_handle);
   }
 
   ~Handle() {
-    if (sparse) {
-      cusparseDestroy(s_handle);
-    } else {
-      cublasDestroy_v2(d_handle);
-    }
+    cusparseDestroy(s_handle);
+    cublasDestroy_v2(d_handle);
   }
 
   bool isSparse() { return sparse; }
@@ -155,6 +161,17 @@ int64_t get_time_elapsed(std::chrono::_V2::system_clock::time_point start);
  */
 int* compute_tile_sizes(int m, int nprocs);
 
+
+//std::vector<std::vector<std::array<int, 2>>> compute_tile_sizes2d(int m, int nprocs);
+
+
+int square_grid_dim(MPI_Comm comm);
+bool is_square_grid(MPI_Comm comm);
+int tile_dim(MPI_Comm comm, int x);
+int tile_dim2(int p, int x);
+void print_phase(const char * name);
+void print_line();
+
 /**
  * @brief Print buffer on device
  * 
@@ -173,6 +190,17 @@ void print_device_buffer(T* buf, size_t count) {
   free(temp);
 }
 
+template <typename T>
+void print_host_buffer(T* buf, size_t count, int rank) 
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+  std::cout<<"Rank: "<<rank<<std::endl;
+  for (int i = 0; i < count; ++i)
+    std::cout << buf[i] << " ";
+  std::cout << std::endl;
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+
 /**
  * @brief Print matrix on device
  *
@@ -185,16 +213,45 @@ void print_device_matrix(T* mat, size_t h, size_t w) {
   T* temp = (T*)malloc(h * w * sizeof(T));
   cudaMemcpy(temp, mat, h * w * sizeof(T), cudaMemcpyDeviceToHost);
 
-  for (int i = 0; i < h; ++i) {
-    for (int j = 0; j < w; ++j) {
-      std::cout << temp[i * w + j] << " ";
-    }
-    std::cout << "\n";
+  int rank, size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+  for (int p=0; p<size; p++)
+  {
+      if (p==rank)
+      {
+          std::cout << "--Process "<<p<<"--"<<std::endl;
+          for (int i = 0; i < h; ++i) {
+            for (int j = 0; j < w; ++j) {
+              std::cout << temp[i * w + j] << " ";
+            }
+            std::cout << "\n";
+          }
+          std::cout << std::flush;
+      }
+      MPI_Barrier(MPI_COMM_WORLD);
   }
-  std::cout << std::flush;
 
   free(temp);
 }
+
+
+template <typename... Args>
+void par_print(const char * str, Args... args)
+{
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Barrier(MPI_COMM_WORLD);
+    fprintf(stdout, "---Process %d---\n", rank);
+    fprintf(stdout, str, args...);
+    fprintf(stdout, "----------------\n");
+    fflush(stdout);
+    sleep(1);
+    MPI_Barrier(MPI_COMM_WORLD);
+}
+
+extern Timer timer;
 
 }  // namespace cpop
 

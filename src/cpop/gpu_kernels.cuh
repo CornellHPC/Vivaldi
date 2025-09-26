@@ -1,7 +1,32 @@
 #ifndef CPOP_GPU_KERNELS_CUH
 #define CPOP_GPU_KERNELS_CUH
 
+
+#include <thrust/count.h>
+#include <thrust/copy.h>
+#include <thrust/device_ptr.h>
+#include <thrust/scan.h>
+
+
 namespace cpop {
+
+struct FloatI32
+{
+    float f;
+    int i;
+    friend std::ostream& operator<<(std::ostream& os, const FloatI32& f);
+};
+
+struct IsMine
+{
+    int lower, upper;
+    __host__ __device__
+    bool operator()(const int cluster)
+    {
+        return (cluster >= lower ) && (cluster < upper);
+    }
+};
+
 
 /**
  * Applies polynomial kernel function to matrix B.
@@ -25,6 +50,7 @@ void launch_polynomial_kernel(int64_t m, int64_t n, float* B, float gamma,
  * @param ET This process's ET partial/submatrix (ET is k-by-t in row-major)
  */
 void launch_z_kernel(int64_t t, float* z, int* assignments, float* ET);
+void launch_z_kernel2d(int64_t nnz, int64_t cols, float* z, int* assignments,  int * colptrs, float* ET);
 
 /**
  * @brief Launches the argmin kernel, which computes D = -2E + c followed by a
@@ -44,6 +70,8 @@ void launch_argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
                           float* local_k_means_objective_delta,
                           float* prev_point_to_cluster_distances);
 
+void launch_argmin_kernel_simple(int64_t k, int64_t t, float* dE, float* dc, int* local_assignments, int* local_cluster_sizes, FloatI32 * local_minpairs, int offset);
+
 /**
  * @brief Launches the reinit kernel, which computes V = 1 / cluster_size
  * 
@@ -57,6 +85,8 @@ void launch_argmin_kernel(int64_t k, int64_t t, float* dE, float* dc,
 void launch_reinit_kernel(float* V_global_values, int* global_assignments,
                           int* global_cluster_sizes, int64_t k, int64_t m,
                           bool sparse);
+void launch_reinit_kernel2d(float * d_values, int * d_rowinds, int * d_colptrs, int * d_mininds, int * d_cluster_sizes, int64_t k, int64_t m, int64_t nnz, IsMine& op);
+void launch_init_from_rowinds_kernel(int * d_rowinds, int * d_colptrs, int * d_cluster_sizes, float * d_vals, int64_t nnz, int64_t m);
 
 /**
   * @brief Launches the cluster score kernel, which computes the sum of squared distance
@@ -70,6 +100,29 @@ void launch_reinit_kernel(float* V_global_values, int* global_assignments,
   */
 void launch_score_kernel(float* local_scores, float* dK, float* dE, float* dc,
                          int* local_assignments, int64_t t);
+
+void launch_mininds_kernel(FloatI32 * d_minpairs, int * d_mininds, int64_t cols);
+
+
+template <typename P>
+int64_t launch_countif(int * d_in, int64_t n, P& p)
+{
+  return thrust::count_if(thrust::device_pointer_cast(d_in),
+                          thrust::device_pointer_cast(d_in) + n,
+                          p);
+
+}
+
+template <typename P>
+void launch_copyif(int * d_in, int * d_out, int64_t n, P& p)
+{
+  thrust::copy_if(thrust::device_pointer_cast(d_in),
+                  thrust::device_pointer_cast(d_in) + n,
+                  thrust::device_pointer_cast(d_out),
+                  p);
+}
+
+void launch_inclusive_scan(int * d_in, int * d_out, int64_t n);
 
 /**
  * @brief Compares two assignments vectors for exact equality
