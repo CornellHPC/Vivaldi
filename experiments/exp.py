@@ -588,7 +588,7 @@ def create_script(path, prefix, account, p, m, k, dataset, d=None, sparse=None, 
 
     # Five seconds for one trial estimated through experiments
     total_time_seconds = 5*len(m)*len(d)*len(k)*len(dataset)*len(sparse)
-    timestamp = str(datetime.timedelta(seconds=total_time_seconds))
+    timestamp = str(datetime.timedelta(seconds=total_time_seconds*7))
 
     with open(script_fname, "w") as f:
         f.writelines([
@@ -1169,7 +1169,7 @@ if __name__ == "__main__":
         # for p in [4, 8, 16, 32, 64, 128, 256]:
             # create_file_text(p, "")
         # TODO:
-        create_scripts("m4341")
+        create_scripts("m1266")
         print("Generated scripts in experiments/scripts/ directory.")
     if action == "create_random":
         create_random()
