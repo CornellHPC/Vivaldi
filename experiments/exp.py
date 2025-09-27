@@ -24,15 +24,15 @@ ALGS = ["1d", "2d", "15d"]
 
 DATASETS = [
     {
-        "bin_fname": "/pscratch/sd/j/jbellav/cpop_data/poker.t.bin",
-        "txt_fname": "/pscratch/sd/j/jbellav/cpop_data/poker.t.txt",
-        "zip_fname": "/pscratch/sd/j/jbellav/cpop_data/poker.t.bz2",
-        "url": "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass/poker.t.bz2",
-        "name": "poker",
-        "label": "Poker",
-        "m": 999936,
-        "d": 10,
-        "k": 10,
+        "bin_fname": "data/susy.bin",
+        "txt_fname": "data/susy.txt",
+        "zip_fname": "data/susy.xz",
+        "url": "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/SUSY.xz",
+        "name": "susy",
+        "label": "Susy",
+        "m": 1600000,
+        "d": 18,
+        "k": 2,
     },
     {
         "bin_fname": "/pscratch/sd/j/jbellav/cpop_data/HIGGS.bin",
@@ -41,7 +41,7 @@ DATASETS = [
         "url": "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/HIGGS.xz",
         "name": "higgs",
         "label": "HIGGS",
-        "m": 11000000,
+        "m": 1600000,
         "d": 28,
         "k": 2,
     },
@@ -52,7 +52,7 @@ DATASETS = [
         "url": "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass/mnist8m.scale.xz",
         "name": "mnist8m",
         "label": "MNIST8m",
-        "m": 1120000,
+        "m": 1600000,
         "d": 784,
         "k": 10,
     },
@@ -62,11 +62,11 @@ RANDOM_DATASET = {
     "bin_fname": "/pscratch/sd/j/jbellav/cpop_data/rand.bin",
     "name": "rand",
     "label": "Synthetic",
-    "m": 1024000,
+    "m": 1600000,
     "d": 1024,
 }
 
-MAX_NUM_POINTS = 1200000  ## one million points limit for basically everything
+MAX_NUM_POINTS = 1600000  ## one million points limit for basically everything
 
 SCALING_HIGHEST_POWER = 6  ## for graph generation
 N_TRIALS = 5  ## number of trials for each experiment
