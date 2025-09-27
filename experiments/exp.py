@@ -6,11 +6,11 @@ import matplotlib.ticker
 # Test for strong scaling (70k points per GPU)
 INCLUDE_STRONG_SCALING = True
 # Test for variant weak scaling (70k points per GPU, sqrt(p) scaling)
-INCLUDE_VARIANT_SCALING = True
+INCLUDE_VARIANT_SCALING = True 
 # Test for proper weak scaling (m and d scaling, random data)
-INCLUDE_PROPER_WEAK_SCALING = True
+INCLUDE_PROPER_WEAK_SCALING = False
 # Convergence (process exclusion and no process exclusion) testing for weak scaling
-INCLUDE_CONVERGENCE_TESTING = True
+INCLUDE_CONVERGENCE_TESTING = False
 # Mode testing for K
 INCLUDE_MODE_TESTING = False
 # Base m for scaling
@@ -20,11 +20,13 @@ CMAP = plt.cm.viridis
 # Markers for graph
 MARKERS = ["o", "s", "D", "^", "v", "p"]
 
+ALGS = ["1d", "2d", "15d"]
+
 DATASETS = [
     {
-        "bin_fname": "data/poker.t.bin",
-        "txt_fname": "data/poker.t.txt",
-        "zip_fname": "data/poker.t.bz2",
+        "bin_fname": "/pscratch/sd/j/jbellav/cpop_data/poker.t.bin",
+        "txt_fname": "/pscratch/sd/j/jbellav/cpop_data/poker.t.txt",
+        "zip_fname": "/pscratch/sd/j/jbellav/cpop_data/poker.t.bz2",
         "url": "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass/poker.t.bz2",
         "name": "poker",
         "label": "Poker",
@@ -33,9 +35,9 @@ DATASETS = [
         "k": 10,
     },
     {
-        "bin_fname": "data/HIGGS.bin",
-        "txt_fname": "data/HIGGS.txt",
-        "zip_fname": "data/HIGGS.xz",
+        "bin_fname": "/pscratch/sd/j/jbellav/cpop_data/HIGGS.bin",
+        "txt_fname": "/pscratch/sd/j/jbellav/cpop_data/HIGGS.txt",
+        "zip_fname": "/pscratch/sd/j/jbellav/cpop_data/HIGGS.xz",
         "url": "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/HIGGS.xz",
         "name": "higgs",
         "label": "HIGGS",
@@ -44,9 +46,9 @@ DATASETS = [
         "k": 2,
     },
     {
-        "bin_fname": "data/mnist8m.scale.bin",
-        "txt_fname": "data/mnist8m.scale.txt",
-        "zip_fname": "data/mnist8m.scale.xz",
+        "bin_fname": "/pscratch/sd/j/jbellav/cpop_data/mnist8m.scale.bin",
+        "txt_fname": "/pscratch/sd/j/jbellav/cpop_data/mnist8m.scale.txt",
+        "zip_fname": "/pscratch/sd/j/jbellav/cpop_data/mnist8m.scale.xz",
         "url": "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass/mnist8m.scale.xz",
         "name": "mnist8m",
         "label": "MNIST8m",
@@ -57,7 +59,7 @@ DATASETS = [
 ]
 
 RANDOM_DATASET = {
-    "bin_fname": "data/rand.bin",
+    "bin_fname": "/pscratch/sd/j/jbellav/cpop_data/rand.bin",
     "name": "rand",
     "label": "Synthetic",
     "m": 1024000,
@@ -69,6 +71,7 @@ MAX_NUM_POINTS = 1200000  ## one million points limit for basically everything
 SCALING_HIGHEST_POWER = 6  ## for graph generation
 N_TRIALS = 5  ## number of trials for each experiment
 P = [4, 8, 16, 32, 64, 128, 256]  # number of GPUs (must be divisible by 4)
+K = [8, 16, 32, 64, 128]
 C = ["K", "VI", "E", "Z", "C MPI", "C Computation", "VR MPI", "VR Computation"]
 
 
@@ -169,9 +172,9 @@ def create_file_text(
                 niter = 100
                 convergence = 0
                 m = 2 * BASE_M  # experimentally decided that 128k points fit on 4 GPUs
-                for k in [2, 5, 10, 50, 100]:
+                for k in K:
                     # 32 based on experiments
-                    sparse = int(k > 32)
+                    sparse = True #int(k > 32)
                     run_5_trials(
                         f,
                         input_dataset_path,
@@ -191,7 +194,7 @@ def create_file_text(
                     )
             if INCLUDE_VARIANT_SCALING:
                 d = input_dataset["d"]
-                for k in [2, 5, 10, 50, 100]:
+                for k in K:
                     # weak scaling number of points
                     m = min(
                         int(BASE_M * np.sqrt(p)),
@@ -200,7 +203,7 @@ def create_file_text(
                     )
                     # m -= m % p
                     # 32 based on experiments
-                    sparse = int(k > 32)
+                    sparse = True #int(k > 32)
                     niter = 100
                     convergence = 0
                     run_5_trials(
@@ -222,7 +225,7 @@ def create_file_text(
                     )
             if INCLUDE_CONVERGENCE_TESTING:
                 d = input_dataset["d"]
-                for k in [2, 5, 10, 50, 100]:
+                for k in K:
                     # weak scaling number of points
                     m = min(
                         int(BASE_M * np.sqrt(p)),
@@ -231,7 +234,7 @@ def create_file_text(
                     )
                     # m -= m % p
                     # 32 based on experiments
-                    sparse = int(k > 32)
+                    sparse = True
                     niter = 1000
                     convergence = 1
                     run_5_trials(
@@ -277,14 +280,14 @@ def create_file_text(
             d = 4 * p
             niter = 100
             convergence = 0
-            for k in [2, 5, 10, 50, 100]:
+            for k in K:
                 # weak scaling number of points
                 m = min(
                     int(BASE_M * np.sqrt(p)), int(input_dataset["m"]), MAX_NUM_POINTS
                 )
                 m -= m % p
                 # 32 based on experiments
-                sparse = int(k > 32)
+                sparse = True
                 run_5_trials(
                     f,
                     input_dataset_path,
@@ -305,7 +308,7 @@ def create_file_text(
         if INCLUDE_MODE_TESTING:
             if p == 4:
                 for m in {16000, 32000, BASE_M}:
-                    for k in [10, 20, 30, 40, 50, 60]:
+                    for k in K:
                         sparse = 1
                         run_5_trials(
                             f,
@@ -479,7 +482,7 @@ def create_scripts(account, path=os.getcwd(), n_trials=5, base_m=131072, max_m=1
     P = [2**i for i in range(2,9)]
 
     for p in P:
-        k = [2, 5, 10, 50, 100]
+        k = K
 
         # Strong scaling
         m = int(min(base_m, max_m))
@@ -494,13 +497,13 @@ def create_scripts(account, path=os.getcwd(), n_trials=5, base_m=131072, max_m=1
         # Variant weak scaling
         m = int(min(base_m*math.sqrt(p)/2, max_m))
         m -= m % p
-        create_script(path, "vweak", account, p, m, k, RANDOM_DATASET, d=p*4)
+        #create_script(path, "vweak", account, p, m, k, RANDOM_DATASET, d=p*4)
 
     # Mode test
     p = 1
     m = [25000, 50000, 100000]
     k = [10, 20, 30, 40, 50, 60]
-    create_script(path, "mode", account, p, m, k, RANDOM_DATASET, sparse=[True, False])
+    #create_script(path, "mode", account, p, m, k, RANDOM_DATASET, sparse=[True, False])
 
     # Strong scaling runner
     strong_path = os.path.join(path, "scripts", "strong.sh")
@@ -521,21 +524,21 @@ def create_scripts(account, path=os.getcwd(), n_trials=5, base_m=131072, max_m=1
     os.chmod(weak_path, st.st_mode | stat.S_IEXEC)
 
     # Variant weak scaling runner
-    vweak_path = os.path.join(path, "scripts", "vweak.sh")
-    with open(vweak_path, "w") as f:
-        f.write("#!/bin/bash\n")
-        for p in P:
-            f.write(f"sbatch --array=1-{n_trials} scripts/vweak_{p}.sh\n")
-    st = os.stat(vweak_path)
-    os.chmod(vweak_path, st.st_mode | stat.S_IEXEC)
+    #vweak_path = os.path.join(path, "scripts", "vweak.sh")
+    #with open(vweak_path, "w") as f:
+    #    f.write("#!/bin/bash\n")
+    #    for p in P:
+    #        f.write(f"sbatch --array=1-{n_trials} scripts/vweak_{p}.sh\n")
+    #st = os.stat(vweak_path)
+    #os.chmod(vweak_path, st.st_mode | stat.S_IEXEC)
 
     # Mode runner
-    mode_path = os.path.join(path, "scripts", "mode.sh")
-    with open(mode_path, "w") as f:
-        f.write("#!/bin/bash\n")
-        f.write(f"sbatch --array=1-{n_trials} scripts/mode_1.sh\n")
-    st = os.stat(mode_path)
-    os.chmod(mode_path, st.st_mode | stat.S_IEXEC)
+    #mode_path = os.path.join(path, "scripts", "mode.sh")
+    #with open(mode_path, "w") as f:
+    #    f.write("#!/bin/bash\n")
+    #    f.write(f"sbatch --array=1-{n_trials} scripts/mode_1.sh\n")
+    #st = os.stat(mode_path)
+    #os.chmod(mode_path, st.st_mode | stat.S_IEXEC)
 
     # All runner
     all_path = os.path.join(path, "scripts", "all.sh")
@@ -598,7 +601,7 @@ def create_script(path, prefix, account, p, m, k, dataset, d=None, sparse=None, 
             f"#SBATCH --account={account}\n",
             f"#SBATCH --output={log_fname}_%a\n",
             "export DVS_MAXNODES=1__\n",
-            "module load cudatoolkit/12.2\n",
+            "module load cudatoolkit/12.9\n",
         ])
 
         for _m in m:
@@ -606,22 +609,23 @@ def create_script(path, prefix, account, p, m, k, dataset, d=None, sparse=None, 
                 for _k in k:
                     for _dataset in dataset:
                         for _sparse in sparse:
-                            dataset_fname = _dataset["bin_fname"]
-                            dataset_label = _dataset["label"].lower()
-                            if d[0] is None:
-                                _d = _dataset["d"]
-                            if sparse[0] is None:
-                                _sparse = int(_k > 32)
-                            _m = min(_m, _dataset["m"])
-                            _sparse = int(_sparse)
+                            for alg in ALGS:
+                                dataset_fname = _dataset["bin_fname"]
+                                dataset_label = _dataset["label"].lower()
+                                if d[0] is None:
+                                    _d = _dataset["d"]
+                                if sparse[0] is None:
+                                    _sparse = int(_k > 32)
+                                _m = min(_m, _dataset["m"])
+                                _sparse = int(_sparse)
 
-                            name = f"{prefix}_{p}_{_m}_{_d}_{_k}_{niter}_{_sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{dataset_label}"
-                            log_fname = os.path.join(log_dir, f"{name}_out")
-                            result_fname = os.path.join(results_dir, f"{name}_assignments")
-                            bench_fname = os.path.join(results_dir, f"{name}_time_${{SLURM_ARRAY_TASK_ID}}")
+                                name = f"{prefix}_{p}_{_m}_{_d}_{_k}_{niter}_{_sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{dataset_label}"
+                                log_fname = os.path.join(log_dir, f"{name}_out")
+                                result_fname = os.path.join(results_dir, f"{name}_assignments")
+                                bench_fname = os.path.join(results_dir, f"{name}_time_${{SLURM_ARRAY_TASK_ID}}")
 
-                            f.write(f"srun -N {nodes} --ntasks-per-node {p//nodes} --cpus-per-task 32 --cpu-bind cores -G {p//nodes} $PWD/../build/device_wrapper $PWD/../build/main ") # No newline so params on same line
-                            f.write(f"-i {dataset_fname} -m {_m} -n {_d} --niter {niter} --sparse {_sparse} --gamma {gamma} --c {c} --r {r} --convergence {convergence} -k {_k} -o {result_fname} --benchmark {bench_fname}\n")
+                                f.write(f"srun -N {nodes} --ntasks-per-node {p//nodes} --cpus-per-task 32 --cpu-bind cores -G {p//nodes} $PWD/../build/device_wrapper $PWD/../build/main ") # No newline so params on same line
+                                f.write(f"-i {dataset_fname} -m {_m} -n {_d} --niter {niter} --sparse {_sparse} --gamma {gamma} --c {c} --r {r} --convergence {convergence} -k {_k} -o {result_fname} --benchmark {bench_fname} --alg {alg} \n")
 
 
 def get_scaling_data(
