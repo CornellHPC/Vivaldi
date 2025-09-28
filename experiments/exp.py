@@ -20,20 +20,20 @@ CMAP = plt.cm.viridis
 # Markers for graph
 MARKERS = ["o", "s", "D", "^", "v", "p"]
 
-ALGS = ["1d", "2d", "15d"]
+ALGS = ["1d", "15d"]
 
 DATASETS = [
-    {
-        "bin_fname": "data/susy.bin",
-        "txt_fname": "data/susy.txt",
-        "zip_fname": "data/susy.xz",
-        "url": "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/SUSY.xz",
-        "name": "susy",
-        "label": "Susy",
-        "m": 1600000,
-        "d": 18,
-        "k": 2,
-    },
+    #{
+    #    "bin_fname": "data/susy.bin",
+    #    "txt_fname": "data/susy.txt",
+    #    "zip_fname": "data/susy.xz",
+    #    "url": "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/SUSY.xz",
+    #    "name": "susy",
+    #    "label": "Susy",
+    #    "m": 1600000,
+    #    "d": 18,
+    #    "k": 2,
+    #},
     {
         "bin_fname": "/pscratch/sd/j/jbellav/cpop_data/HIGGS.bin",
         "txt_fname": "/pscratch/sd/j/jbellav/cpop_data/HIGGS.txt",
@@ -45,17 +45,17 @@ DATASETS = [
         "d": 28,
         "k": 2,
     },
-    {
-        "bin_fname": "/pscratch/sd/j/jbellav/cpop_data/mnist8m.scale.bin",
-        "txt_fname": "/pscratch/sd/j/jbellav/cpop_data/mnist8m.scale.txt",
-        "zip_fname": "/pscratch/sd/j/jbellav/cpop_data/mnist8m.scale.xz",
-        "url": "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass/mnist8m.scale.xz",
-        "name": "mnist8m",
-        "label": "MNIST8m",
-        "m": 1600000,
-        "d": 784,
-        "k": 10,
-    },
+    #{
+    #    "bin_fname": "/pscratch/sd/j/jbellav/cpop_data/mnist8m.scale.bin",
+    #    "txt_fname": "/pscratch/sd/j/jbellav/cpop_data/mnist8m.scale.txt",
+    #    "zip_fname": "/pscratch/sd/j/jbellav/cpop_data/mnist8m.scale.xz",
+    #    "url": "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass/mnist8m.scale.xz",
+    #    "name": "mnist8m",
+    #    "label": "MNIST8m",
+    #    "m": 1600000,
+    #    "d": 784,
+    #    "k": 10,
+    #},
 ]
 
 RANDOM_DATASET = {
@@ -75,7 +75,7 @@ K = [8, 16, 32, 64, 128]
 C = ["K", "VI", "E", "Z", "C MPI", "C Computation", "VR MPI", "VR Computation"]
 
 
-def request_p_prefix(p, nodes, log_dir, s_name):
+def request_p_prefix(p, nodes, log_dir, s_name, alg=None):
     if p >= 256:
         timestamp = "02:00:00"
     elif p >= 128:
@@ -478,7 +478,7 @@ def read_data(formatted_txt_file) -> np.ndarray:
     return np.array(data)
 
 
-def create_scripts(account, path=os.getcwd(), n_trials=5, base_m=131072, max_m=1600000):
+def create_scripts(account, path=os.getcwd(), n_trials=5, base_m=128000, max_m=1600000):
     P = [2**i for i in range(2,9)]
 
     for p in P:
@@ -600,6 +600,7 @@ def create_script(path, prefix, account, p, m, k, dataset, d=None, sparse=None, 
             "#SBATCH --qos=regular\n",
             f"#SBATCH --account={account}\n",
             f"#SBATCH --output={log_fname}_%a\n",
+            f"#SBATCH --error={log_fname}_%a_err\n",
             "export DVS_MAXNODES=1__\n",
             "module load cudatoolkit/12.9\n",
         ])
@@ -615,16 +616,16 @@ def create_script(path, prefix, account, p, m, k, dataset, d=None, sparse=None, 
                                 if d[0] is None:
                                     _d = _dataset["d"]
                                 if sparse[0] is None:
-                                    _sparse = int(_k > 32)
+                                    _sparse = 1
                                 _m = min(_m, _dataset["m"])
                                 _sparse = int(_sparse)
 
-                                name = f"{prefix}_{p}_{_m}_{_d}_{_k}_{niter}_{_sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{dataset_label}"
+                                name = f"{prefix}_{p}_{_m}_{_d}_{_k}_{niter}_{_sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{dataset_label}_{alg}"
                                 log_fname = os.path.join(log_dir, f"{name}_out")
                                 result_fname = os.path.join(results_dir, f"{name}_assignments")
                                 bench_fname = os.path.join(results_dir, f"{name}_time_${{SLURM_ARRAY_TASK_ID}}")
 
-                                f.write(f"srun -N {nodes} --ntasks-per-node {p//nodes} --cpus-per-task 32 --cpu-bind cores -G {p//nodes} $PWD/../build/device_wrapper $PWD/../build/main ") # No newline so params on same line
+                                f.write(f"srun -N {nodes} --ntasks-per-node {p//nodes} --cpus-per-task 32 --cpu-bind cores -G {p} $PWD/../build/device_wrapper $PWD/../build/main ") # No newline so params on same line
                                 f.write(f"-i {dataset_fname} -m {_m} -n {_d} --niter {niter} --sparse {_sparse} --gamma {gamma} --c {c} --r {r} --convergence {convergence} -k {_k} -o {result_fname} --benchmark {bench_fname} --alg {alg} \n")
 
 

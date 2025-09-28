@@ -8,6 +8,7 @@
 #include "dist_v.hh"
 
 //#define GEMM_2D
+#define DEBUG2D
 
 namespace cpop {
 

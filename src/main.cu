@@ -103,6 +103,12 @@ int cluster2d(ArgParse args, MPI_Comm comm)
   /** K-Means Loop */
   for (int i = 0; i < args.niter; ++i) {
     timer.niter += 1;  // Increment iteration counter
+#ifdef DEBUG2D
+    if (rank==0)
+    {
+        std::cout<<"Iteration "<<i<<std::endl;
+    }
+#endif
 
 #ifndef BASIC
     auto e_start = hrc::now();
@@ -110,7 +116,10 @@ int cluster2d(ArgParse args, MPI_Comm comm)
 
 
 #ifdef DEBUG2D
-    print_phase("SpMM");
+    if (rank==0)
+    {
+        std::cout<<"SpMM"<<std::endl;
+    }
 #endif
 
     spmm2d_bs(handle, V, K, E, T);  
@@ -123,7 +132,10 @@ int cluster2d(ArgParse args, MPI_Comm comm)
 
 
 #ifdef DEBUG2D
-    print_phase("Z");
+    if (rank==0)
+    {
+        std::cout<<"z"<<std::endl;
+    }
 #endif
 
     compute_z2d(V, E, z);  // Calculate z from the mask of local V on ET
@@ -137,7 +149,10 @@ int cluster2d(ArgParse args, MPI_Comm comm)
 #endif
 
 #ifdef DEBUG2D
-    print_phase("SpMV");
+    if (rank==0)
+    {
+        std::cout<<"spmv"<<std::endl;
+    }
 #endif
 
     spmv(handle, V, *z.vec, *c.vec);  // SpMV: c = Vz using local V
@@ -149,7 +164,10 @@ int cluster2d(ArgParse args, MPI_Comm comm)
 #endif
 
 #ifdef DEBUG2D
-    print_phase("Sum");
+    if (rank==0)
+    {
+        std::cout<<"sum"<<std::endl;
+    }
 #endif
 
     sum_vec2d(c);  // Calculate global c by summing across ranks
@@ -164,7 +182,10 @@ int cluster2d(ArgParse args, MPI_Comm comm)
 
 
 #ifdef DEBUG2D
-    print_phase("Argmin");
+    if (rank==0)
+    {
+        std::cout<<"argmin"<<std::endl;
+    }
 #endif
 
     argmin2d(E, c, V);  // Argmin kernel (compute D matrix)
@@ -174,8 +195,12 @@ int cluster2d(ArgParse args, MPI_Comm comm)
     vr_computation_start = hrc::now();
 #endif
 
+
 #ifdef DEBUG2D
-    print_phase("Reinit");
+    if (rank==0)
+    {
+        std::cout<<"V"<<std::endl;
+    }
 #endif
 
     set_V_from_assignments2d(V);  // Reinitialize V based on D matrix
@@ -303,6 +328,10 @@ int cluster15d(ArgParse args, MPI_Comm comm)
   /** K-Means Loop */
   for (int i = 0; i < args.niter; ++i) {
     timer.niter += 1;  // Increment iteration counter
+    if (rank==0)
+    {
+        std::cout<<"Iteration "<<i<<std::endl;
+    }
 
 #ifndef BASIC
     auto e_start = hrc::now();

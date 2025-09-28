@@ -149,8 +149,8 @@ float* compute_kernel_matrix2d(Handle& handle, slate::Matrix<float>& PT, float g
   int64_t rows = PT.n();
   auto t_rows = compute_tile_sizes(rows, grid_dim);
   auto t_cols = compute_tile_sizes(rows, grid_dim);
-  auto loc_rows = t_rows[row_rank];
-  auto loc_cols = t_cols[col_rank];
+  int64_t loc_rows = t_rows[row_rank];
+  int64_t loc_cols = t_cols[col_rank];
   CHECK_CUDA(cudaMalloc(&data,  loc_rows * loc_cols * sizeof(float)));
 
   int q = tile_dim(MPI_COMM_WORLD, rows);

@@ -293,9 +293,6 @@ int spmm2d(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E)
     for (int i=0; i<niters; i++)
     {
 
-#ifdef DEBUG2D
-        par_print("Iteration %d\n", i);
-#endif
 
         if (i == grid->col_rank)
         {
@@ -447,7 +444,10 @@ int spmm2d_bs(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E, DistDn
     for (int i=0; i<niters; i++)
     {
 #ifdef DEBUG2D
-        par_print("Iteration %d\n", i);
+        if (grid->world_rank==0)
+        {
+            std::cout<<"Iteration "<<i<<std::endl;
+        }
 #endif
 
         if (i == grid->row_rank)
@@ -466,9 +466,18 @@ int spmm2d_bs(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E, DistDn
 #ifndef BASIC
         auto bcast_start = hrc::now();
 #endif
+
+#ifdef DEBUG2D
+        if (grid->world_rank==0)
+        {
+            std::cout<<"bcast "<<i<<std::endl;
+        }
+#endif
+
         MPI_Bcast(d_vals_send, recv_nnz[i], MPI_FLOAT, i, grid->row_comm);
         MPI_Bcast(d_rowinds_send, recv_nnz[i], MPI_INT, i, grid->row_comm);
         MPI_Bcast(d_colptrs_send, V_tr.tile_cols[i] + 1, MPI_INT, i, grid->row_comm);
+
 #ifndef BASIC
         timer.e_mpi += get_time_elapsed(bcast_start);
 #endif
@@ -511,6 +520,13 @@ int spmm2d_bs(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E, DistDn
         CHECK_CUDA(cudaFree(buffer));
         CHECK_CUSPARSE(cusparseDestroySpMat(loc_V));
 
+#ifdef DEBUG2D
+        if (grid->world_rank==0)
+        {
+            std::cout<<"spmm "<<i<<std::endl;
+        }
+#endif
+
 #ifndef BASIC
         timer.e_spmm += get_time_elapsed(comp_start);
 #endif
@@ -532,6 +548,13 @@ int spmm2d_bs(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E, DistDn
         {
             MPI_Reduce(T.mat->dM, nullptr, T.mat->h_ * T.mat->w_, MPI_FLOAT, MPI_SUM, i, grid->col_comm);
         }
+
+#ifdef DEBUG2D
+        if (grid->world_rank==0)
+        {
+            std::cout<<"reduce "<<i<<std::endl;
+        }
+#endif
                     
 
 #ifndef BASIC
