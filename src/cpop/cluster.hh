@@ -155,7 +155,16 @@ struct V_t {
 struct DistV1D {
   std::shared_ptr<ProcessGrid> grid;
   V_t * local_v;
+
+  float * d_remote_vals;
+  int * d_remote_rowinds;
+  int * d_remote_colptrs;
+
+  cusparseSpMatDescr_t v_cusparse;
+
   DistV1D(int64_t m, int64_t k, bool sparse, std::shared_ptr<ProcessGrid> grid);
+
+  ~DistV1D();
 
 };
 

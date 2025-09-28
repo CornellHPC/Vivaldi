@@ -176,7 +176,6 @@ int cluster2d(ArgParse args, MPI_Comm comm)
     MPI_Barrier(comm);
     timer.c_mpi += get_time_elapsed(c_mpi_start);
     timer.c_elapsed += get_time_elapsed(c_start);
-    auto vr_start = hrc::now();
     auto vr_computation_start = hrc::now();
 #endif
 
@@ -208,7 +207,6 @@ int cluster2d(ArgParse args, MPI_Comm comm)
 #ifndef BASIC
     MPI_Barrier(comm);
     timer.vr_computation += get_time_elapsed(vr_computation_start);
-    timer.vr_elapsed += get_time_elapsed(vr_start);
 #endif
 
   }
@@ -372,7 +370,6 @@ int cluster15d(ArgParse args, MPI_Comm comm)
     MPI_Barrier(comm);
     timer.c_mpi += get_time_elapsed(c_mpi_start);
     timer.c_elapsed += get_time_elapsed(c_start);
-    auto vr_start = hrc::now();
     auto vr_computation_start = hrc::now();
 #endif
 
@@ -388,7 +385,6 @@ int cluster15d(ArgParse args, MPI_Comm comm)
 #ifndef BASIC
     MPI_Barrier(comm);
     timer.vr_computation += get_time_elapsed(vr_computation_start);
-    timer.vr_elapsed += get_time_elapsed(vr_start);
 #endif
 
   }
@@ -530,7 +526,6 @@ int cluster1d(ArgParse args, MPI_Comm comm)
     MPI_Barrier(comm);
     timer.c_mpi += get_time_elapsed(c_mpi_start);
     timer.c_elapsed += get_time_elapsed(c_start);
-    auto vr_start = hrc::now();
     auto vr_computation_start = hrc::now();
 #endif
 
@@ -561,7 +556,6 @@ int cluster1d(ArgParse args, MPI_Comm comm)
 #ifndef BASIC
     MPI_Barrier(comm);
     timer.vr_computation += get_time_elapsed(vr_computation_start);
-    timer.vr_elapsed += get_time_elapsed(vr_start);
 #endif
 
   }

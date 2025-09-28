@@ -218,6 +218,44 @@ DistV1D::DistV1D(int64_t m, int64_t k, bool sparse, std::shared_ptr<ProcessGrid>
 {
     this->local_v = new V_t(m, k, sparse, grid->world_comm);
     this->grid = grid;
+
+    int sqrtp = grid->row_size;
+
+    CHECK_CUDA(cudaMalloc(&this->d_remote_vals, sizeof(float) * sqrtp * local_v->t));
+    CHECK_CUDA(cudaMalloc(&this->d_remote_rowinds, sizeof(int) * sqrtp * local_v->t));
+    CHECK_CUDA(cudaMalloc(&this->d_remote_colptrs, sizeof(int) * (sqrtp * local_v->t + 1)));
+    CHECK_CUDA(cudaMemset(this->d_remote_colptrs,0,sizeof(int)*(sqrtp*local_v->t + 1)));
+
+    CHECK_CUSPARSE(cusparseCreateCsc(&v_cusparse,
+                                     local_v->k_,
+                                     sqrtp*local_v->t,
+                                     sqrtp*local_v->t,
+                                     d_remote_colptrs,
+                                     d_remote_rowinds,
+                                     d_remote_vals,
+                                     CUSPARSE_INDEX_32I,
+                                     CUSPARSE_INDEX_32I,
+                                     CUSPARSE_INDEX_BASE_ZERO,
+                                     CUDA_R_32F));
+
+}
+
+DistV1D::~DistV1D()
+{
+    if (this->d_remote_vals != nullptr)
+    {
+        CHECK_CUDA(cudaFree(this->d_remote_vals));
+    }
+    if (this->d_remote_rowinds != nullptr)
+    {
+        CHECK_CUDA(cudaFree(this->d_remote_rowinds));
+    }
+    if (this->d_remote_colptrs != nullptr)
+    {
+        CHECK_CUDA(cudaFree(this->d_remote_colptrs));
+    }
+
+    CHECK_CUSPARSE(cusparseDestroySpMat(v_cusparse));
 }
 
 
@@ -606,11 +644,11 @@ int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMa
     // Other stuff can be implicitly determined
     
 #ifndef BASIC
-    auto e_mpi_start = hrc::now();
+    auto e_other_start = hrc::now();
 #endif
     
-    int * d_rowinds;
-    CHECK_CUDA(cudaMalloc(&d_rowinds, sizeof(int) * sqrtp * loc_v->t));
+    int * d_rowinds = V.d_remote_rowinds;
+    //CHECK_CUDA(cudaMalloc(&d_rowinds, sizeof(int) * sqrtp * loc_v->t));
 
     if (grid2dcolmaj->row_rank == grid2dcolmaj->col_rank)
     {
@@ -619,20 +657,23 @@ int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMa
                     cudaMemcpyDeviceToDevice);
     }
 
+#ifndef BASIC
+    timer.e_other += get_time_elapsed(e_other_start);
+    auto e_gather_start = hrc::now();
+#endif
+
     MPI_Gather(loc_v->local_ptr_to_assignments, loc_v->t, MPI_INT,
                 d_rowinds, loc_v->t, MPI_INT,
                 grid2dcolmaj->row_rank, grid2dcolmaj->col_comm);
     MPI_Bcast(d_rowinds, loc_v->t*sqrtp, MPI_INT, grid2dcolmaj->col_rank, grid2dcolmaj->row_comm);
 
 #ifndef BASIC
-    timer.e_mpi += get_time_elapsed(e_mpi_start);
+    timer.e_gather += get_time_elapsed(e_gather_start);
+    e_other_start = hrc::now();
 #endif
 
-    float * d_vals;
-    int * d_colptrs;
-    CHECK_CUDA(cudaMalloc(&d_vals, sizeof(float) * sqrtp * loc_v->t));
-    //TODO: Technically we can initialize only once and reuse d_colptrs
-    CHECK_CUDA(cudaMalloc(&d_colptrs, sizeof(int) * (sqrtp * loc_v->t + 1)));
+    float * d_vals = V.d_remote_vals;
+    int * d_colptrs = V.d_remote_colptrs;
     CHECK_CUDA(cudaMemset(d_colptrs,0,sizeof(int)*(sqrtp*loc_v->t + 1)));
 
 #ifndef BASIC
@@ -677,9 +718,6 @@ int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMa
     // Clean up
     CHECK_CUDA(cudaFree(buffer));
     CHECK_CUSPARSE(cusparseDestroySpMat(v_gather));
-    CHECK_CUDA(cudaFree(d_vals));
-    CHECK_CUDA(cudaFree(d_colptrs));
-    CHECK_CUDA(cudaFree(d_rowinds));
 
 #ifndef BASIC
     timer.e_spmm += get_time_elapsed(e_spmm_start);
@@ -708,13 +746,13 @@ int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMa
     //CHECK_CUDA(cudaMemset(loc_e_p->dM, 0,sizeof(float) * loc_e_p->h_ * loc_e_p->w_))
 
 #ifndef BASIC
-    e_mpi_start = hrc::now();
+    auto e_reduce_start = hrc::now();
 #endif
 
     MPI_Reduce_scatter_block(d_tmp, d_tmp2, loc_e->h_ * loc_e->w_, MPI_FLOAT, MPI_SUM, grid2dcolmaj->col_comm);
 
 #ifndef BASIC
-    timer.e_mpi += get_time_elapsed(e_mpi_start);
+    timer.e_reduce += get_time_elapsed(e_reduce_start);
 #endif
 
 #ifndef BASIC

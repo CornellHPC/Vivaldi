@@ -82,7 +82,10 @@ struct Timer {
   int64_t e_elapsed = 0;
   int64_t e_transpose = 0;
   int64_t e_mpi = 0;
+  int64_t e_reduce = 0;
+  int64_t e_gather = 0;
   int64_t e_spmm = 0;
+  int64_t e_other = 0;
 
   // Z
   int64_t z_elapsed = 0;
