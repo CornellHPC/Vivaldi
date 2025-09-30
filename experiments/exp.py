@@ -20,24 +20,24 @@ CMAP = plt.cm.viridis
 # Markers for graph
 MARKERS = ["o", "s", "D", "^", "v", "p"]
 
-ALGS = ["1d", "15d"]
+ALGS = ["1d", "15d", "2d"]
 
 DATASETS = [
-    #{
-    #    "bin_fname": "data/susy.bin",
-    #    "txt_fname": "data/susy.txt",
-    #    "zip_fname": "data/susy.xz",
-    #    "url": "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/SUSY.xz",
-    #    "name": "susy",
-    #    "label": "Susy",
-    #    "m": 1600000,
-    #    "d": 18,
-    #    "k": 2,
-    #},
     {
-        "bin_fname": "/pscratch/sd/j/jbellav/cpop_data/HIGGS.bin",
-        "txt_fname": "/pscratch/sd/j/jbellav/cpop_data/HIGGS.txt",
-        "zip_fname": "/pscratch/sd/j/jbellav/cpop_data/HIGGS.xz",
+        "bin_fname": "data/susy.bin",
+        "txt_fname": "data/susy.txt",
+        "zip_fname": "data/susy.xz",
+        "url": "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/SUSY.xz",
+        "name": "susy",
+        "label": "Susy",
+        "m": 1600000,
+        "d": 18,
+        "k": 2,
+    },
+    {
+        "bin_fname": "data/HIGGS.bin",
+        "txt_fname": "data/HIGGS.txt",
+        "zip_fname": "data/HIGGS.xz",
         "url": "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/HIGGS.xz",
         "name": "higgs",
         "label": "HIGGS",
@@ -45,21 +45,21 @@ DATASETS = [
         "d": 28,
         "k": 2,
     },
-    #{
-    #    "bin_fname": "/pscratch/sd/j/jbellav/cpop_data/mnist8m.scale.bin",
-    #    "txt_fname": "/pscratch/sd/j/jbellav/cpop_data/mnist8m.scale.txt",
-    #    "zip_fname": "/pscratch/sd/j/jbellav/cpop_data/mnist8m.scale.xz",
-    #    "url": "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass/mnist8m.scale.xz",
-    #    "name": "mnist8m",
-    #    "label": "MNIST8m",
-    #    "m": 1600000,
-    #    "d": 784,
-    #    "k": 10,
-    #},
+    {
+        "bin_fname": "data/mnist8m.scale.bin",
+        "txt_fname": "data/mnist8m.scale.txt",
+        "zip_fname": "data/mnist8m.scale.xz",
+        "url": "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass/mnist8m.scale.xz",
+        "name": "mnist8m",
+        "label": "MNIST8m",
+        "m": 1600000,
+        "d": 784,
+        "k": 10,
+    },
 ]
 
 RANDOM_DATASET = {
-    "bin_fname": "/pscratch/sd/j/jbellav/cpop_data/rand.bin",
+    "bin_fname": "data/rand.bin",
     "name": "rand",
     "label": "Synthetic",
     "m": 1600000,
@@ -482,28 +482,15 @@ def create_scripts(account, path=os.getcwd(), n_trials=5, base_m=128000, max_m=1
     P = [2**i for i in range(2,9)]
 
     for p in P:
-        k = K
-
         # Strong scaling
         m = int(min(base_m, max_m))
         m -= m % p
-        create_script(path, "strong", account, p, m, k, DATASETS)
+        create_script(path, "strong", account, p, m, K, DATASETS, ALGS)
 
         # Weak scaling
         m = int(min(base_m*math.sqrt(p)/2, max_m))
         m -= m % p
-        create_script(path, "weak", account, p, m, k, DATASETS)
-
-        # Variant weak scaling
-        m = int(min(base_m*math.sqrt(p)/2, max_m))
-        m -= m % p
-        #create_script(path, "vweak", account, p, m, k, RANDOM_DATASET, d=p*4)
-
-    # Mode test
-    p = 1
-    m = [25000, 50000, 100000]
-    k = [10, 20, 30, 40, 50, 60]
-    #create_script(path, "mode", account, p, m, k, RANDOM_DATASET, sparse=[True, False])
+        create_script(path, "weak", account, p, m, K, DATASETS, ALGS)
 
     # Strong scaling runner
     strong_path = os.path.join(path, "scripts", "strong.sh")
@@ -523,40 +510,24 @@ def create_scripts(account, path=os.getcwd(), n_trials=5, base_m=128000, max_m=1
     st = os.stat(weak_path)
     os.chmod(weak_path, st.st_mode | stat.S_IEXEC)
 
-    # Variant weak scaling runner
-    #vweak_path = os.path.join(path, "scripts", "vweak.sh")
-    #with open(vweak_path, "w") as f:
-    #    f.write("#!/bin/bash\n")
-    #    for p in P:
-    #        f.write(f"sbatch --array=1-{n_trials} scripts/vweak_{p}.sh\n")
-    #st = os.stat(vweak_path)
-    #os.chmod(vweak_path, st.st_mode | stat.S_IEXEC)
-
-    # Mode runner
-    #mode_path = os.path.join(path, "scripts", "mode.sh")
-    #with open(mode_path, "w") as f:
-    #    f.write("#!/bin/bash\n")
-    #    f.write(f"sbatch --array=1-{n_trials} scripts/mode_1.sh\n")
-    #st = os.stat(mode_path)
-    #os.chmod(mode_path, st.st_mode | stat.S_IEXEC)
-
     # All runner
     all_path = os.path.join(path, "scripts", "all.sh")
     with open(all_path, "w") as f:
         f.write("#!/bin/bash\n")
-        for test in ["strong", "weak", "vweak", "mode"]:
+        for test in ["strong", "weak"]:
             f.write(f". {path}/scripts/{test}.sh\n")
     st = os.stat(all_path)
     os.chmod(all_path, st.st_mode | stat.S_IEXEC)
 
 
-def create_script(path, prefix, account, p, m, k, dataset, d=None, sparse=None, niter=100, gamma=1, c=1, r=2, basic=False, convergence=False):
+def create_script(path, prefix, account, p, m, k, dataset, alg, d=None, sparse=True, niter=100, gamma=1, c=1, r=2, basic=False, convergence=False):
     """
     This function accepts either a single value or list for
-    m, d, k, dataset, and sparse. If a list is supplied, the
+    m, d, k, dataset, and alg. If a list is supplied, the
     script will perform one srun for each value.
     """
 
+    sparse = int(sparse)
     basic = int(basic)
     convergence = int(convergence)
     nodes = math.ceil(p /4)
@@ -583,11 +554,11 @@ def create_script(path, prefix, account, p, m, k, dataset, d=None, sparse=None, 
         k = [k]
     if not isinstance(dataset, list):
         dataset = [dataset]
-    if not isinstance(sparse, list):
-        sparse = [sparse]
+    if not isinstance(alg, list):
+        alg = [alg]
 
     # Five seconds for one trial estimated through experiments
-    total_time_seconds = 5*len(m)*len(d)*len(k)*len(dataset)*len(sparse)
+    total_time_seconds = 5*len(m)*len(d)*len(k)*len(dataset)
     timestamp = str(datetime.timedelta(seconds=total_time_seconds*7))
 
     with open(script_fname, "w") as f:
@@ -609,24 +580,20 @@ def create_script(path, prefix, account, p, m, k, dataset, d=None, sparse=None, 
             for _d in d:
                 for _k in k:
                     for _dataset in dataset:
-                        for _sparse in sparse:
-                            for alg in ALGS:
-                                dataset_fname = _dataset["bin_fname"]
-                                dataset_label = _dataset["label"].lower()
-                                if d[0] is None:
-                                    _d = _dataset["d"]
-                                if sparse[0] is None:
-                                    _sparse = 1
-                                _m = min(_m, _dataset["m"])
-                                _sparse = int(_sparse)
+                        for _alg in alg:
+                            dataset_fname = _dataset["bin_fname"]
+                            dataset_label = _dataset["label"].lower()
+                            if d[0] is None:
+                                _d = _dataset["d"]
+                            _m = min(_m, _dataset["m"])
 
-                                name = f"{prefix}_{p}_{_m}_{_d}_{_k}_{niter}_{_sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{dataset_label}_{alg}"
-                                log_fname = os.path.join(log_dir, f"{name}_out")
-                                result_fname = os.path.join(results_dir, f"{name}_assignments")
-                                bench_fname = os.path.join(results_dir, f"{name}_time_${{SLURM_ARRAY_TASK_ID}}")
+                            name = f"{prefix}_{p}_{_m}_{_d}_{_k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{dataset_label}_{_alg}"
+                            log_fname = os.path.join(log_dir, f"{name}_out")
+                            result_fname = os.path.join(results_dir, f"{name}_assignments")
+                            bench_fname = os.path.join(results_dir, f"{name}_time_${{SLURM_ARRAY_TASK_ID}}")
 
-                                f.write(f"srun -N {nodes} --ntasks-per-node {p//nodes} --cpus-per-task 32 --cpu-bind cores -G {p} $PWD/../build/device_wrapper $PWD/../build/main ") # No newline so params on same line
-                                f.write(f"-i {dataset_fname} -m {_m} -n {_d} --niter {niter} --sparse {_sparse} --gamma {gamma} --c {c} --r {r} --convergence {convergence} -k {_k} -o {result_fname} --benchmark {bench_fname} --alg {alg} \n")
+                            f.write(f"srun -N {nodes} --ntasks-per-node {p//nodes} --cpus-per-task 32 --cpu-bind cores -G {p} $PWD/../build/device_wrapper $PWD/../build/main ") # No newline so params on same line
+                            f.write(f"-i {dataset_fname} -m {_m} -n {_d} --niter {niter} --sparse {sparse} --gamma {gamma} --c {c} --r {r} --convergence {convergence} -k {_k} -o {result_fname} --benchmark {bench_fname} --alg {_alg} \n")
 
 
 def get_scaling_data(
