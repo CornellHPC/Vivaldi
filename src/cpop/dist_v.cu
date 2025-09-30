@@ -127,8 +127,8 @@ DistV2D::DistV2D(int64_t m, int64_t k, int64_t nnz, std::shared_ptr<ProcessGrid>
 
 
     tile_nnz = new int64_t[grid->world_size];
-    tile_nnz[grid->world_rank] = nnz;
     memset(tile_nnz, 0, sizeof(int64_t) * grid->world_size);
+    tile_nnz[grid->world_rank] = nnz;
 
     MPI_Allreduce(MPI_IN_PLACE, tile_nnz, grid->world_size, MPI_INT64_T, MPI_SUM, grid->world_comm);
 
@@ -140,8 +140,8 @@ DistV2D::DistV2D(int64_t m, int64_t k, int64_t nnz, std::shared_ptr<ProcessGrid>
     CHECK_CUDA(cudaMalloc(&d_colptrs, sizeof(int) * (cols+1)));
     CHECK_CUDA(cudaMemset(d_colptrs, 0, sizeof(int)))
 
-    CHECK_CUDA(cudaMalloc(&d_remote_vals, sizeof(float) * nnz));
-    CHECK_CUDA(cudaMalloc(&d_remote_rowinds, sizeof(int) * nnz));
+    CHECK_CUDA(cudaMalloc(&d_remote_vals, sizeof(float) * cols));
+    CHECK_CUDA(cudaMalloc(&d_remote_rowinds, sizeof(int) * cols));
     CHECK_CUDA(cudaMalloc(&d_remote_colptrs, sizeof(int) * (cols+1)));
     CHECK_CUDA(cudaMemset(d_remote_colptrs, 0, sizeof(int)))
 
@@ -204,13 +204,13 @@ DistV2D::~DistV2D()
         cudaFree(this->d_mininds);
     }
     if (this->d_remote_vals != nullptr) {
-        cudaFree(this->d_vals);
+        cudaFree(this->d_remote_vals);
     }
     if (this->d_remote_rowinds != nullptr) {
-        cudaFree(this->d_rowinds);
+        cudaFree(this->d_remote_rowinds);
     }
     if (this->d_remote_colptrs != nullptr) {
-        cudaFree(this->d_colptrs);
+        cudaFree(this->d_remote_colptrs);
     }
 
     delete[] tile_rows;

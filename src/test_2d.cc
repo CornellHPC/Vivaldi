@@ -103,7 +103,7 @@ int main(int argc, char* argv[]) {
 
   /** Const */
   bool s = true;
-  int m = 256;
+  int m = 2048;
   int n = 8;
   int k = 16;
 
