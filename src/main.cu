@@ -58,6 +58,7 @@ int cluster2d(ArgParse args, MPI_Comm comm)
 
 
   DistV2D V(args.m, args.k, grid);
+  DistV2D V_tr(args.m, args.k, V.cols, grid);
 
 
 #ifndef BASIC
@@ -122,7 +123,7 @@ int cluster2d(ArgParse args, MPI_Comm comm)
     }
 #endif
 
-    spmm2d_bs(handle, V, K, E, T);  
+    spmm2d_bs(handle, V, V_tr, K, E, T);  
 
 #ifndef BASIC
     MPI_Barrier(comm);
