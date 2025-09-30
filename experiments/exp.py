@@ -558,8 +558,9 @@ def create_script(path, prefix, account, p, m, k, dataset, alg, d=None, sparse=T
         alg = [alg]
 
     # Five seconds for one trial estimated through experiments
-    total_time_seconds = 5*len(m)*len(d)*len(k)*len(dataset)
-    timestamp = str(datetime.timedelta(seconds=total_time_seconds*7))
+    seconds_per_trial = 5
+    total_time_seconds = seconds_per_trial*len(m)*len(d)*len(k)*len(dataset)*len(alg)
+    timestamp = str(datetime.timedelta(seconds=total_time_seconds))
 
     with open(script_fname, "w") as f:
         f.writelines([
