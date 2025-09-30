@@ -444,7 +444,7 @@ int spmm2d(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E)
 
 
 // Do not communicate tiles of the kernel matrix 
-int spmm2d_bs(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMat_t& T)
+int spmm2d_bs(Handle& handle, DistV2D& V, DistV2D& V_tr, DistDnMat_t& K, DistDnMat_t& E, DistDnMat_t& T)
 {
 
     auto grid = V.grid;
@@ -457,10 +457,10 @@ int spmm2d_bs(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E, DistDn
 
     cusparseSpMatDescr_t loc_V;
 
-
     // Transpose the sparse matrix
     int tr_rank = (grid->col_rank) * grid->col_size + grid->row_rank;
-    DistV2D V_tr(V.global_cols, V.global_rows, V.tile_nnz[tr_rank], grid);
+    V_tr.nnz = V.tile_nnz[tr_rank];
+
     MPI_Sendrecv(V.d_vals, V.nnz, MPI_FLOAT, tr_rank, 100, 
                  V_tr.d_vals, V_tr.nnz, MPI_FLOAT, tr_rank, 100,
                  grid->world_comm, MPI_STATUS_IGNORE);
@@ -496,9 +496,9 @@ int spmm2d_bs(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E, DistDn
         }
         else
         {
-            CHECK_CUDA(cudaMalloc(&d_vals_send, sizeof(float) * recv_nnz[i]));
-            CHECK_CUDA(cudaMalloc(&d_rowinds_send, sizeof(int) * recv_nnz[i]));
-            CHECK_CUDA(cudaMalloc(&d_colptrs_send, sizeof(int) * (V_tr.tile_cols[i] + 1)));
+            d_vals_send = V_tr.d_remote_vals;
+            d_rowinds_send = V_tr.d_remote_rowinds;
+            d_colptrs_send = V_tr.d_remote_colptrs;
         }
         
 #ifndef BASIC
@@ -574,18 +574,8 @@ int spmm2d_bs(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E, DistDn
 #ifndef BASIC
         auto reduce_start = hrc::now();
 #endif
-        if (i == grid->col_rank)
-        {
-            MPI_Reduce(MPI_IN_PLACE, T.mat->dM, T.mat->h_ * T.mat->w_, MPI_FLOAT, MPI_SUM, i, grid->col_comm);
 
-            // Overwrite E
-            CHECK_CUDA(cudaMemcpy(E.mat->dM, T.mat->dM, sizeof(float) * E.mat->h_ * E.mat->w_, 
-                                            cudaMemcpyDeviceToDevice));
-        }
-        else
-        {
-            MPI_Reduce(T.mat->dM, nullptr, T.mat->h_ * T.mat->w_, MPI_FLOAT, MPI_SUM, i, grid->col_comm);
-        }
+        MPI_Reduce(T.mat->dM, E.mat->dM, T.mat->h_ * T.mat->w_, MPI_FLOAT, MPI_SUM, i, grid->col_comm);
 
 #ifdef DEBUG2D
         if (grid->world_rank==0)
@@ -598,15 +588,6 @@ int spmm2d_bs(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E, DistDn
 #ifndef BASIC
         timer.e_mpi += get_time_elapsed(reduce_start);
 #endif
-
-
-        if (i != grid->row_rank)
-        {
-            CHECK_CUDA(cudaFree(d_vals_send));
-            CHECK_CUDA(cudaFree(d_rowinds_send));
-            CHECK_CUDA(cudaFree(d_colptrs_send));
-        }
-
         CHECK_CUDA(cudaDeviceSynchronize());
         MPI_Barrier(MPI_COMM_WORLD);
 

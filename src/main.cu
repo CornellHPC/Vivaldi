@@ -58,6 +58,7 @@ int cluster2d(ArgParse args, MPI_Comm comm)
 
 
   DistV2D V(args.m, args.k, grid);
+  DistV2D V_tr(args.m, args.k, V.cols, grid); // For the SpMM
 
 
 #ifndef BASIC
@@ -103,12 +104,10 @@ int cluster2d(ArgParse args, MPI_Comm comm)
   /** K-Means Loop */
   for (int i = 0; i < args.niter; ++i) {
     timer.niter += 1;  // Increment iteration counter
-#ifdef DEBUG2D
     if (rank==0)
     {
         std::cout<<"Iteration "<<i<<std::endl;
     }
-#endif
 
 #ifndef BASIC
     auto e_start = hrc::now();
@@ -122,7 +121,7 @@ int cluster2d(ArgParse args, MPI_Comm comm)
     }
 #endif
 
-    spmm2d_bs(handle, V, K, E, T);  
+    spmm2d_bs(handle, V, V_tr, K, E, T);  
 
 #ifndef BASIC
     MPI_Barrier(comm);
