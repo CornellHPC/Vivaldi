@@ -35,6 +35,10 @@ struct DistV2D {
   int * d_mininds;
   FloatI32 * d_minpairs;
 
+  float * d_remote_vals;
+  int * d_remote_colptrs;
+  int * d_remote_rowinds;
+
   int * tile_rows;
   int * tile_cols;
   int64_t * tile_nnz;

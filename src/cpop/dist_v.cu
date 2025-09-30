@@ -138,6 +138,13 @@ DistV2D::DistV2D(int64_t m, int64_t k, int64_t nnz, std::shared_ptr<ProcessGrid>
     CHECK_CUDA(cudaMalloc(&d_vals, sizeof(float) * nnz));
     CHECK_CUDA(cudaMalloc(&d_rowinds, sizeof(int) * nnz));
     CHECK_CUDA(cudaMalloc(&d_colptrs, sizeof(int) * (cols+1)));
+    CHECK_CUDA(cudaMemset(d_colptrs, 0, sizeof(int)))
+
+    CHECK_CUDA(cudaMalloc(&d_remote_vals, sizeof(float) * nnz));
+    CHECK_CUDA(cudaMalloc(&d_remote_rowinds, sizeof(int) * nnz));
+    CHECK_CUDA(cudaMalloc(&d_remote_colptrs, sizeof(int) * (cols+1)));
+    CHECK_CUDA(cudaMemset(d_remote_colptrs, 0, sizeof(int)))
+
     CHECK_CUDA(cudaMalloc(&d_cluster_sizes, sizeof(int) * k));
     CHECK_CUDA(cudaMalloc(&d_minpairs, sizeof(FloatI32) * cols));
     CHECK_CUDA(cudaMalloc(&d_mininds, sizeof(int) * cols));
@@ -195,6 +202,15 @@ DistV2D::~DistV2D()
     }
     if (this->d_mininds!= nullptr) {
         cudaFree(this->d_mininds);
+    }
+    if (this->d_remote_vals != nullptr) {
+        cudaFree(this->d_vals);
+    }
+    if (this->d_remote_rowinds != nullptr) {
+        cudaFree(this->d_rowinds);
+    }
+    if (this->d_remote_colptrs != nullptr) {
+        cudaFree(this->d_colptrs);
     }
 
     delete[] tile_rows;

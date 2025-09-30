@@ -103,11 +103,12 @@ int main(int argc, char* argv[]) {
 
   /** Const */
   bool s = true;
-  int m = 1024;
+  int m = 256;
   int n = 8;
-  int k = 32;
+  int k = 16;
 
   DistV2D Vdist(m, k, grid2d);
+  DistV2D Vdist_tr(m, k, Vdist.cols, grid2d);
   V_t V(m, k, s, comm);
   int t = V.t;  // get this process tile size
 
@@ -143,7 +144,7 @@ int main(int argc, char* argv[]) {
       print_phase("Iteration beginning");
 
       spmm(handle, V, K1D, Ecorrect);
-      spmm2d_bs(handle, Vdist, K2D, E, T);
+      spmm2d_bs(handle, Vdist, Vdist_tr, K2D, E, T);
       //spmm2d(handle, Vdist, K2D, E);
       //print_device_matrix(E.mat->dM, E.mat->h_, E.mat->w_);
       //print_device_matrix(Ecorrect.dM, Ecorrect.h_, Ecorrect.w_);
@@ -185,6 +186,8 @@ int main(int argc, char* argv[]) {
       //print_device_matrix(Vdist.d_vals, 1, Vdist.nnz);
 
       check_assignments(Vdist, V, logfile_path);
+
+      par_print("NNZ V(%d, %d): %zu\n", grid2d->col_rank, grid2d->row_rank, Vdist.nnz);
 
       print_phase("Iteration correct");
   }
