@@ -463,11 +463,14 @@ int cluster1d(ArgParse args, MPI_Comm comm)
   auto k_start = hrc::now();
 #endif
 
-#ifdef GEMM_2D
-  DnMat_t K(args.m, t, compute_kernel_matrix2d(handle, PT, args.gamma, args.c, args.r, true));
-#else
-  DnMat_t K(args.m, t, compute_kernel_matrix(PT, args.gamma, args.c, args.r));
-#endif
+  float* kernel_matrix;
+  if (args.alg.compare("1d") == 0) {
+    kernel_matrix = compute_kernel_matrix(PT, args.gamma, args.c, args.r);
+  } else {
+    kernel_matrix =
+        compute_kernel_matrix2d(handle, PT, args.gamma, args.c, args.r, true);
+  }
+  DnMat_t K(args.m, t, kernel_matrix);
   PT.releaseWorkspace();
 
 #ifndef BASIC
