@@ -429,12 +429,12 @@ int cluster1d(ArgParse args, MPI_Comm comm)
   auto io_start = hrc::now();
 #endif
 
-#ifdef GEMM_2D
-  auto PT = load_matrix2d(args.path.c_str(), args.m, args.n, comm);
-#else
-  auto PT = load_matrix(args.path.c_str(), args.m, args.n, comm);
-#endif
-
+  slate::Matrix<float> PT;
+  if (args.alg.compare("1d")==0) {
+    PT = load_matrix(args.path.c_str(), args.m, args.n, comm);
+  } else {
+    PT = load_matrix2d(args.path.c_str(), args.m, args.n, comm);
+  }
 
 #ifndef BASIC
   MPI_Barrier(comm);
@@ -597,7 +597,7 @@ int main(int argc, char* argv[]) {
   }
 
   /** Cluster */
-  if (args.alg.compare("1d")==0) {
+  if (args.alg.compare("1d")==0 || args.alg.compare("1dr")==0) {
       cluster1d(args, comm);
   } else if (args.alg.compare("15d")==0) {
       cluster15d(args, comm);

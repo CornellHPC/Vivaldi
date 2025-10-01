@@ -57,8 +57,9 @@ ArgParse::ArgParse(int argc, char* argv[]) {
       "niter", po::value<int>()->default_value(100), "number of iterations")(
       "convergence", po::value<int>()->default_value(0),
       "enable convergence check (1 for basic, 2 for "
-      "process-exclusion-based-convergence)")
-      ("alg,a", po::value<std::string>(), "clustering algorithm to use (1d, 15d, 2d)");
+      "process-exclusion-based-convergence)")(
+      "alg,a", po::value<std::string>(),
+      "clustering algorithm to use (1d, 1dr, 15d, 2d)");
 
   // Parse command line arguments
   po::variables_map vm;
@@ -106,7 +107,6 @@ ArgParse::ArgParse(int argc, char* argv[]) {
   }
 
   alg = vm["alg"].as<std::string>();
-
 }
 
 void Timer::save_elapsed(const char* path) {
@@ -148,10 +148,10 @@ void Timer::save_all(const char* path, float score) {
   file << "E: " << e_elapsed << std::endl;
   file << "E Transpose: " << e_transpose << std::endl;
   file << "E MPI: " << e_mpi << std::endl;
-  file << "E Reduce: " << e_reduce << " ms" <<std::endl;
-  file << "E Gather: " << e_gather << " ms" <<std::endl;
+  file << "E Reduce: " << e_reduce << " ms" << std::endl;
+  file << "E Gather: " << e_gather << " ms" << std::endl;
   file << "E SpMM: " << e_spmm << std::endl;
-  file << "E other: " << e_other<< std::endl;
+  file << "E other: " << e_other << std::endl;
   file << "Z: " << z_elapsed << std::endl;
   file << "C: " << c_elapsed << std::endl;
   file << "C MPI: " << c_mpi << std::endl;
@@ -178,12 +178,12 @@ void Timer::save_all(const char* path, float score) {
   std::cout << "K Redist: " << k_redist << " ms" << std::endl;
   std::cout << "VI: " << vi_elapsed << " ms" << std::endl;
   std::cout << "E: " << e_elapsed << " ms" << std::endl;
-  std::cout << "E Transpose: " << e_transpose << " ms" <<std::endl;
-  std::cout << "E MPI: " << e_mpi << " ms" <<std::endl;
-  std::cout << "E Reduce: " << e_reduce << " ms" <<std::endl;
-  std::cout << "E Gather: " << e_gather << " ms" <<std::endl;
-  std::cout << "E SpMM: " << e_spmm << " ms" <<std::endl;
-  std::cout << "E other: " << e_other<< std::endl;
+  std::cout << "E Transpose: " << e_transpose << " ms" << std::endl;
+  std::cout << "E MPI: " << e_mpi << " ms" << std::endl;
+  std::cout << "E Reduce: " << e_reduce << " ms" << std::endl;
+  std::cout << "E Gather: " << e_gather << " ms" << std::endl;
+  std::cout << "E SpMM: " << e_spmm << " ms" << std::endl;
+  std::cout << "E other: " << e_other << std::endl;
   std::cout << "Z: " << z_elapsed << " ms" << std::endl;
   std::cout << "C: " << c_elapsed << " ms" << std::endl;
   std::cout << "C MPI: " << c_mpi << " ms" << std::endl;
@@ -228,7 +228,7 @@ int* compute_tile_sizes(int m, int nprocs) {
   return t_sizes;
 }
 
-//std::vector<std::vector<std::array<int, 2>>> compute_tile_sizes2d(int m, int nprocs) 
+//std::vector<std::vector<std::array<int, 2>>> compute_tile_sizes2d(int m, int nprocs)
 //{
 //  int nprocs_root = std::floor(std::sqrt(nprocs));
 //
@@ -264,7 +264,6 @@ int* compute_tile_sizes(int m, int nprocs) {
 //  return result;
 //}
 
-
 int square_grid_dim(MPI_Comm comm) {
   int size;
   MPI_Comm_size(comm, &size);
@@ -287,29 +286,25 @@ int tile_dim2(int p, int x) {
   return (x / p) + ((x % p == 0) ? 0 : 1);
 }
 
-void print_phase(const char * name)
-{
-    MPI_Barrier(MPI_COMM_WORLD);
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    if (rank==0)
-    {
-        std::cout<<"=========="<<name<<"=========="<<std::endl;
-    }
-    sleep(1);
-    MPI_Barrier(MPI_COMM_WORLD);
+void print_phase(const char* name) {
+  MPI_Barrier(MPI_COMM_WORLD);
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if (rank == 0) {
+    std::cout << "==========" << name << "==========" << std::endl;
+  }
+  sleep(1);
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
-void print_line()
-{
-    MPI_Barrier(MPI_COMM_WORLD);
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    if (rank==0)
-    {
-        std::cout<<"=========="<<__LINE__<<"=========="<<std::endl;
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
+void print_line() {
+  MPI_Barrier(MPI_COMM_WORLD);
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if (rank == 0) {
+    std::cout << "==========" << __LINE__ << "==========" << std::endl;
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 }  // namespace cpop

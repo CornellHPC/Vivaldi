@@ -20,7 +20,7 @@ CMAP = plt.cm.viridis
 # Markers for graph
 MARKERS = ["o", "s", "D", "^", "v", "p"]
 
-ALGS = ["1d", "15d", "2d"]
+ALGS = ["1d", "1dr", "15d", "2d"]
 
 DATASETS = [
     {
