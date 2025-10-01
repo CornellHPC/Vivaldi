@@ -137,7 +137,9 @@ void Timer::gather_nnz_perproc() {
 
 void Timer::save_all(const char* path, float score) {
 
-  gather_nnz_perproc();
+  if (global_nnz_perproc != nullptr) {
+    gather_nnz_perproc();
+  }
 
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
