@@ -67,6 +67,7 @@ alloc:
 
 test:
 	source /opt/cray/pe/lmod/lmod/init/bash && \
+	module load cudatoolkit/12.9 && \
 	cd build && \
 	srun -N 1 --ntasks-per-node 4 --cpus-per-task 32 --cpu-bind cores -G 4 \
 	device_wrapper ctest --output-on-failure -O /tmp/output test_exe
