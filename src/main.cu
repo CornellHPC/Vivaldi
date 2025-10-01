@@ -104,7 +104,7 @@ int cluster2d(ArgParse args, MPI_Comm comm)
   /** K-Means Loop */
   for (int i = 0; i < args.niter; ++i) {
     timer.niter += 1;  // Increment iteration counter
-    if (rank==0)
+    if (i % 10 == 0 && rank == 0)
     {
         std::cout<<"Iteration "<<i<<std::endl;
     }
@@ -325,7 +325,7 @@ int cluster15d(ArgParse args, MPI_Comm comm)
   /** K-Means Loop */
   for (int i = 0; i < args.niter; ++i) {
     timer.niter += 1;  // Increment iteration counter
-    if (rank==0)
+    if (i % 10 == 0 && rank == 0)
     {
         std::cout<<"Iteration "<<i<<std::endl;
     }
@@ -491,6 +491,11 @@ int cluster1d(ArgParse args, MPI_Comm comm)
   /** K-Means Loop */
   for (int i = 0; i < args.niter; ++i) {
     timer.niter += 1;  // Increment iteration counter
+    if (i % 10 == 0 && rank == 0)
+    {
+        std::cout<<"Iteration "<<i<<std::endl;
+    }
+
 #ifndef BASIC
     auto e_start = hrc::now();
 #endif

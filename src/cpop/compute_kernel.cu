@@ -109,7 +109,8 @@ float* compute_kernel_matrix(slate::Matrix<float>& PT, float gamma, float c,
   float* data;
   int64_t rows = PT.n();
   int* t_sizes = compute_tile_sizes(rows, size);
-  CHECK_CUDA(cudaMalloc(&data, rows * t_sizes[rank] * sizeof(float)));
+  int64_t my_size = t_sizes[rank];
+  CHECK_CUDA(cudaMalloc(&data, rows * my_size * sizeof(float)));
 
   // Initialize matrices
   auto P = slate::transpose(PT);
@@ -118,9 +119,10 @@ float* compute_kernel_matrix(slate::Matrix<float>& PT, float gamma, float c,
 
   // Fill K matrix with tiles using buffer
   for (int64_t i = 0; i < size; ++i) {
-    int64_t offset = P.tileMb(0) * t_sizes[rank] * i;
+    int64_t offset = ((int64_t)P.tileMb(0)) * my_size * i;
     K.tileInsert(i, rank, 0, data + offset, t_sizes[i]);
   }
+
 
   // Compute kernel matrix
   slate::gemm<float>(1.0f, P, PT, 0.0f, K,
@@ -217,18 +219,16 @@ float * redistribute_2d_1d(Handle& handle, float * K, const uint64_t m, const ui
     int * senddispls = new int[size];
     memset(senddispls, 0, sizeof(int) * size);
 
-    size_t start_offset = mb * row_rank;
-    size_t slice_size = mb * (m/size); 
+    int64_t slice_size = mb * (m/size); 
 
     // Iterate through my column major blocks and figure out how many are to be sent to other processes
     // I have sqrt(P) col blocks
     for (int i=0; i<grid_dim; i++)
     {
-        //size_t offset = start_offset + i * (m/size);
-        //int owner = offset / (m/size);
         int owner = i + col_rank*grid_dim;
-        sendcounts[owner] += slice_size;
+        sendcounts[owner] += (slice_size / 4);
     }
+
 
     int * recvcounts = new int[size];
     int * recvdispls = new int[size];
@@ -247,27 +247,29 @@ float * redistribute_2d_1d(Handle& handle, float * K, const uint64_t m, const ui
     }
 
     float * send_buf;
-    CHECK_CUDA(cudaMalloc(&send_buf, sizeof(float) * send_size_total));
+    CHECK_CUDA(cudaMalloc(&send_buf, sizeof(float) * send_size_total * 4));
 
-    for (int i=0; i<grid_dim; i++)
+    for (int64_t i=0; i<grid_dim; i++)
     {
         int owner = i + col_rank*grid_dim;
-        CHECK_CUDA(cudaMemcpyAsync(send_buf + senddispls[owner],
-                                  K + i * slice_size,
+        int64_t offset = (int64_t)(senddispls[owner])*4;
+        int64_t k_offset = i * slice_size;
+        CHECK_CUDA(cudaMemcpyAsync(send_buf + offset,
+                                  K + k_offset,
                                   sizeof(float) * slice_size,
                                   cudaMemcpyDeviceToDevice));
     }
     CHECK_CUDA(cudaDeviceSynchronize());
 
     // reuse K pointer for recvbuf
-    MPI_Alltoallv(send_buf, sendcounts, senddispls, MPI_FLOAT,
-                  K, recvcounts, recvdispls, MPI_FLOAT,
+    MPI_Alltoallv(send_buf, sendcounts, senddispls, MPI_LONG_DOUBLE,
+                  K, recvcounts, recvdispls, MPI_LONG_DOUBLE,
                   MPI_COMM_WORLD);
 
     // Have to transpose my received tiles -- can trick cuBLAS into doing it
     float alpha = 1.0;
     float beta = 0.0;
-    for (int i=0; i<grid_dim; i++)
+    for (int64_t i=0; i<grid_dim; i++)
     {
         CHECK_CUBLAS(cublasSgeam(handle.dh(), CUBLAS_OP_T,
                                  CUBLAS_OP_N,
@@ -278,7 +280,7 @@ float * redistribute_2d_1d(Handle& handle, float * K, const uint64_t m, const ui
                                  send_buf + i*slice_size, m/size));
     }
     CHECK_CUDA(cudaDeviceSynchronize());
-                             
+
     std::swap(send_buf, K);
 
     // Cleanup
