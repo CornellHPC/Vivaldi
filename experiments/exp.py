@@ -478,7 +478,7 @@ def read_data(formatted_txt_file) -> np.ndarray:
     return np.array(data)
 
 
-def create_scripts(account, path=os.getcwd(), n_trials=5, base_m=128000, max_m=1600000):
+def create_scripts(account, path=os.getcwd(), n_trials=5, base_m=2**17, max_m=2**20):
     P = [2**i for i in range(2,9)]
 
     for p in P:
@@ -557,8 +557,8 @@ def create_script(path, prefix, account, p, m, k, dataset, alg, d=None, sparse=T
     if not isinstance(alg, list):
         alg = [alg]
 
-    # Five seconds for one trial estimated through experiments
-    seconds_per_trial = 5
+    # Ten seconds for one trial estimated through experiments
+    seconds_per_trial = 10
     total_time_seconds = seconds_per_trial*len(m)*len(d)*len(k)*len(dataset)*len(alg)
     timestamp = str(datetime.timedelta(seconds=total_time_seconds))
 
@@ -568,7 +568,7 @@ def create_script(path, prefix, account, p, m, k, dataset, alg, d=None, sparse=T
             f"#SBATCH --nodes={nodes}\n",
             f"#SBATCH --gpus={p}\n",
             f"#SBATCH --time={timestamp}\n",
-            "#SBATCH --constraint=gpu&hbm80g\n",
+            "#SBATCH --constraint=gpu&hbm40g\n",
             "#SBATCH --qos=regular\n",
             f"#SBATCH --account={account}\n",
             f"#SBATCH --output={log_fname}_%a\n",
@@ -1138,7 +1138,7 @@ if __name__ == "__main__":
         # for p in [4, 8, 16, 32, 64, 128, 256]:
             # create_file_text(p, "")
         # TODO:
-        create_scripts("m1266")
+        create_scripts("m4341")
         print("Generated scripts in experiments/scripts/ directory.")
     if action == "create_random":
         create_random()
