@@ -129,9 +129,19 @@ void Timer::save_elapsed(const char* path) {
   std::cout << "-------------------" << std::endl;
 }
 
+
+void Timer::gather_nnz_perproc() {
+    MPI_Gather(nnz_perproc, niter, MPI_INT64_T, global_nnz_perproc, niter, MPI_INT64_T, 0, MPI_COMM_WORLD);
+}
+
+
 void Timer::save_all(const char* path, float score) {
-  int rank;
+
+  gather_nnz_perproc();
+
+  int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
   if (rank != 0)
     return;  // Only the root process will save the results
 
@@ -171,6 +181,16 @@ void Timer::save_all(const char* path, float score) {
   } else {
     file << "Dead process counts: Not recorded" << std::endl;
   }
+  if (global_nnz_perproc != nullptr) {
+    file << "NNZ per proc: " << std::endl;
+    for (int i=0; i<niter; ++i) {
+      file << "    Iteration "<<i<<std::endl;
+      for (int j=0; j<size; ++j) {
+        file << "        Process "<<j<<": "<<global_nnz_perproc[j * niter + i]<<std::endl;
+      }
+    }
+  }
+      
   file.close();  // Close the file
   std::cout << "-------------------" << std::endl;
   std::cout << "IO: " << io << " ms" << std::endl;

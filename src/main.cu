@@ -99,6 +99,10 @@ int cluster2d(ArgParse args, MPI_Comm comm)
 #ifndef BASIC
   timer.dead_proc_counts =
       (int*)calloc(args.niter, sizeof(int));  // initialize dead process counts
+  timer.nnz_perproc = 
+      (int64_t*)calloc(args.niter, sizeof(int64_t));
+  timer.global_nnz_perproc = 
+      (int64_t*)calloc(args.niter * size, sizeof(int64_t));
 #endif
 
   /** K-Means Loop */
@@ -110,6 +114,7 @@ int cluster2d(ArgParse args, MPI_Comm comm)
     }
 
 #ifndef BASIC
+    timer.nnz_perproc[i] = V.nnz;
     auto e_start = hrc::now();
 #endif
 

@@ -104,6 +104,13 @@ struct Timer {
   int64_t niter = 0;
   int* dead_proc_counts = nullptr;
 
+  // nnz per process for 2d
+  int64_t * nnz_perproc = nullptr;
+  int64_t * global_nnz_perproc = nullptr;
+
+
+  void gather_nnz_perproc();
+
   /**
    * @brief Save only the elapsed time as a single value to a file.
    * 
