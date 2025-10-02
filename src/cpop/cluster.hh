@@ -114,6 +114,9 @@ struct V_t {
   float previous_global_k_means_objective_score;
   float previous_local_k_means_objective_score;
   float* prev_point_to_cluster_distances;  // t-size vector
+  
+  // For dense
+  float * d_v_dense;
 
   /**
    * @brief Constructor
@@ -180,7 +183,7 @@ struct DistV1D {
  */
 int spmm(Handle& handle, V_t& V, DnMat_t& K, DnMat_t& E);
 int spmm2d(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E);
-int spmm2d_bs(Handle& handle, DistV2D& V, DistV2D& V_tr, DistDnMat_t& K, DistDnMat_t& E, DistDnMat_t& T);
+int spmm2d_bs(Handle& handle, DistV2D& V, DistV2D& V_tr, DistDnMat_t& K, DistDnMat_t& E, float * d_T);
 int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMat_t& E_p, float * d_tmp, float * d_tmp2);
 
 /**

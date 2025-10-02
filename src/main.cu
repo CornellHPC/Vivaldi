@@ -58,7 +58,9 @@ int cluster2d(ArgParse args, MPI_Comm comm)
 
 
   DistV2D V(args.m, args.k, grid);
-  DistV2D V_tr(args.m, args.k, V.cols, grid); // For the SpMM
+
+  int tr_rank = (grid->col_rank) * grid->col_size + grid->row_rank;
+  DistV2D V_tr(args.m, args.k, V.tile_rows[grid->row_rank], V.cols, grid);
 
 
 #ifndef BASIC
@@ -87,13 +89,12 @@ int cluster2d(ArgParse args, MPI_Comm comm)
 
 
   /** Initialize E, z, T, and c */
+  float * d_T_buf;
+  CHECK_CUDA(cudaMalloc(&d_T_buf, sizeof(float ) * (V.rows+1) * V.cols));
   DistDnMat_t E({new DnMat_t(V.rows, V.cols), 
-                 grid});
-  DistDnMat_t T({new DnMat_t(V.rows, V.cols), 
                  grid});
   DistDnVec_t z({new DnVec_t(V.cols), grid});
   DistDnVec_t c({new DnVec_t(V.rows), grid});
-
 
 
 #ifndef BASIC
@@ -126,7 +127,7 @@ int cluster2d(ArgParse args, MPI_Comm comm)
     }
 #endif
 
-    spmm2d_bs(handle, V, V_tr, K, E, T);  
+    spmm2d_bs(handle, V, V_tr, K, E, d_T_buf);  
 
 #ifndef BASIC
     MPI_Barrier(comm);
@@ -273,7 +274,7 @@ int cluster15d(ArgParse args, MPI_Comm comm)
 #endif
 
 
-  DistV1D V(args.m, args.k, args.s, grid1d);
+  DistV1D V(args.m, args.k, true, grid1d);
 
 
 #ifndef BASIC

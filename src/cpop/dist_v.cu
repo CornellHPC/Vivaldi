@@ -57,6 +57,7 @@ DistV2D::DistV2D(int64_t m, int64_t k, std::shared_ptr<ProcessGrid> grid)
     rows = tile_rows[grid->col_rank];
     cols = tile_cols[grid->row_rank];
 
+
     float * h_values = new float[nnz];
     int * h_rowinds = new int[nnz];
     int * h_colptrs = new int[cols+1];
@@ -69,7 +70,7 @@ DistV2D::DistV2D(int64_t m, int64_t k, std::shared_ptr<ProcessGrid> grid)
         int owner = map2d(j, i);
         if (owner == grid->world_rank)
         {
-            h_rowinds[offset] = j % rows;
+            h_rowinds[offset] = j % tile_rows[0];
             h_colptrs[i%cols + 1] = 1;
             h_values[offset++] = 1.0/(float)row_sizes[j];
         }
@@ -117,12 +118,14 @@ DistV2D::DistV2D(int64_t m, int64_t k, std::shared_ptr<ProcessGrid> grid)
     delete[] row_sizes;
 }
 
-DistV2D::DistV2D(int64_t m, int64_t k, int64_t nnz, std::shared_ptr<ProcessGrid> grid):
-    global_cols(m), global_rows(k), grid(grid), nnz(nnz)
+DistV2D::DistV2D(int64_t m, int64_t k, int loc_k, int64_t nnz, std::shared_ptr<ProcessGrid> grid):
+    global_cols(m), global_rows(k), grid(grid), nnz(nnz), rows(loc_k)
 {
     MPI_Allreduce(&nnz, &global_nnz, 1, MPI_INT64_T, MPI_SUM, grid->world_comm);
 
-    tile_rows = compute_tile_sizes(k, grid->col_size);
+    tile_rows = new int[grid->col_size];
+    tile_rows[grid->col_rank] = loc_k;
+    MPI_Allgather(&loc_k, 1, MPI_INT, tile_rows, 1, MPI_INT, grid->col_comm);
     tile_cols = compute_tile_sizes(m, grid->row_size);
 
 
@@ -132,7 +135,7 @@ DistV2D::DistV2D(int64_t m, int64_t k, int64_t nnz, std::shared_ptr<ProcessGrid>
 
     MPI_Allreduce(MPI_IN_PLACE, tile_nnz, grid->world_size, MPI_INT64_T, MPI_SUM, grid->world_comm);
 
-    rows = tile_rows[grid->col_rank];
+    //rows = tile_rows[grid->col_rank];
     cols = tile_cols[grid->row_rank];
 
     CHECK_CUDA(cudaMalloc(&d_vals, sizeof(float) * nnz));
@@ -148,6 +151,8 @@ DistV2D::DistV2D(int64_t m, int64_t k, int64_t nnz, std::shared_ptr<ProcessGrid>
     CHECK_CUDA(cudaMalloc(&d_cluster_sizes, sizeof(int) * k));
     CHECK_CUDA(cudaMalloc(&d_minpairs, sizeof(FloatI32) * cols));
     CHECK_CUDA(cudaMalloc(&d_mininds, sizeof(int) * cols));
+
+    CHECK_CUDA(cudaMalloc(&d_v_dense, sizeof(float) * loc_k * cols));
 
     this->init_cusparse_csc();
 
@@ -211,6 +216,9 @@ DistV2D::~DistV2D()
     }
     if (this->d_remote_colptrs != nullptr) {
         cudaFree(this->d_remote_colptrs);
+    }
+    if (this->d_v_dense != nullptr) {
+        cudaFree(this->d_v_dense);
     }
 
     delete[] tile_rows;

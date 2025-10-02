@@ -39,6 +39,8 @@ struct DistV2D {
   int * d_remote_colptrs;
   int * d_remote_rowinds;
 
+  float * d_v_dense;
+
   int * tile_rows;
   int * tile_cols;
   int64_t * tile_nnz;
@@ -49,7 +51,7 @@ struct DistV2D {
   cusparseSpMatDescr_t csc_mat;
 
   DistV2D(int64_t m, int64_t k, std::shared_ptr<ProcessGrid> grid);
-  DistV2D(int64_t m, int64_t k, int64_t nnz, std::shared_ptr<ProcessGrid> grid);
+  DistV2D(int64_t m, int64_t k, int loc_k, int64_t nnz, std::shared_ptr<ProcessGrid> grid);
   void init_cusparse_csc();
   void update_nnz(int64_t nnz);
   ~DistV2D();
