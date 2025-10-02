@@ -103,14 +103,18 @@ int main(int argc, char* argv[]) {
 
   /** Const */
   bool s = true;
-  int m = 2048;
+  int m = 90;
   int n = 8;
-  int k = 16;
+  int k = 32;
 
   DistV2D Vdist(m, k, grid2d);
-  DistV2D Vdist_tr(m, k, Vdist.cols, grid2d);
+  int tr_rank = (grid2d->col_rank) * grid2d->col_size + grid2d->row_rank;
+  DistV2D Vdist_tr(m, k, Vdist.tile_rows[grid2d->row_rank], Vdist.cols, grid2d);
   V_t V(m, k, s, comm);
   int t = V.t;  // get this process tile size
+  
+
+  par_print("V rows: %lu\n", Vdist.rows);
 
   wake_gpus(rank);
   slate::gpu_aware_mpi(true);
@@ -125,9 +129,11 @@ int main(int argc, char* argv[]) {
                    grid2d});
   PT2D.releaseWorkspace();
 
+  float * d_T_buf;
+  CHECK_CUDA(cudaMalloc(&d_T_buf, sizeof(float ) * (Vdist.rows+1) * Vdist.cols));
   DistDnMat_t E({new DnMat_t(Vdist.rows, Vdist.cols), 
                  grid2d});
-  DistDnMat_t T({new DnMat_t(Vdist.rows, Vdist.cols), 
+  DistDnMat_t T({new DnMat_t(Vdist_tr.rows, Vdist.cols, d_T_buf), 
                  grid2d});
   DistDnVec_t z({new DnVec_t(Vdist.cols), grid2d});
   DistDnVec_t c({new DnVec_t(Vdist.rows), grid2d});
@@ -144,16 +150,21 @@ int main(int argc, char* argv[]) {
       print_phase("Iteration beginning");
 
       spmm(handle, V, K1D, Ecorrect);
-      spmm2d_bs(handle, Vdist, Vdist_tr, K2D, E, T);
+      spmm2d_bs(handle, Vdist, Vdist_tr, K2D, E, d_T_buf);
       //spmm2d(handle, Vdist, K2D, E);
       //print_device_matrix(E.mat->dM, E.mat->h_, E.mat->w_);
+      //sleep(1);
+      //fflush(stdout);
       //print_device_matrix(Ecorrect.dM, Ecorrect.h_, Ecorrect.w_);
-      //print_phase("SpMM Done");
+      print_phase("SpMM Done");
       MPI_Barrier(MPI_COMM_WORLD);
 
 
       compute_z(V, Ecorrect, zcorrect);
       compute_z2d(Vdist, E, z);
+
+      //print_device_matrix(z.vec->dz, 1, z.vec->size);
+      //print_device_matrix(zcorrect.dz, 1, zcorrect.size);
 
       spmv(handle, V, zcorrect, ccorrect);
       sum_vec(ccorrect, comm);

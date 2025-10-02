@@ -444,7 +444,7 @@ int spmm2d(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E)
 
 
 // Do not communicate tiles of the kernel matrix 
-int spmm2d_bs(Handle& handle, DistV2D& V, DistV2D& V_tr, DistDnMat_t& K, DistDnMat_t& E, DistDnMat_t& T)
+int spmm2d_bs(Handle& handle, DistV2D& V, DistV2D& V_tr, DistDnMat_t& K, DistDnMat_t& E, float * d_T)
 {
 
     auto grid = V.grid;
@@ -456,6 +456,7 @@ int spmm2d_bs(Handle& handle, DistV2D& V, DistV2D& V_tr, DistDnMat_t& K, DistDnM
     int * d_colptrs_send;
 
     cusparseSpMatDescr_t loc_V;
+    cusparseDnMatDescr_t T;
 
     // Transpose the sparse matrix
     int tr_rank = (grid->col_rank) * grid->col_size + grid->row_rank;
@@ -477,6 +478,7 @@ int spmm2d_bs(Handle& handle, DistV2D& V, DistV2D& V_tr, DistDnMat_t& K, DistDnM
     recv_nnz[grid->row_rank] = V_tr.nnz;
     MPI_Allreduce(MPI_IN_PLACE, recv_nnz, niters, MPI_INT64_T, MPI_SUM, grid->row_comm);
 
+    //print_device_matrix(V_tr.d_rowinds, 1, V_tr.nnz);
 
 
     for (int i=0; i<niters; i++)
@@ -523,6 +525,11 @@ int spmm2d_bs(Handle& handle, DistV2D& V, DistV2D& V_tr, DistDnMat_t& K, DistDnM
 #ifndef BASIC
         auto comp_start = hrc::now();
 #endif
+
+        CHECK_CUSPARSE(cusparseCreateDnMat(&T, V_tr.tile_rows[i], V_tr.tile_cols[i], V_tr.tile_cols[i], d_T,
+                    CUDA_R_32F, CUSPARSE_ORDER_ROW));
+
+
         CHECK_CUSPARSE(cusparseCreateCsc(&loc_V, V_tr.tile_rows[i], V_tr.tile_cols[i],
                           recv_nnz[i],
                           d_colptrs_send, 
@@ -537,12 +544,14 @@ int spmm2d_bs(Handle& handle, DistV2D& V, DistV2D& V_tr, DistDnMat_t& K, DistDnM
         float alpha = 1.0f;
         float beta = 0.0f;
 
+        //par_print("V_tr rows: %lu, T rows: %lu\n", V_tr.tile_rows[i], T.mat->h_);
+
         // Buffer size 
         size_t buffer_size;
         void* buffer;
         CHECK_CUSPARSE(cusparseSpMM_bufferSize(
             handle.sh(), CUSPARSE_OPERATION_NON_TRANSPOSE,
-            CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, loc_V, K.mat->M, &beta, T.mat->M,
+            CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, loc_V, K.mat->M, &beta, T,
             CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, &buffer_size));
         CHECK_CUDA(cudaMalloc(&buffer, buffer_size));
         CHECK_CUDA(cudaDeviceSynchronize());
@@ -550,13 +559,14 @@ int spmm2d_bs(Handle& handle, DistV2D& V, DistV2D& V_tr, DistDnMat_t& K, DistDnM
         // Perform SpMM
         CHECK_CUSPARSE(cusparseSpMM(
             handle.sh(), CUSPARSE_OPERATION_NON_TRANSPOSE,
-            CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, loc_V, K.mat->M, &beta, T.mat->M,
+            CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, loc_V, K.mat->M, &beta, T,
             CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, buffer));
         CHECK_CUDA(cudaDeviceSynchronize());
 
         // Clean up
         CHECK_CUDA(cudaFree(buffer));
         CHECK_CUSPARSE(cusparseDestroySpMat(loc_V));
+        CHECK_CUSPARSE(cusparseDestroyDnMat(T));
 
 #ifdef DEBUG2D
         if (grid->world_rank==0)
@@ -575,7 +585,10 @@ int spmm2d_bs(Handle& handle, DistV2D& V, DistV2D& V_tr, DistDnMat_t& K, DistDnM
         auto reduce_start = hrc::now();
 #endif
 
-        MPI_Reduce(T.mat->dM, E.mat->dM, T.mat->h_ * T.mat->w_, MPI_FLOAT, MPI_SUM, i, grid->col_comm);
+        //MPI_Reduce(T.mat->dM, E.mat->dM, T.mat->h_ * T.mat->w_, MPI_FLOAT, MPI_SUM, i, grid->col_comm);
+        //par_print("T rows: %lu, E rows: %lu, V rows: %lu\n", T.mat->h_, E.mat->h_, V.tile_rows[i]);
+        MPI_Reduce(d_T, E.mat->dM, V.tile_rows[i] * E.mat->w_, MPI_FLOAT, MPI_SUM, i, grid->col_comm);
+        CHECK_CUDA(cudaMemset(d_T, 0, sizeof(float) * E.mat->w_ * V.tile_rows[0]));
 
 #ifdef DEBUG2D
         if (grid->world_rank==0)
@@ -922,7 +935,7 @@ int argmin(DnMat_t& E, DnVec_t& c, V_t& V, bool ptr) {
 int argmin2d(DistDnMat_t& E, DistDnVec_t& c, DistV2D& V) 
 {
 
-  int offset = V.grid->col_rank * V.rows;
+  int offset = V.grid->col_rank * V.tile_rows[0];
 
 
   launch_argmin_kernel_simple(
@@ -1060,9 +1073,10 @@ int set_V_from_assignments2d(DistV2D& V)
   CHECK_CUDA(cudaDeviceSynchronize());
   MPI_Allreduce(MPI_IN_PLACE, V.d_cluster_sizes, V.global_rows, MPI_INT, MPI_SUM, V.grid->row_comm);
 
-  int lower = V.rows * V.grid->col_rank;
-  int upper = lower + V.rows;
+  int lower = V.tile_rows[0]* V.grid->col_rank;
+  int upper = lower + V.tile_rows[0];
 
+  //print_device_matrix(V.d_mininds, 1, V.cols);
 
   // Which points belong to my chunk of the clusters
   IsMine op{lower, upper};
@@ -1081,7 +1095,7 @@ int set_V_from_assignments2d(DistV2D& V)
 
   launch_reinit_kernel2d(V.d_vals, V.d_rowinds, V.d_colptrs, 
                          V.d_mininds, V.d_cluster_sizes,
-                         V.rows, V.cols, V.nnz, 
+                         V.tile_rows[0], V.cols, V.nnz, 
                          op);
   CHECK_CUDA(cudaDeviceSynchronize());
 
@@ -1093,6 +1107,12 @@ int set_V_from_assignments2d(DistV2D& V)
   // Reinit cusparse csc
   cusparseDestroySpMat(V.csc_mat);
   V.init_cusparse_csc();
+  //print_device_matrix(V.d_vals, 1, V.nnz);
+  //CHECK_CUDA(cudaDeviceSynchronize());
+  //print_device_matrix(V.d_rowinds, 1, V.nnz);
+  //CHECK_CUDA(cudaDeviceSynchronize());
+  //print_device_matrix(V.d_colptrs, 1, V.cols+1);
+  //CHECK_CUDA(cudaDeviceSynchronize());
 
 
   return EXIT_SUCCESS;

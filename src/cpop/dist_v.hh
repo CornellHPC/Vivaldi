@@ -49,7 +49,7 @@ struct DistV2D {
   cusparseSpMatDescr_t csc_mat;
 
   DistV2D(int64_t m, int64_t k, std::shared_ptr<ProcessGrid> grid);
-  DistV2D(int64_t m, int64_t k, int64_t nnz, std::shared_ptr<ProcessGrid> grid);
+  DistV2D(int64_t m, int64_t k, int loc_k, int64_t nnz, std::shared_ptr<ProcessGrid> grid);
   void init_cusparse_csc();
   void update_nnz(int64_t nnz);
   ~DistV2D();
