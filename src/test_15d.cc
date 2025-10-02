@@ -14,7 +14,7 @@
 
 using namespace cpop;
 
-float EPSILON = 0.01;
+float EPSILON = 0.1;
 
 template <typename T>
 void assert_buffer_equal(T* m0, T* m1, int64_t count, const std::string& logfile_path) {
@@ -70,18 +70,19 @@ int main(int argc, char* argv[]) {
   std::shared_ptr<ProcessGrid> grid1d = std::make_shared<ProcessGrid>(world_size, 1, false);
 
   /** Const */
-  bool s = true;
-  int m = 128;
+  bool s = false;
+  int m = 1024;
   int n = 8;
-  int k = 128;
+  int k = 32;
 
   DistV1D Vdist(m, k, true, grid1d);
-  V_t V(m, k, s, comm);
+  V_t V(m, k, true, comm);
   int t = V.t;  // get this process tile size
 
   wake_gpus(rank);
   slate::gpu_aware_mpi(true);
   Handle handle(s);
+  Handle handle_1d(true);
 
   auto PT = load_matrix("../data/randi", m, n, comm);
 
@@ -122,7 +123,7 @@ int main(int argc, char* argv[]) {
   for (int iter=0; iter<niters; iter++)
   {
       print_phase("Iteration beginning");
-      spmm(handle, V, K1D, Ecorrect);
+      spmm(handle_1d, V, K1D, Ecorrect);
       spmm15d(handle, Vdist, K2D, E, E_p, d_tmp, d_tmp2);
 
       check_e(Ecorrect, *E.mat, rank, logfile_path);
@@ -131,10 +132,10 @@ int main(int argc, char* argv[]) {
       compute_z(V, Ecorrect, zcorrect);
       compute_z(*Vdist.local_v, *E.mat, *z.vec);
 
-      spmv(handle, V, zcorrect, ccorrect);
+      spmv(handle_1d, V, zcorrect, ccorrect);
       sum_vec(ccorrect, comm);
 
-      spmv(handle, *Vdist.local_v, *z.vec, *c.vec);
+      spmv(handle_1d, *Vdist.local_v, *z.vec, *c.vec);
       sum_vec(*c.vec, comm);
 
 

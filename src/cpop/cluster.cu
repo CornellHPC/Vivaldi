@@ -121,6 +121,8 @@ V_t::V_t(int64_t m, int64_t k, bool sparse, MPI_Comm comm) {
     free(values);
   }
 
+  CHECK_CUDA(cudaMalloc(&d_v_dense, sizeof(float) * m * k * (int)std::floor(std::sqrt(n_procs))));
+
   // Clean up
   free(init_global_cluster_sizes);
   free(init_assignments);
@@ -194,6 +196,7 @@ V_t::~V_t() {
   CHECK_CUDA(cudaFree(local_k_means_objective_score));
   CHECK_CUDA(cudaFree(local_k_means_objective_delta));
   CHECK_CUDA(cudaFree(prev_point_to_cluster_distances));
+  CHECK_CUDA(cudaFree(d_v_dense));
   free(t_sizes);
   free(displs);
   if (sparse) {
@@ -638,7 +641,6 @@ int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMa
 #endif
     
     int * d_rowinds = V.d_remote_rowinds;
-    //CHECK_CUDA(cudaMalloc(&d_rowinds, sizeof(int) * sqrtp * loc_v->t));
 
     if (grid2dcolmaj->row_rank == grid2dcolmaj->col_rank)
     {
@@ -687,26 +689,57 @@ int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMa
                                      CUSPARSE_INDEX_32I,
                                      CUSPARSE_INDEX_BASE_ZERO,
                                      CUDA_R_32F));
-
     float alpha = 1.0f;
     float beta = 0.0f;
-    size_t buffer_size;
-    void* buffer;
-    CHECK_CUSPARSE(cusparseSpMM_bufferSize(
-        handle.sh(), CUSPARSE_OPERATION_NON_TRANSPOSE,
-        CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, v_gather, loc_k->M, &beta, loc_e_p->M,
-        CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, &buffer_size));
-    CHECK_CUDA(cudaMalloc(&buffer, buffer_size));
+    if (handle.isSparse())
+    {
 
-    // Perform SpMM
-    CHECK_CUSPARSE(cusparseSpMM(
-        handle.sh(), CUSPARSE_OPERATION_NON_TRANSPOSE,
-        CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, v_gather, loc_k->M, &beta, loc_e_p->M,
-        CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, buffer));
-    CHECK_CUDA(cudaDeviceSynchronize());
+        size_t buffer_size;
+        void* buffer;
+        CHECK_CUSPARSE(cusparseSpMM_bufferSize(
+            handle.sh(), CUSPARSE_OPERATION_NON_TRANSPOSE,
+            CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, v_gather, loc_k->M, &beta, loc_e_p->M,
+            CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, &buffer_size));
+        CHECK_CUDA(cudaMalloc(&buffer, buffer_size));
 
-    // Clean up
-    CHECK_CUDA(cudaFree(buffer));
+        // Perform SpMM
+        CHECK_CUSPARSE(cusparseSpMM(
+            handle.sh(), CUSPARSE_OPERATION_NON_TRANSPOSE,
+            CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, v_gather, loc_k->M, &beta, loc_e_p->M,
+            CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, buffer));
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        // Clean up
+        CHECK_CUDA(cudaFree(buffer));
+    }
+    else
+    {
+        cusparseDnMatDescr_t v_dense;
+        size_t buf_size = 0;
+        void * d_buf = nullptr;
+        CHECK_CUDA(cudaMemset(loc_v->d_v_dense, 0, sizeof(float) * loc_v->k_ * loc_v->t*sqrtp));
+        CHECK_CUSPARSE(cusparseCreateDnMat(&v_dense, loc_v->k_, sqrtp*loc_v->t, sqrtp*loc_v->t, loc_v->d_v_dense, CUDA_R_32F, CUSPARSE_ORDER_ROW));
+
+        CHECK_CUSPARSE(cusparseSparseToDense_bufferSize(handle.sh(), v_gather, v_dense, CUSPARSE_SPARSETODENSE_ALG_DEFAULT, &buf_size));
+        CHECK_CUDA(cudaMalloc(&d_buf, buf_size));
+        CHECK_CUSPARSE(cusparseSparseToDense(handle.sh(), v_gather, v_dense, CUSPARSE_SPARSETODENSE_ALG_DEFAULT, d_buf));
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+
+        CHECK_CUDA(cudaFree(d_buf));
+        CHECK_CUSPARSE(cusparseDestroyDnMat(v_dense));
+        CHECK_CUBLAS(cublasSgemm(handle.dh(), 
+                                 CUBLAS_OP_N, CUBLAS_OP_N,
+                                 sqrtp*loc_v->t, loc_v->k_, sqrtp*loc_v->t,
+                                 &alpha, 
+                                 loc_k->dM, sqrtp*loc_v->t,
+                                 loc_v->d_v_dense, sqrtp*loc_v->t,
+                                 &beta,
+                                 loc_e_p->dM,
+                                 sqrtp*loc_v->t));
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+    }
     CHECK_CUSPARSE(cusparseDestroySpMat(v_gather));
 
 #ifndef BASIC
@@ -733,7 +766,6 @@ int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMa
     timer.e_transpose += get_time_elapsed(e_trans_start);
 #endif
 
-    //CHECK_CUDA(cudaMemset(loc_e_p->dM, 0,sizeof(float) * loc_e_p->h_ * loc_e_p->w_))
 
 #ifndef BASIC
     auto e_reduce_start = hrc::now();
@@ -831,7 +863,7 @@ int spmv(Handle& handle, V_t& V, DnVec_t& z, DnVec_t& c) {
   float alpha = 1.0f;
   float beta = 0.0f;
 
-  if (handle.isSparse()) {
+  if (handle.isSparse() || V.sparse) {
     // allocate an external buffer if needed
     void* dBuffer = NULL;
     size_t bufferSize = 0;

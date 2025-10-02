@@ -58,9 +58,9 @@ int cluster2d(ArgParse args, MPI_Comm comm)
 
 
   DistV2D V(args.m, args.k, grid);
+
   int tr_rank = (grid->col_rank) * grid->col_size + grid->row_rank;
   DistV2D V_tr(args.m, args.k, V.tile_rows[grid->row_rank], V.cols, grid);
-  //DistV2D V_tr(args.m, args.k, V.cols, grid); // For the SpMM
 
 
 #ifndef BASIC
@@ -274,7 +274,7 @@ int cluster15d(ArgParse args, MPI_Comm comm)
 #endif
 
 
-  DistV1D V(args.m, args.k, args.s, grid1d);
+  DistV1D V(args.m, args.k, true, grid1d);
 
 
 #ifndef BASIC

@@ -114,6 +114,9 @@ struct V_t {
   float previous_global_k_means_objective_score;
   float previous_local_k_means_objective_score;
   float* prev_point_to_cluster_distances;  // t-size vector
+  
+  // For dense
+  float * d_v_dense;
 
   /**
    * @brief Constructor
