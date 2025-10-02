@@ -70,7 +70,7 @@ MAX_NUM_POINTS = 1600000  ## one million points limit for basically everything
 
 SCALING_HIGHEST_POWER = 6  ## for graph generation
 N_TRIALS = 5  ## number of trials for each experiment
-P = [4, 8, 16, 32, 64, 128, 256]  # number of GPUs (must be divisible by 4)
+P = [4, 16, 64, 256]  # number of GPUs (must be divisible by 4)
 K = [8, 16, 32, 64, 128]
 C = ["K", "VI", "E", "Z", "C MPI", "C Computation", "VR MPI", "VR Computation"]
 
