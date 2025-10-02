@@ -133,8 +133,6 @@ int main(int argc, char* argv[]) {
   CHECK_CUDA(cudaMalloc(&d_T_buf, sizeof(float ) * (Vdist.rows+1) * Vdist.cols));
   DistDnMat_t E({new DnMat_t(Vdist.rows, Vdist.cols), 
                  grid2d});
-  DistDnMat_t T({new DnMat_t(Vdist_tr.rows, Vdist.cols, d_T_buf), 
-                 grid2d});
   DistDnVec_t z({new DnVec_t(Vdist.cols), grid2d});
   DistDnVec_t c({new DnVec_t(Vdist.rows), grid2d});
 

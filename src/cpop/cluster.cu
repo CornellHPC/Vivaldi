@@ -478,7 +478,6 @@ int spmm2d_bs(Handle& handle, DistV2D& V, DistV2D& V_tr, DistDnMat_t& K, DistDnM
     recv_nnz[grid->row_rank] = V_tr.nnz;
     MPI_Allreduce(MPI_IN_PLACE, recv_nnz, niters, MPI_INT64_T, MPI_SUM, grid->row_comm);
 
-    //print_device_matrix(V_tr.d_rowinds, 1, V_tr.nnz);
 
 
     for (int i=0; i<niters; i++)
@@ -544,7 +543,6 @@ int spmm2d_bs(Handle& handle, DistV2D& V, DistV2D& V_tr, DistDnMat_t& K, DistDnM
         float alpha = 1.0f;
         float beta = 0.0f;
 
-        //par_print("V_tr rows: %lu, T rows: %lu\n", V_tr.tile_rows[i], T.mat->h_);
 
         // Buffer size 
         size_t buffer_size;
@@ -585,8 +583,6 @@ int spmm2d_bs(Handle& handle, DistV2D& V, DistV2D& V_tr, DistDnMat_t& K, DistDnM
         auto reduce_start = hrc::now();
 #endif
 
-        //MPI_Reduce(T.mat->dM, E.mat->dM, T.mat->h_ * T.mat->w_, MPI_FLOAT, MPI_SUM, i, grid->col_comm);
-        //par_print("T rows: %lu, E rows: %lu, V rows: %lu\n", T.mat->h_, E.mat->h_, V.tile_rows[i]);
         MPI_Reduce(d_T, E.mat->dM, V.tile_rows[i] * E.mat->w_, MPI_FLOAT, MPI_SUM, i, grid->col_comm);
         CHECK_CUDA(cudaMemset(d_T, 0, sizeof(float) * E.mat->w_ * V.tile_rows[0]));
 
