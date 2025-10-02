@@ -39,6 +39,8 @@ struct DistV2D {
   int * d_remote_colptrs;
   int * d_remote_rowinds;
 
+  float * d_v_dense;
+
   int * tile_rows;
   int * tile_cols;
   int64_t * tile_nnz;

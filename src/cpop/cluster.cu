@@ -309,6 +309,9 @@ DnVec_t::~DnVec_t() {
 int spmm2d(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E)
 {
 
+    std::cerr<<"do not use spmm2d"<<std::endl;
+    MPI_Abort(MPI_COMM_WORLD, 1);
+
     auto grid = V.grid;
 
     const int niters = grid->row_size;
@@ -528,9 +531,6 @@ int spmm2d_bs(Handle& handle, DistV2D& V, DistV2D& V_tr, DistDnMat_t& K, DistDnM
         auto comp_start = hrc::now();
 #endif
 
-        CHECK_CUSPARSE(cusparseCreateDnMat(&T, V_tr.tile_rows[i], V_tr.tile_cols[i], V_tr.tile_cols[i], d_T,
-                    CUDA_R_32F, CUSPARSE_ORDER_ROW));
-
 
         CHECK_CUSPARSE(cusparseCreateCsc(&loc_V, V_tr.tile_rows[i], V_tr.tile_cols[i],
                           recv_nnz[i],
@@ -546,28 +546,64 @@ int spmm2d_bs(Handle& handle, DistV2D& V, DistV2D& V_tr, DistDnMat_t& K, DistDnM
         float alpha = 1.0f;
         float beta = 0.0f;
 
+        if (handle.isSparse())
+        {
 
-        // Buffer size 
-        size_t buffer_size;
-        void* buffer;
-        CHECK_CUSPARSE(cusparseSpMM_bufferSize(
-            handle.sh(), CUSPARSE_OPERATION_NON_TRANSPOSE,
-            CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, loc_V, K.mat->M, &beta, T,
-            CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, &buffer_size));
-        CHECK_CUDA(cudaMalloc(&buffer, buffer_size));
-        CHECK_CUDA(cudaDeviceSynchronize());
+            CHECK_CUSPARSE(cusparseCreateDnMat(&T, V_tr.tile_rows[i], V_tr.tile_cols[i], V_tr.tile_cols[i], d_T, CUDA_R_32F, CUSPARSE_ORDER_ROW));
 
-        // Perform SpMM
-        CHECK_CUSPARSE(cusparseSpMM(
-            handle.sh(), CUSPARSE_OPERATION_NON_TRANSPOSE,
-            CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, loc_V, K.mat->M, &beta, T,
-            CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, buffer));
-        CHECK_CUDA(cudaDeviceSynchronize());
+            // Buffer size 
+            size_t buffer_size;
+            void* buffer;
+            CHECK_CUSPARSE(cusparseSpMM_bufferSize(
+                handle.sh(), CUSPARSE_OPERATION_NON_TRANSPOSE,
+                CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, loc_V, K.mat->M, &beta, T,
+                CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, &buffer_size));
+            CHECK_CUDA(cudaMalloc(&buffer, buffer_size));
+            CHECK_CUDA(cudaDeviceSynchronize());
 
-        // Clean up
-        CHECK_CUDA(cudaFree(buffer));
+            // Perform SpMM
+            CHECK_CUSPARSE(cusparseSpMM(
+                handle.sh(), CUSPARSE_OPERATION_NON_TRANSPOSE,
+                CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, loc_V, K.mat->M, &beta, T,
+                CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, buffer));
+            CHECK_CUDA(cudaDeviceSynchronize());
+
+            // Clean up
+            CHECK_CUDA(cudaFree(buffer));
+            CHECK_CUSPARSE(cusparseDestroyDnMat(T));
+        }
+        else
+        {
+            assert( V_tr.global_rows % grid->col_size == 0 && "Dense 2D does not work when k % sqrt(P) != 0\n");
+            cusparseDnMatDescr_t v_dense;
+            size_t buf_size = 0;
+            void * d_buf = nullptr;
+
+            //CHECK_CUDA(cudaMemset(V_tr.d_v_dense, 0, sizeof(float) * V_tr.tile_rows[i] * V_tr.tile_cols[i]));
+            CHECK_CUSPARSE(cusparseCreateDnMat(&v_dense, V_tr.tile_rows[i], V_tr.tile_cols[i], V_tr.tile_cols[i], V_tr.d_v_dense, CUDA_R_32F, CUSPARSE_ORDER_ROW));
+            CHECK_CUSPARSE(cusparseSparseToDense_bufferSize(handle.sh(), loc_V, v_dense, CUSPARSE_SPARSETODENSE_ALG_DEFAULT, &buf_size));
+            CHECK_CUDA(cudaMalloc(&d_buf, buf_size));
+            CHECK_CUSPARSE(cusparseSparseToDense(handle.sh(), loc_V, v_dense, CUSPARSE_SPARSETODENSE_ALG_DEFAULT, d_buf));
+            CHECK_CUDA(cudaDeviceSynchronize());
+            CHECK_CUDA(cudaFree(d_buf));
+
+            CHECK_CUSPARSE(cusparseDestroyDnMat(v_dense));
+
+            CHECK_CUBLAS(cublasSgemm(handle.dh(),
+                                     CUBLAS_OP_N, CUBLAS_OP_N, 
+                                     V_tr.tile_cols[i],
+                                     V_tr.tile_rows[i],
+                                     V_tr.tile_cols[i],
+                                     &alpha,
+                                     K.mat->dM, V_tr.tile_cols[i],
+                                     V_tr.d_v_dense, V_tr.tile_cols[i],
+                                     &beta,
+                                     d_T,
+                                     V_tr.tile_cols[i]));
+
+
+        }
         CHECK_CUSPARSE(cusparseDestroySpMat(loc_V));
-        CHECK_CUSPARSE(cusparseDestroyDnMat(T));
 
 #ifdef DEBUG2D
         if (grid->world_rank==0)
@@ -587,7 +623,7 @@ int spmm2d_bs(Handle& handle, DistV2D& V, DistV2D& V_tr, DistDnMat_t& K, DistDnM
 #endif
 
         MPI_Reduce(d_T, E.mat->dM, V.tile_rows[i] * E.mat->w_, MPI_FLOAT, MPI_SUM, i, grid->col_comm);
-        CHECK_CUDA(cudaMemset(d_T, 0, sizeof(float) * E.mat->w_ * V.tile_rows[0]));
+        //CHECK_CUDA(cudaMemset(d_T, 0, sizeof(float) * E.mat->w_ * V.tile_rows[0]));
 
 #ifdef DEBUG2D
         if (grid->world_rank==0)
@@ -717,7 +753,7 @@ int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMa
         cusparseDnMatDescr_t v_dense;
         size_t buf_size = 0;
         void * d_buf = nullptr;
-        CHECK_CUDA(cudaMemset(loc_v->d_v_dense, 0, sizeof(float) * loc_v->k_ * loc_v->t*sqrtp));
+        //CHECK_CUDA(cudaMemset(loc_v->d_v_dense, 0, sizeof(float) * loc_v->k_ * loc_v->t*sqrtp));
         CHECK_CUSPARSE(cusparseCreateDnMat(&v_dense, loc_v->k_, sqrtp*loc_v->t, sqrtp*loc_v->t, loc_v->d_v_dense, CUDA_R_32F, CUSPARSE_ORDER_ROW));
 
         CHECK_CUSPARSE(cusparseSparseToDense_bufferSize(handle.sh(), v_gather, v_dense, CUSPARSE_SPARSETODENSE_ALG_DEFAULT, &buf_size));

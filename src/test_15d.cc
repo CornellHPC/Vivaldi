@@ -70,7 +70,7 @@ int main(int argc, char* argv[]) {
   std::shared_ptr<ProcessGrid> grid1d = std::make_shared<ProcessGrid>(world_size, 1, false);
 
   /** Const */
-  bool s = false;
+  bool s = true;
   int m = 1024;
   int n = 8;
   int k = 32;
@@ -127,7 +127,7 @@ int main(int argc, char* argv[]) {
       spmm15d(handle, Vdist, K2D, E, E_p, d_tmp, d_tmp2);
 
       check_e(Ecorrect, *E.mat, rank, logfile_path);
-      print_phase("E correct");
+      //print_phase("E correct");
 
       compute_z(V, Ecorrect, zcorrect);
       compute_z(*Vdist.local_v, *E.mat, *z.vec);

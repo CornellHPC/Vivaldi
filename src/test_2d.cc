@@ -103,14 +103,14 @@ int main(int argc, char* argv[]) {
 
   /** Const */
   bool s = true;
-  int m = 90;
+  int m = 2048;
   int n = 8;
-  int k = 32;
+  int k = 128;
 
   DistV2D Vdist(m, k, grid2d);
   int tr_rank = (grid2d->col_rank) * grid2d->col_size + grid2d->row_rank;
   DistV2D Vdist_tr(m, k, Vdist.tile_rows[grid2d->row_rank], Vdist.cols, grid2d);
-  V_t V(m, k, s, comm);
+  V_t V(m, k, true, comm);
   int t = V.t;  // get this process tile size
   
 
@@ -119,6 +119,7 @@ int main(int argc, char* argv[]) {
   wake_gpus(rank);
   slate::gpu_aware_mpi(true);
   Handle handle(s);
+  Handle handle_1d(true);
 
   auto PT = load_matrix("../data/randi", m, n, comm);
   DnMat_t K1D(m, t, compute_kernel_matrix(PT, 1.0f, 1.0f, 1.0f));
@@ -147,15 +148,15 @@ int main(int argc, char* argv[]) {
   {
       print_phase("Iteration beginning");
 
-      spmm(handle, V, K1D, Ecorrect);
+      spmm(handle_1d, V, K1D, Ecorrect);
       spmm2d_bs(handle, Vdist, Vdist_tr, K2D, E, d_T_buf);
       //spmm2d(handle, Vdist, K2D, E);
       //print_device_matrix(E.mat->dM, E.mat->h_, E.mat->w_);
       //sleep(1);
       //fflush(stdout);
       //print_device_matrix(Ecorrect.dM, Ecorrect.h_, Ecorrect.w_);
-      print_phase("SpMM Done");
-      MPI_Barrier(MPI_COMM_WORLD);
+      //print_phase("SpMM Done");
+      //MPI_Barrier(MPI_COMM_WORLD);
 
 
       compute_z(V, Ecorrect, zcorrect);
@@ -164,20 +165,20 @@ int main(int argc, char* argv[]) {
       //print_device_matrix(z.vec->dz, 1, z.vec->size);
       //print_device_matrix(zcorrect.dz, 1, zcorrect.size);
 
-      spmv(handle, V, zcorrect, ccorrect);
+      spmv(handle_1d, V, zcorrect, ccorrect);
       sum_vec(ccorrect, comm);
       //print_device_matrix(ccorrect.dz, 1, ccorrect.size); 
-      MPI_Barrier(MPI_COMM_WORLD);
+      //MPI_Barrier(MPI_COMM_WORLD);
 
 
       spmv(handle, Vdist, *z.vec, *c.vec);
       sum_vec2d(c);
       //print_device_matrix(c.vec->dz, 1, c.vec->size); 
-      MPI_Barrier(MPI_COMM_WORLD);
+      //MPI_Barrier(MPI_COMM_WORLD);
       //print_phase("SpMV Done");
 
       check_c(c, ccorrect, logfile_path);
-      print_phase("c vector correct");
+      //print_phase("c vector correct");
 
       reinit_V(Ecorrect, ccorrect, V);
 
@@ -196,7 +197,7 @@ int main(int argc, char* argv[]) {
 
       check_assignments(Vdist, V, logfile_path);
 
-      par_print("NNZ V(%d, %d): %zu\n", grid2d->col_rank, grid2d->row_rank, Vdist.nnz);
+      //par_print("NNZ V(%d, %d): %zu\n", grid2d->col_rank, grid2d->row_rank, Vdist.nnz);
 
       print_phase("Iteration correct");
   }

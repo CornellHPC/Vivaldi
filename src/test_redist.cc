@@ -71,7 +71,7 @@ int main(int argc, char* argv[]) {
   bool s = true;
   int m = 128;
   int n = 8;
-  int k = 2;
+  int k = 16;
 
   V_t V(m, k, s, comm);
   int t = V.t;  // get this process tile size
