@@ -130,15 +130,15 @@ void Timer::save_elapsed(const char* path) {
 }
 
 
-void Timer::gather_nnz_perproc() {
-    MPI_Gather(nnz_perproc, niter, MPI_INT64_T, global_nnz_perproc, niter, MPI_INT64_T, 0, MPI_COMM_WORLD);
+void Timer::allgather_nnz_perproc() {
+    MPI_Allgather(nnz_perproc, niter, MPI_INT64_T, global_nnz_perproc, niter, MPI_INT64_T, MPI_COMM_WORLD);
 }
 
 
 void Timer::save_all(const char* path, float score) {
 
   if (global_nnz_perproc != nullptr) {
-    gather_nnz_perproc();
+    allgather_nnz_perproc();
   }
 
   int rank, size;
@@ -218,6 +218,83 @@ void Timer::save_all(const char* path, float score) {
   std::cout << "-------------------" << std::endl;
 }
 
+
+void Timer::save_allranks(const char* path, float score) {
+
+  if (global_nnz_perproc != nullptr) {
+    allgather_nnz_perproc();
+  }
+
+  int rank, size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+  std::string fpath(path);
+  fpath += "_rank" + std::to_string(rank);
+
+  std::ofstream file(fpath);  // Open the file in write mode
+  if (!file.is_open()) {
+    std::cerr << "Error opening file: " << fpath
+              << std::endl;  // Print error message if file cannot be opened
+    return;                  // Exit the function if file cannot be opened
+  }
+
+  file << "IO: " << io << std::endl;
+  file << "K: " << k_elapsed << std::endl;
+  file << "K Redist: " << k_redist << std::endl;
+  file << "VI: " << vi_elapsed << std::endl;
+  file << "E: " << e_elapsed << std::endl;
+  file << "E Transpose: " << e_transpose << std::endl;
+  file << "E MPI: " << e_mpi << std::endl;
+  file << "E Reduce: " << e_reduce << " ms" << std::endl;
+  file << "E Gather: " << e_gather << " ms" << std::endl;
+  file << "E SpMM: " << e_spmm << std::endl;
+  file << "E other: " << e_other << std::endl;
+  file << "Z: " << z_elapsed << std::endl;
+  file << "C: " << c_elapsed << std::endl;
+  file << "C MPI: " << c_mpi << std::endl;
+  file << "C Computation: " << c_computation << std::endl;
+  file << "VR Computation: " << vr_computation << std::endl;
+  file << "Elapsed: " << elapsed << std::endl;
+  file << "Iterations before convergence: " << niter << std::endl;
+  if (global_nnz_perproc != nullptr) {
+    file << "NNZ per proc: " << std::endl;
+    for (int i=0; i<niter; ++i) {
+      file << "    Iteration "<<i<<std::endl;
+      for (int j=0; j<size; ++j) {
+        file << "        Process "<<j<<": "<<global_nnz_perproc[j * niter + i]<<std::endl;
+      }
+    }
+  }
+      
+  file.close();  // Close the file
+  
+  // Only rank 0 prints times
+  if (rank==0) {
+    std::cout << "-------------------" << std::endl;
+    std::cout << "IO: " << io << " ms" << std::endl;
+    std::cout << "K: " << k_elapsed << " ms" << std::endl;
+    std::cout << "K Redist: " << k_redist << " ms" << std::endl;
+    std::cout << "VI: " << vi_elapsed << " ms" << std::endl;
+    std::cout << "E: " << e_elapsed << " ms" << std::endl;
+    std::cout << "E Transpose: " << e_transpose << " ms" << std::endl;
+    std::cout << "E MPI: " << e_mpi << " ms" << std::endl;
+    std::cout << "E Reduce: " << e_reduce << " ms" << std::endl;
+    std::cout << "E Gather: " << e_gather << " ms" << std::endl;
+    std::cout << "E SpMM: " << e_spmm << " ms" << std::endl;
+    std::cout << "E other: " << e_other << std::endl;
+    std::cout << "Z: " << z_elapsed << " ms" << std::endl;
+    std::cout << "C: " << c_elapsed << " ms" << std::endl;
+    std::cout << "C MPI: " << c_mpi << " ms" << std::endl;
+    std::cout << "C Computation: " << c_computation << " ms" << std::endl;
+    std::cout << "VR Computation: " << vr_computation << " ms" << std::endl;
+    std::cout << "Elapsed: " << elapsed << " ms" << std::endl;
+    std::cout << "Iterations before convergence: " << niter << std::endl;
+    // std::cout << "Cluster score: " << score << std::endl;
+    std::cout << "Results saved to: " << path << std::endl;
+    std::cout << "-------------------" << std::endl;
+  }
+}
 void wake_gpus(int rank) {
   int ndevices;
   cudaGetDeviceCount(&ndevices);

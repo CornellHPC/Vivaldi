@@ -211,7 +211,6 @@ float * redistribute_2d_1d(Handle& handle, float * K, const uint64_t m, const ui
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
     int grid_dim = square_grid_dim(MPI_COMM_WORLD);
-    int row_rank = rank % grid_dim;
     int col_rank = rank / grid_dim;
 
     int * sendcounts = new int[size];

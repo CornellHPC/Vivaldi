@@ -109,7 +109,7 @@ struct Timer {
   int64_t * global_nnz_perproc = nullptr;
 
 
-  void gather_nnz_perproc();
+  void allgather_nnz_perproc();
 
   /**
    * @brief Save only the elapsed time as a single value to a file.
@@ -125,6 +125,7 @@ struct Timer {
    * @param score cluster score
    */
   void save_all(const char* path, float score);
+  void save_allranks(const char* path, float score);
 };
 
 class Handle {

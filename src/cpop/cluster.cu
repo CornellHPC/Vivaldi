@@ -524,6 +524,7 @@ int spmm2d_bs(Handle& handle, DistV2D& V, DistV2D& V_tr, DistDnMat_t& K, DistDnM
         MPI_Bcast(d_colptrs_send, V_tr.tile_cols[i] + 1, MPI_INT, i, grid->row_comm);
 
 #ifndef BASIC
+        CHECK_CUDA(cudaDeviceSynchronize());
         timer.e_mpi += get_time_elapsed(bcast_start);
 #endif
 
@@ -623,7 +624,6 @@ int spmm2d_bs(Handle& handle, DistV2D& V, DistV2D& V_tr, DistDnMat_t& K, DistDnM
 #endif
 
         MPI_Reduce(d_T, E.mat->dM, V.tile_rows[i] * E.mat->w_, MPI_FLOAT, MPI_SUM, i, grid->col_comm);
-        //CHECK_CUDA(cudaMemset(d_T, 0, sizeof(float) * E.mat->w_ * V.tile_rows[0]));
 
 #ifdef DEBUG2D
         if (grid->world_rank==0)
@@ -652,7 +652,6 @@ int spmm2d_bs(Handle& handle, DistV2D& V, DistV2D& V_tr, DistDnMat_t& K, DistDnM
  *  3. Allgather along rows, then -- reduce + scatter along columns
  *  4. Allgather along rows, then -- alltoallv + local reduction along columns
  */
-
 int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMat_t& E_p, float * d_tmp, float * d_tmp2)
 {
     auto grid2d = K.grid;
@@ -666,7 +665,6 @@ int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMa
     DnMat_t * loc_e = E.mat;
     DnMat_t * loc_e_p = E_p.mat;
 
-    assert(loc_v->sparse && "1.5D only works with sparse V for now");
 
     // Allgather local V along process rows of grid2d
     // We only have to communicate the rowinds array

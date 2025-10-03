@@ -225,7 +225,7 @@ int cluster2d(ArgParse args, MPI_Comm comm)
   MPI_Barrier(comm);
   timer.elapsed = get_time_elapsed(start);
   float score = 0.0f; //TODO -- 2d cluster score
-  timer.save_all(args.benchmark.c_str(), score);
+  timer.save_allranks(args.benchmark.c_str(), score);
   return EXIT_SUCCESS;
 }
 
@@ -405,7 +405,7 @@ int cluster15d(ArgParse args, MPI_Comm comm)
   /** Save and exit */
   MPI_Barrier(comm);
   timer.elapsed = get_time_elapsed(start);
-  timer.save_all(args.benchmark.c_str(), 0.0); //TODO: cluster score computation
+  timer.save_allranks(args.benchmark.c_str(), 0.0); //TODO: cluster score computation
   V.local_v->save(args.output.c_str());
   return EXIT_SUCCESS;
 }
@@ -582,7 +582,7 @@ int cluster1d(ArgParse args, MPI_Comm comm)
   MPI_Barrier(comm);
   timer.elapsed = get_time_elapsed(start);
   float score = compute_cluster_score(K, E, c, V);
-  timer.save_all(args.benchmark.c_str(), score);
+  timer.save_allranks(args.benchmark.c_str(), score);
   if (rank==0)
   {
       std::cout<<"K-means score: "<<score<<std::endl;
