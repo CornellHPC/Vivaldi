@@ -70,7 +70,7 @@ MAX_NUM_POINTS = 1600000  ## one million points limit for basically everything
 
 SCALING_HIGHEST_POWER = 6  ## for graph generation
 N_TRIALS = 5  ## number of trials for each experiment
-P = [4, 8, 16, 32, 64, 128, 256]  # number of GPUs (must be divisible by 4)
+P = [4, 16, 64, 256]  # number of GPUs (must be divisible by 4)
 K = [8, 16, 32, 64, 128]
 C = ["K", "VI", "E", "Z", "C MPI", "C Computation", "VR MPI", "VR Computation"]
 
@@ -479,7 +479,7 @@ def read_data(formatted_txt_file) -> np.ndarray:
 
 
 def create_scripts(account, path=os.getcwd(), n_trials=5, base_m=2**17, max_m=2**20):
-    P = [2**i for i in range(2,9)]
+    P = [2**i for i in range(2,9,2)]
 
     for p in P:
         # Strong scaling
@@ -520,14 +520,13 @@ def create_scripts(account, path=os.getcwd(), n_trials=5, base_m=2**17, max_m=2*
     os.chmod(all_path, st.st_mode | stat.S_IEXEC)
 
 
-def create_script(path, prefix, account, p, m, k, dataset, alg, d=None, sparse=True, niter=100, gamma=1, c=1, r=2, basic=False, convergence=False):
+def create_script(path, prefix, account, p, m, k, dataset, alg, d=None, sparse=None, niter=100, gamma=1, c=1, r=2, basic=False, convergence=False):
     """
     This function accepts either a single value or list for
     m, d, k, dataset, and alg. If a list is supplied, the
     script will perform one srun for each value.
     """
 
-    sparse = int(sparse)
     basic = int(basic)
     convergence = int(convergence)
     nodes = math.ceil(p /4)
@@ -587,14 +586,18 @@ def create_script(path, prefix, account, p, m, k, dataset, alg, d=None, sparse=T
                             if d[0] is None:
                                 _d = _dataset["d"]
                             _m = min(_m, _dataset["m"])
+                            if sparse is None:
+                                _sparse = int(_k > 32)
+                            else:
+                                _sparse = int(sparse)
 
-                            name = f"{prefix}_{p}_{_m}_{_d}_{_k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{dataset_label}_{_alg}"
+                            name = f"{prefix}_{p}_{_m}_{_d}_{_k}_{niter}_{_sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{dataset_label}_{_alg}"
                             log_fname = os.path.join(log_dir, f"{name}_out")
                             result_fname = os.path.join(results_dir, f"{name}_assignments")
                             bench_fname = os.path.join(results_dir, f"{name}_time_${{SLURM_ARRAY_TASK_ID}}")
 
                             f.write(f"srun -N {nodes} --ntasks-per-node {p//nodes} --cpus-per-task 32 --cpu-bind cores -G {p} $PWD/../build/device_wrapper $PWD/../build/main ") # No newline so params on same line
-                            f.write(f"-i {dataset_fname} -m {_m} -n {_d} --niter {niter} --sparse {sparse} --gamma {gamma} --c {c} --r {r} --convergence {convergence} -k {_k} -o {result_fname} --benchmark {bench_fname} --alg {_alg} \n")
+                            f.write(f"-i {dataset_fname} -m {_m} -n {_d} --niter {niter} --sparse {_sparse} --gamma {gamma} --c {c} --r {r} --convergence {convergence} -k {_k} -o {result_fname} --benchmark {bench_fname} --alg {_alg} \n")
 
 
 def get_scaling_data(
