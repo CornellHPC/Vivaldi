@@ -9,6 +9,7 @@
 
 //#define GEMM_2D
 //#define DEBUG2D
+#define SPARSITY_THRESH 0.97
 
 namespace cpop {
 

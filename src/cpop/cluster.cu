@@ -468,6 +468,10 @@ int spmm2d_bs(Handle& handle, DistV2D& V, DistV2D& V_tr, DistDnMat_t& K, DistDnM
     int tr_rank = (grid->col_rank) * grid->col_size + grid->row_rank;
     V_tr.nnz = V.tile_nnz[tr_rank];
 
+#ifndef BASIC
+    auto preprocess = hrc::now();
+#endif
+
     MPI_Sendrecv(V.d_vals, V.nnz, MPI_FLOAT, tr_rank, 100, 
                  V_tr.d_vals, V_tr.nnz, MPI_FLOAT, tr_rank, 100,
                  grid->world_comm, MPI_STATUS_IGNORE);
@@ -484,6 +488,10 @@ int spmm2d_bs(Handle& handle, DistV2D& V, DistV2D& V_tr, DistDnMat_t& K, DistDnM
     recv_nnz[grid->row_rank] = V_tr.nnz;
     MPI_Allreduce(MPI_IN_PLACE, recv_nnz, niters, MPI_INT64_T, MPI_SUM, grid->row_comm);
 
+
+#ifndef BASIC
+    timer.e_mpi += get_time_elapsed(preprocess);
+#endif
 
 
     for (int i=0; i<niters; i++)
@@ -547,7 +555,9 @@ int spmm2d_bs(Handle& handle, DistV2D& V, DistV2D& V_tr, DistDnMat_t& K, DistDnM
         float alpha = 1.0f;
         float beta = 0.0f;
 
-        if (handle.isSparse())
+        bool is_sparse = (recv_nnz[i] / (V_tr.tile_rows[i] * V_tr.tile_cols[i])) <= SPARSITY_THRESH;
+
+        if (is_sparse)
         {
 
             CHECK_CUSPARSE(cusparseCreateDnMat(&T, V_tr.tile_rows[i], V_tr.tile_cols[i], V_tr.tile_cols[i], d_T, CUDA_R_32F, CUSPARSE_ORDER_ROW));

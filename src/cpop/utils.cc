@@ -295,6 +295,12 @@ void Timer::save_allranks(const char* path, float score) {
     std::cout << "-------------------" << std::endl;
   }
 }
+
+int mod(int a, int b) {
+    int r = a % b;
+    return (r < 0) ? r + b : r;
+}
+
 void wake_gpus(int rank) {
   int ndevices;
   cudaGetDeviceCount(&ndevices);
@@ -309,6 +315,25 @@ void wake_gpus(int rank) {
 
   if (rank == 0)
     std::cout << " DONE!\n" << std::flush;
+
+  cublasHandle_t handle;
+  CHECK_CUBLAS(cublasCreate(&handle));
+  
+  float * d_x;
+  float result;
+  CHECK_CUDA(cudaMalloc(&d_x, sizeof(float) * 4));
+  CHECK_CUBLAS(cublasSnrm2(handle, 4, d_x, 1, &result));
+  CHECK_CUDA(cudaDeviceSynchronize());
+  CHECK_CUDA(cudaFree(d_x));
+  CHECK_CUBLAS(cublasDestroy(handle));
+
+  int size;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  int target = (rank + 1) % size;
+  int source = mod(rank-1, size);
+  int recv;
+  MPI_Sendrecv(&rank, 1, MPI_INT, target, target, &recv, 1, MPI_INT, source, rank, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                
 }
 
 int64_t get_time_elapsed(std::chrono::_V2::system_clock::time_point start) {
