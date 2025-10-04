@@ -3,18 +3,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker
 
-# Test for strong scaling (70k points per GPU)
-INCLUDE_STRONG_SCALING = True
-# Test for variant weak scaling (70k points per GPU, sqrt(p) scaling)
-INCLUDE_VARIANT_SCALING = True 
-# Test for proper weak scaling (m and d scaling, random data)
-INCLUDE_PROPER_WEAK_SCALING = False
-# Convergence (process exclusion and no process exclusion) testing for weak scaling
-INCLUDE_CONVERGENCE_TESTING = False
-# Mode testing for K
-INCLUDE_MODE_TESTING = False
-# Base m for scaling
-BASE_M = [64000, 70000]
 # Color map for graph
 CMAP = plt.cm.viridis
 # Markers for graph
@@ -58,6 +46,9 @@ DATASETS = [
     },
 ]
 
+# TODO: Use remaining datasetse
+DATASETS = [DATASETS[-1]]
+
 RANDOM_DATASET = {
     "bin_fname": "data/rand.bin",
     "name": "rand",
@@ -66,286 +57,9 @@ RANDOM_DATASET = {
     "d": 1024,
 }
 
-MAX_NUM_POINTS = 1600000  ## one million points limit for basically everything
-
-SCALING_HIGHEST_POWER = 6  ## for graph generation
-N_TRIALS = 5  ## number of trials for each experiment
 P = [4, 16, 64, 256]  # number of GPUs (must be divisible by 4)
 K = [16, 32, 64, 128]
-C = ["K", "VI", "E", "Z", "C MPI", "C Computation", "VR MPI", "VR Computation"]
-
-
-def request_p_prefix(p, nodes, log_dir, s_name, alg=None):
-    if p >= 256:
-        timestamp = "02:00:00"
-    elif p >= 128:
-        timestamp = "01:30:00"
-    elif p >= 32:
-        timestamp = "00:50:00"
-    else:
-        timestamp = "00:40:00"
-
-    return f"""#!/bin/bash
-#SBATCH --nodes={nodes}
-#SBATCH --gpus={p}
-#SBATCH --time={timestamp}
-#SBATCH --constraint=gpu
-#SBATCH --qos=regular
-#SBATCH --account=m4341
-#SBATCH --output={log_dir}/{s_name}_out"""
-
-
-test_counter = 0
-
-
-def run_5_trials(
-    f,
-    input_dataset_path,
-    results_dir,
-    s_name,
-    nodes,
-    p,
-    m,
-    d,
-    k,
-    niter,
-    sparse,
-    gamma,
-    c,
-    r,
-    convergence,
-):
-    global test_counter
-    test_counter += 1
-    print("Added test", test_counter)
-    main_args = f"-i {input_dataset_path} -m {m} -n {d} --niter {niter} --sparse {sparse} --gamma {gamma} --c {c} --r {r} --convergence {convergence} -k {k}"
-    log_args = f"-o {results_dir}/{s_name}_assignments --benchmark {results_dir}/{s_name}_time_$i"
-    n_trials = 5
-    f.write(f'echo "Running with args {main_args}"\n')
-    f.write(f'echo ""\n')
-    f.write(f"for i in $(seq 1 {n_trials}); do\n")
-    f.write(f'  echo "Trial $i"\n')
-    f.write(
-        f"  srun -N {nodes} --ntasks-per-node {p//nodes} --cpus-per-task 32 --cpu-bind cores -G {p} $EXE_PATH {main_args} {log_args}\n"
-    )
-    f.write(f'  echo ""\n')
-    f.write(f"done\n\n")
-
-
-def create_file_text(
-    p,
-    unique_id,
-    experiments_dir="$PWD",
-):
-    if p % 4 != 0:
-        raise ValueError("Number of nodes must be divisible by 4")
-    nodes = p // 4
-    suffix = 0
-    while os.path.exists(f"exp_{p}_{suffix}.sh"):
-        suffix += 1
-    s_name = f"exp_{unique_id}conv_{p}_{suffix}"
-    log_dir = "logs"
-    os.makedirs(log_dir, exist_ok=True)
-    results_dir = "results"
-    os.makedirs(results_dir, exist_ok=True)
-    scripts_dir = "scripts"
-    os.makedirs(scripts_dir, exist_ok=True)
-    bash_file = os.path.join(scripts_dir, f"{s_name}.sh")
-
-    with open(bash_file, "w") as f:
-        f.write(request_p_prefix(p, nodes, log_dir, s_name) + "\n")
-        f.write("export DVS_MAXNODES=1__\n")
-        f.write(
-            f'export EXE_PATH="{experiments_dir}/../build/device_wrapper {experiments_dir}/../build/main"\n'
-        )
-        f.write("module load cudatoolkit/12.2\n")
-        gamma = 1  # gamma fixed at 1
-        c = 1  # c fixed at 1
-        r = 2  # r fixed at 2 (quadratic kernel)
-        basic = True  # todo (all): this won't do breakdown
-        for input_dataset in DATASETS:
-            input_dataset_path = input_dataset["bin_fname"]
-            input_dataset_name = input_dataset["name"]
-
-            if INCLUDE_STRONG_SCALING:
-                d = input_dataset["d"]
-                niter = 100
-                convergence = 0
-                m = 2 * BASE_M  # experimentally decided that 128k points fit on 4 GPUs
-                for k in K:
-                    # 32 based on experiments
-                    sparse = True #int(k > 32)
-                    run_5_trials(
-                        f,
-                        input_dataset_path,
-                        results_dir,
-                        f"{unique_id}_s_{p}_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}",
-                        nodes,
-                        p,
-                        m,
-                        d,
-                        k,
-                        niter,
-                        sparse,
-                        gamma,
-                        c,
-                        r,
-                        convergence,
-                    )
-            if INCLUDE_VARIANT_SCALING:
-                d = input_dataset["d"]
-                for k in K:
-                    # weak scaling number of points
-                    m = min(
-                        int(BASE_M * np.sqrt(p)),
-                        int(input_dataset["m"]),
-                        MAX_NUM_POINTS,
-                    )
-                    # m -= m % p
-                    # 32 based on experiments
-                    sparse = True #int(k > 32)
-                    niter = 100
-                    convergence = 0
-                    run_5_trials(
-                        f,
-                        input_dataset_path,
-                        results_dir,
-                        f"{unique_id}_w_{p}_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}",
-                        nodes,
-                        p,
-                        m,
-                        d,
-                        k,
-                        niter,
-                        sparse,
-                        gamma,
-                        c,
-                        r,
-                        convergence,
-                    )
-            if INCLUDE_CONVERGENCE_TESTING:
-                d = input_dataset["d"]
-                for k in K:
-                    # weak scaling number of points
-                    m = min(
-                        int(BASE_M * np.sqrt(p)),
-                        int(input_dataset["m"]),
-                        MAX_NUM_POINTS,
-                    )
-                    # m -= m % p
-                    # 32 based on experiments
-                    sparse = True
-                    niter = 1000
-                    convergence = 1
-                    run_5_trials(
-                        f,
-                        input_dataset_path,
-                        results_dir,
-                        f"{unique_id}_wc_{p}_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}",
-                        nodes,
-                        p,
-                        m,
-                        d,
-                        k,
-                        niter,
-                        sparse,
-                        gamma,
-                        c,
-                        r,
-                        convergence,
-                    )
-                    convergence = 2
-                    run_5_trials(
-                        f,
-                        input_dataset_path,
-                        results_dir,
-                        f"{unique_id}_wce_{p}_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}",
-                        nodes,
-                        p,
-                        m,
-                        d,
-                        k,
-                        niter,
-                        sparse,
-                        gamma,
-                        c,
-                        r,
-                        convergence,
-                    )
-            # combblas (todo)
-        if INCLUDE_PROPER_WEAK_SCALING:
-            input_dataset = RANDOM_DATASET
-            input_dataset_path = input_dataset["bin_fname"]
-            input_dataset_name = input_dataset["name"]
-            d = 4 * p
-            niter = 100
-            convergence = 0
-            for k in K:
-                # weak scaling number of points
-                m = min(
-                    int(BASE_M * np.sqrt(p)), int(input_dataset["m"]), MAX_NUM_POINTS
-                )
-                m -= m % p
-                # 32 based on experiments
-                sparse = True
-                run_5_trials(
-                    f,
-                    input_dataset_path,
-                    results_dir,
-                    f"{unique_id}_wp_{p}_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}",
-                    nodes,
-                    p,
-                    m,
-                    d,
-                    k,
-                    niter,
-                    sparse,
-                    gamma,
-                    c,
-                    r,
-                    convergence,
-                )
-        if INCLUDE_MODE_TESTING:
-            if p == 4:
-                for m in {16000, 32000, BASE_M}:
-                    for k in K:
-                        sparse = 1
-                        run_5_trials(
-                            f,
-                            input_dataset_path,
-                            results_dir,
-                            f"{unique_id}_m_1_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}",
-                            1,
-                            1,
-                            m,
-                            d,
-                            k,
-                            niter,
-                            sparse,
-                            gamma,
-                            c,
-                            r,
-                            convergence,
-                        )
-                        sparse = 0
-                        run_5_trials(
-                            f,
-                            input_dataset_path,
-                            results_dir,
-                            f"{unique_id}_m_1_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}",
-                            1,
-                            1,
-                            m,
-                            d,
-                            k,
-                            niter,
-                            sparse,
-                            gamma,
-                            c,
-                            r,
-                            convergence,
-                        )
-        f.write("echo 'Done!'\n")
+C = ["IO", "K", "K Redist", "VI", "E", "E Transpose", "E MPI", "E Reduce", "E Gather", "E SpMM", "E other", "Z", "C", "C MPI", "C Computation", "VR Computation", "Elapsed"]
 
 
 def create_random(low=0, high=100):
@@ -600,492 +314,61 @@ def create_script(path, prefix, account, p, m, k, dataset, alg, d=None, sparse=N
                             f.write(f"-i {dataset_fname} -m {_m} -n {_d} --niter {niter} --sparse {_sparse} --gamma {gamma} --c {c} --r {r} --convergence {convergence} -k {_k} -o {result_fname} --benchmark {bench_fname} --alg {_alg} \n")
 
 
-def get_scaling_data(
-    unique_id,
-    scaling_type,
-    p,
-    m,
-    d,
-    k,
-    niter,
-    sparse,
-    gamma,
-    c,
-    r,
-    convergence,
-    basic,
-    input_dataset_name,
-):
-    # ``scaling_type`` is one of "s" (strong) or "w" (weak)
+def get_scaling_data(scaling_type, p, m, d, k, niter, sparse, gamma, c, r, convergence, basic, input_dataset_name, alg, n_trials):
+    # ``scaling_type`` is one of "strong" or "weak"
     scaling_data = {}
-    for trial in range(N_TRIALS):
+    for trial in range(n_trials):
         trial_in_fname = trial + 1
-        fpath = f"results/{unique_id}_{scaling_type}_{p}_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}_time_{trial_in_fname}"
-        # print(f"Looking for {fpath}...")
+        fpath = f"results/{scaling_type}_{p}_{m}_{d}_{k}_{niter}_{sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{input_dataset_name}_{alg}_time_{trial_in_fname}_rank0"
         if not os.path.exists(fpath):
             print(f"Could not find {fpath}")
             continue
         with open(fpath, "r") as f:
-            while True:
+            for label in C:
                 line = f.readline()
-                if not line:
-                    break
-                if "," in line:
-                    continue
-                k_, v_ = line.split(": ")
-                if not k_ in scaling_data:
-                    scaling_data[k_] = np.zeros(N_TRIALS)
-                scaling_data[k_][trial] = int(v_)
+                _label, _v = line.split(": ")
+                if _label != label:
+                    print(f"Got label '{_label}' but expected label '{label}' in file '{fpath}'. Skipping this file...")
+                v = int(_v.split()[0])
+                if not label in scaling_data:
+                    scaling_data[label] = np.zeros(n_trials)
+                scaling_data[label][trial] = v
     return scaling_data
 
 
-def get_threshold_data(path="results"):
-    filenames = [x for x in os.listdir(path) if x.startswith("mode") and "time" in x]
-    pattern = re.compile(r"Elapsed: (\d+)")
-
-    data = {}
-    for filename in filenames:
-        filepath = os.path.join(path, filename)
-        with open(filepath) as f:
-            text = f.read()
-            match = pattern.search(text)
-            elapsed = int(match.group(1))
-        elems = filename.split("_")
-        m = int(elems[2])
-        k = int(elems[4])
-        sp = "sp" if elems[6] == "1" else "dn"
-        data.setdefault(m, {}).setdefault(sp, {}).setdefault(k, []).append(elapsed)
-
-    out = {}
-    for m, m_data in data.items():
-        out[m] = {
-            "m": sorted(int(x) for x in list(m_data.values())[0].keys()),
-            "sp": [sum(int(x) for x in l)/len(l) for _,l in sorted(m_data["sp"].items())],
-            "dn": [sum(int(x) for x in l)/len(l) for _,l in sorted(m_data["dn"].items())],
-        }
-    return out
-
-
-def construct_graphs():
+def construct_graphs(path=os.getcwd(), n_trials=5, base_m=2**17):
     os.makedirs("graphs", exist_ok=True)
-    unique_id = ""
 
-    # construct mode graph
-    plt.figure(figsize=(6, 4))
-    threshold_data = get_threshold_data()
-    for i, (m, m_data) in enumerate(threshold_data.items()):
-        x = m_data["m"]
-        y_sp = m_data["sp"]
-        y_dn = m_data["dn"]
-        plt.plot(x, y_sp, label=f"n={m} (Sparse)", color=CMAP(0), marker=MARKERS[2*i])
-        plt.plot(x, y_dn, label=f"n={m} (Dense)", color=CMAP(0.75), marker=MARKERS[2*i+1])
-    plt.title(f"Sparse vs. Dense Runtime")
-    plt.xlabel("Number of Clusters (k)")
-    plt.ylabel("Average Time (ms)")
-    plt.yscale("log")
-    plt.legend(loc="upper right")
-    plt.savefig(f"graphs/mode.png")
-    plt.clf()
-    return
-
-    # construct strong scaling graph
-    for base_m in BASE_M:
-        fig, axs = plt.subplots(1, 3, figsize=(18, 4), sharey=True)
-        niter = 100
-        gamma = 1
-        c = 1
-        r = 2
-        basic = True
-        for idx, input_dataset in enumerate(DATASETS):
-            input_dataset_name = input_dataset["name"]
-            input_dataset_label = input_dataset["label"]
-            ax = axs[idx]
-            d = input_dataset["d"]
-            convergence = 0
-            m = 2 * base_m
-            for k_idx, k in enumerate([2, 5, 10, 50, 100]):
-                color = CMAP(k_idx / 4)  # Use a colormap for different k values
-                dataset_symbol = MARKERS[k_idx]  # Different marker for each k value
-                y = []
-                sparse = int(k > 32)
-                for p in P:
-                    scaling_data = get_scaling_data(
-                        unique_id,
-                        "s",
-                        p,
-                        m,
-                        d,
-                        k,
-                        niter,
-                        sparse,
-                        gamma,
-                        c,
-                        r,
-                        convergence,
-                        basic,
-                        input_dataset_name,
-                    )
-                    y.append(np.average(scaling_data["Elapsed"]))
-                ax.plot(P, y, label=f"k={k}", marker=dataset_symbol, color=color)
-            ax.set_xscale("log")
-            ax.set_yscale("log")
-            ax.set_title(f"{input_dataset_label} Strong Scaling")
-            ax.set_xlabel("Number of GPUs (p)")
-            ax.set_xticks(P)
-            # ax.minorticks_off()
-            ax.set_xticklabels(P)
-            if idx == 0:
-                ax.set_ylabel("Average Time (ms)")
-            ax.legend(loc="upper right")
-        # plt.suptitle("Strong Scaling Across Datasets")
-        plt.tight_layout(rect=[0, 0, 1, 0.95])
-        plt.savefig(f"graphs/strong_scaling_{base_m}.png")
-
-    # construct strong scaling graph (minus K)
-    for base_m in BASE_M:
-        fig, axs = plt.subplots(1, 3, figsize=(18, 4), sharey=True)
-        niter = 100
-        gamma = 1
-        c = 1
-        r = 2
-        basic = True
-        for idx, input_dataset in enumerate(DATASETS):
-            input_dataset_name = input_dataset["name"]
-            input_dataset_label = input_dataset["label"]
-            ax = axs[idx]
-            d = input_dataset["d"]
-            convergence = 0
-            m = 2 * base_m
-            for k_idx, k in enumerate([2, 5, 10, 50, 100]):
-                color = CMAP(k_idx / 4)  # Use a colormap for different k values
-                dataset_symbol = MARKERS[k_idx]  # Different marker for each k value
-                y = []
-                sparse = int(k > 32)
-                for p in P:
-                    scaling_data = get_scaling_data(
-                        unique_id,
-                        "s",
-                        p,
-                        m,
-                        d,
-                        k,
-                        niter,
-                        sparse,
-                        gamma,
-                        c,
-                        r,
-                        convergence,
-                        basic,
-                        input_dataset_name,
-                    )
-                    y.append(np.average(scaling_data["Elapsed"]-scaling_data["K"]))
-                ax.plot(P, y, label=f"k={k}", marker=dataset_symbol, color=color)
-            ax.set_xscale("log")
-            ax.set_yscale("log")
-            ax.set_title(f"{input_dataset_label} Strong Scaling")
-            ax.set_xlabel("Number of GPUs (p)")
-            ax.set_xticks(P)
-            # ax.minorticks_off()
-            ax.set_xticklabels(P)
-            if idx == 0:
-                ax.set_ylabel("Average Time (ms)")
-            ax.legend(loc="upper right")
-        # plt.suptitle("Strong Scaling Across Datasets")
-        plt.tight_layout(rect=[0, 0, 1, 0.95])
-        plt.savefig(f"graphs/strong_scaling_minus_k_{base_m}.png")
-
-    # construct weak scaling variant graph
-    base_m = 64000 # only ran this test with 64K baseline
-    plt.figure(figsize=(6, 4))
     niter = 100
     gamma = 1
     c = 1
     r = 2
-    basic = True
-    input_dataset = RANDOM_DATASET
-    input_dataset_name = input_dataset["name"]
-    input_dataset_label = input_dataset["label"]
-    convergence = 0
-    fig, ax = plt.subplots()
-    for k_idx, k in enumerate([2, 5, 10, 50, 100]):
-        color = CMAP(k_idx / 4)  # Use a colormap for different k values
-        dataset_symbol = MARKERS[k_idx]  # Different marker for each k value
-        y = []
-        sparse = int(k > 32)
-        for p in P:
-            m = min(
-                int(base_m * np.sqrt(p)) - (int(base_m * np.sqrt(p)) % p),
-                int(input_dataset["m"]),
-                MAX_NUM_POINTS,
-            )
-            d = 4*p
-            scaling_data = get_scaling_data(
-                unique_id,
-                "wp",
-                p,
-                m,
-                d,
-                k,
-                niter,
-                sparse,
-                gamma,
-                c,
-                r,
-                convergence,
-                basic,
-                input_dataset_name,
-            )
-            y.append(np.average(scaling_data["Elapsed"]))
-        ax.plot(P, y, label=f"k={k}", marker=dataset_symbol, color=color)
-    plt.title(f"{input_dataset_label} Weak Scaling Variant")
-    plt.xscale("log")
-    plt.yscale("log")
-    plt.xlabel("Number of GPUs (p)")
-    ax.set_xticks(P)
-    ax.set_xticklabels(P)
-    # plt.minorticks_off()
-    plt.ylabel("Average Time (ms)")
-    plt.legend(loc="upper left")
-    plt.savefig(f"graphs/weak_scaling_variant_{base_m}.png")
+    convergence = int(False)
+    basic = int(False)
 
-    # construct weak scaling graph
-    for base_m in BASE_M:
-        fig, axs = plt.subplots(1, 3, figsize=(18, 4), sharey=True)
-        niter = 100
-        gamma = 1
-        c = 1
-        r = 2
-        basic = True
-        for idx, input_dataset in enumerate(DATASETS):
-            input_dataset_name = input_dataset["name"]
-            input_dataset_label = input_dataset["label"]
-            ax = axs[idx]
-            d = input_dataset["d"]
-            convergence = 0
-            for k_idx, k in enumerate([2, 5, 10, 50, 100]):
-                color = CMAP(k_idx / 4)  # Use a colormap for different k values
-                dataset_symbol = MARKERS[k_idx]  # Different marker for each k value
-                y = []
+    for input_dataset in DATASETS:
+        input_dataset_name = input_dataset["name"]
+        d = input_dataset["d"]
+
+        # Strong scaling data
+        m = base_m
+        k = 32
+        for alg in ALGS:
+            y = []
+            for p in P:
                 sparse = int(k > 32)
-                for p in P:
-                    m = min(
-                        int(base_m * np.sqrt(p)) - (int(base_m * np.sqrt(p)) % p),
-                        int(input_dataset["m"]),
-                        MAX_NUM_POINTS,
-                    )
-                    scaling_data = get_scaling_data(
-                        unique_id,
-                        "w",
-                        p,
-                        m,
-                        d,
-                        k,
-                        niter,
-                        sparse,
-                        gamma,
-                        c,
-                        r,
-                        convergence,
-                        basic,
-                        input_dataset_name,
-                    )
-                    y.append(np.average(scaling_data["Elapsed"]))
-                ax.plot(P, y, label=f"k={k}", marker=dataset_symbol, color=color)
-            ax.set_xscale("log")
-            ax.set_yscale("log")
-            ax.set_title(f"{input_dataset_label} Weak Scaling")
-            ax.set_xlabel("Number of GPUs (p)")
-            ax.set_xticks(P)
-            # ax.minorticks_off()
-            ax.set_xticklabels(P)
-            if idx == 0:
-                ax.set_ylabel("Average Time (ms)")
-            ax.legend(loc="upper left")
-        # plt.suptitle("Strong Scaling Across Datasets")
-        plt.tight_layout(rect=[0, 0, 1, 0.95])
-        plt.savefig(f"graphs/weak_scaling_{base_m}.png")
-
-    # construct strong and weak scaling breakdown graphs
-    for base_m in BASE_M:
-        niter = 100
-        gamma = 1
-        c = 1
-        r = 2
-        basic = True
-
-        for scaling_type in ["s", "w"]:
-            fig, axs = plt.subplots(1, 3, figsize=(18, 4), sharey=True)
-            scaling_type_name = "Strong" if scaling_type == "s" else "Weak"
-            for dataset_idx, input_dataset in enumerate(DATASETS):
-                input_dataset_name = input_dataset["name"]
-                input_dataset_label = input_dataset["label"]
-                if input_dataset_name != "mnist8m":
-                    continue
-                d = input_dataset["d"]
-                convergence = 0
-                strong_m = 2 * base_m
-                for k_idx, k in enumerate([2, 50, 100]):
-                    bar_width = 0.5
-                    x_positions = np.arange(len(P))
-                    bar_offset = 0
-                    ax = axs[k_idx]
-                    ax.set_title(f"{input_dataset_label} {scaling_type_name} Scaling Breakdown (k={k})")
-                    ax.set_xlabel("Number of GPUs (p)")
-                    ax.set_xticks(x_positions)
-                    ax.set_xticklabels(P)
-                    # ax.set_yscale("log")
-                    # ax.minorticks_off()
-                    sparse = int(k > 32)
-                    for p_idx, p in enumerate(P):
-                        weak_m = min(
-                            int(base_m * np.sqrt(p)) - (int(base_m * np.sqrt(p)) % p),
-                            int(input_dataset["m"]),
-                            MAX_NUM_POINTS,
-                        )
-                        m = strong_m if scaling_type == "s" else weak_m
-                        scaling_data = get_scaling_data(
-                            unique_id,
-                            scaling_type,
-                            p,
-                            m,
-                            d,
-                            k,
-                            niter,
-                            sparse,
-                            gamma,
-                            c,
-                            r,
-                            convergence,
-                            basic,
-                            input_dataset_name,
-                        )
-
-                        # Prepare stacked bar data
-                        bottom = 0
-                        running_time = 0
-                        for key, values in scaling_data.items():
-                            # if key not in C:
-                            #     continue
-                            # if (key not in ["K", "E", "VR MPI"]) and (np.average(values) / np.average(strong_scaling_data["Elapsed"]) > 0.02):
-                            #     print("Step", key, "took", np.average(values) / np.average(strong_scaling_data["Elapsed"]), "of total time")
-                            #     # if this doesn't print then only K, E, and VR MPI took more than 2% of the time
-                            useful_keys = ["K", "E", "VR MPI"]
-                            if key not in useful_keys:
-                                continue
-                            color = plt.cm.plasma(
-                                useful_keys.index(key) / len(useful_keys)
-                            )  # Use a colormap for different routines
-                            avg_time = np.average(values)
-                            running_time += avg_time
-                            label = key if bar_offset == 0 else ""
-                            if label == "K":
-                                label = "Distributed GEMM"
-                            elif label == "E":
-                                label = "Local SpMM / Local GEMM"
-                            elif label == "VR MPI":
-                                label = "Assignments Gathering"
-                            ax.bar(
-                                x_positions[p_idx],
-                                avg_time,
-                                bar_width,
-                                bottom=bottom,
-                                label=label,
-                                color=color,
-                            )
-                            bottom += avg_time
-                        bar_offset += bar_width * 1.2
-                    bar_offset += bar_width * 1.3
-            axs[0].set_ylabel("Average Time (ms)")
-            axs[0].legend(loc="upper left", title="Routines")
-            plt.tight_layout()
-            # plt.subplots_adjust(hspace=0, wspace=0, bottom=0.2, left=0)
-            plt.savefig(f"graphs/{scaling_type_name.lower().replace(' ', '_')}_scaling_breakdown_{base_m}.png")
-
-    # construct weak scaling variant breakdown
-    base_m = 64000 # only ran this test with 64k baseline
-    fig, axs = plt.subplots(1, 3, figsize=(18, 4))
-    scaling_type_name = "Weak Scaling Variant"
-    input_dataset = RANDOM_DATASET
-    input_dataset_name = input_dataset["name"]
-    input_dataset_label = input_dataset["label"]
-    convergence = 0
-    for k_idx, k in enumerate([2, 50, 100]):
-        bar_width = 0.5
-        x_positions = np.arange(len(P))
-        bar_offset = 0
-        ax = axs[k_idx]
-        ax.set_title(f"{input_dataset_label} {scaling_type_name} Breakdown (k={k})")
-        ax.set_xlabel("Number of GPUs (p)")
-        ax.set_xticks(x_positions)
-        ax.set_xticklabels(P)
-        # ax.set_yscale("log")
-        # ax.minorticks_off()
-        sparse = int(k > 32)
-        for p_idx, p in enumerate(P):
-            weak_m = min(
-                int(base_m * np.sqrt(p)) - (int(base_m * np.sqrt(p)) % p),
-                int(input_dataset["m"]),
-                MAX_NUM_POINTS,
-            )
-            m = weak_m
-            d = 4*p
-            scaling_data = get_scaling_data(
-                unique_id,
-                "wp",
-                p,
-                m,
-                d,
-                k,
-                niter,
-                sparse,
-                gamma,
-                c,
-                r,
-                convergence,
-                basic,
-                input_dataset_name,
-            )
-
-            # Prepare stacked bar data
-            bottom = 0
-            running_time = 0
-            for key, values in scaling_data.items():
-                # if key not in C:
-                #     continue
-                # if (key not in ["K", "E", "VR MPI"]) and (np.average(values) / np.average(strong_scaling_data["Elapsed"]) > 0.02):
-                #     print("Step", key, "took", np.average(values) / np.average(strong_scaling_data["Elapsed"]), "of total time")
-                #     # if this doesn't print then only K, E, and VR MPI took more than 2% of the time
-                useful_keys = ["K", "E", "VR MPI"]
-                if key not in useful_keys:
-                    continue
-                color = plt.cm.plasma(
-                    useful_keys.index(key) / len(useful_keys)
-                )  # Use a colormap for different routines
-                avg_time = np.average(values)
-                running_time += avg_time
-                label = key if bar_offset == 0 else ""
-                if label == "K":
-                    label = "Distributed GEMM"
-                elif label == "E":
-                    label = "Local SpMM / Local GEMM"
-                elif label == "VR MPI":
-                    label = "Assignments Gathering"
-                ax.bar(
-                    x_positions[p_idx],
-                    avg_time,
-                    bar_width,
-                    bottom=bottom,
-                    label=label,
-                    color=color,
-                )
-                bottom += avg_time
-            bar_offset += bar_width * 1.2
-        bar_offset += bar_width * 1.3
-    axs[0].set_ylabel("Average Time (ms)")
-    axs[0].legend(loc="upper left", title="Routines")
-    plt.tight_layout()
-    # plt.subplots_adjust(hspace=0, wspace=0, bottom=0.2, left=0)
-    plt.savefig(f"graphs/{scaling_type_name.lower().replace(' ', '_')}_breakdown_{base_m}.png")
+                scaling_data = get_scaling_data("strong", p, m, d, k, niter, sparse, gamma, c, r, convergence, basic, input_dataset_name, alg, n_trials)
+                elapsed = scaling_data["Elapsed"].mean()
+                y.append(elapsed)
+            plt.plot(P, y, label=alg)
+        plt.xscale("log", base=4)
+        plt.yscale("log")
+        plt.title("Strong Scaling for MNIST8M (k=32)")
+        plt.xlabel("Number of Ranks (p)")
+        plt.ylabel("Runtime (ms)")
+        plt.xticks(P)
+        plt.legend()
+        plt.savefig("graphs/strong.png")
 
 
 def compare(file1, file2):
@@ -1115,10 +398,6 @@ def compare(file1, file2):
 #   "basic" is the flag to use basic trial, otherwise it is a benchmark trial (but
 #     the benchmark trial requires building with BASIC=0 and is non-negligibly slower due to finer-grained timing)
 
-# example:
-# for p in [4, 8, 16, 32, 64, 128, 256]:
-#     create_file_text(p, "")
-
 if __name__ == "__main__":
     legal = [
         "create_scripts",
@@ -1138,9 +417,6 @@ if __name__ == "__main__":
         print(f"Invalid action. Must be one of {usage_legal}")
         sys.exit(1)
     if action == "create_scripts":
-        # for p in [4, 8, 16, 32, 64, 128, 256]:
-            # create_file_text(p, "")
-        # TODO:
         create_scripts("m4341")
         print("Generated scripts in experiments/scripts/ directory.")
     if action == "create_random":
