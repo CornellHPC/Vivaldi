@@ -205,7 +205,7 @@ void Timer::save_all(const char* path, float score) {
   std::cout << "E Reduce: " << e_reduce << " ms" << std::endl;
   std::cout << "E Gather: " << e_gather << " ms" << std::endl;
   std::cout << "E SpMM: " << e_spmm << " ms" << std::endl;
-  std::cout << "E other: " << e_other << std::endl;
+  std::cout << "E other: " << e_other <<  " ms" << std::endl;
   std::cout << "Z: " << z_elapsed << " ms" << std::endl;
   std::cout << "C: " << c_elapsed << " ms" << std::endl;
   std::cout << "C MPI: " << c_mpi << " ms" << std::endl;
