@@ -70,12 +70,12 @@ int main(int argc, char* argv[]) {
   std::shared_ptr<ProcessGrid> grid1d = std::make_shared<ProcessGrid>(world_size, 1, false);
 
   /** Const */
-  bool s = true;
+  bool s = false;
   int m = 1024;
   int n = 8;
   int k = 32;
 
-  DistV1D Vdist(m, k, true, grid1d);
+  DistV1D Vdist(m, k, s, grid1d);
   V_t V(m, k, true, comm);
   int t = V.t;  // get this process tile size
 

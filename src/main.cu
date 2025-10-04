@@ -274,7 +274,7 @@ int cluster15d(ArgParse args, MPI_Comm comm)
 #endif
 
 
-  DistV1D V(args.m, args.k, true, grid1d);
+  DistV1D V(args.m, args.k, args.s, grid1d);
 
 
 #ifndef BASIC

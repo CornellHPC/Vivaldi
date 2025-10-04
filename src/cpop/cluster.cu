@@ -122,7 +122,7 @@ V_t::V_t(int64_t m, int64_t k, bool sparse, MPI_Comm comm) {
     free(values);
   }
 
-  CHECK_CUDA(cudaMalloc(&d_v_dense, sizeof(float) * m * k * (int)std::floor(std::sqrt(n_procs))));
+  //CHECK_CUDA(cudaMalloc(&d_v_dense, sizeof(float) * m * k * (int)std::floor(std::sqrt(n_procs))));
 
   // Clean up
   free(init_global_cluster_sizes);
@@ -197,7 +197,6 @@ V_t::~V_t() {
   CHECK_CUDA(cudaFree(local_k_means_objective_score));
   CHECK_CUDA(cudaFree(local_k_means_objective_delta));
   CHECK_CUDA(cudaFree(prev_point_to_cluster_distances));
-  CHECK_CUDA(cudaFree(d_v_dense));
   free(t_sizes);
   free(displs);
   if (sparse) {
@@ -220,7 +219,7 @@ V_t::~V_t() {
 
 DistV1D::DistV1D(int64_t m, int64_t k, bool sparse, std::shared_ptr<ProcessGrid> grid)
 {
-    this->local_v = new V_t(m, k, sparse, grid->world_comm);
+    this->local_v = new V_t(m, k, true, grid->world_comm);
     this->grid = grid;
 
     int sqrtp = grid->row_size;
@@ -242,6 +241,15 @@ DistV1D::DistV1D(int64_t m, int64_t k, bool sparse, std::shared_ptr<ProcessGrid>
                                      CUSPARSE_INDEX_BASE_ZERO,
                                      CUDA_R_32F));
 
+    if (!sparse)
+    {
+        CHECK_CUDA(cudaMalloc(&d_v_dense, sizeof(float) * local_v->t * k * sqrtp));
+    }
+    else
+    {
+        d_v_dense = nullptr;
+    }
+
 }
 
 DistV1D::~DistV1D()
@@ -257,6 +265,10 @@ DistV1D::~DistV1D()
     if (this->d_remote_colptrs != nullptr)
     {
         CHECK_CUDA(cudaFree(this->d_remote_colptrs));
+    }
+    if (this->d_v_dense != nullptr)
+    {
+        CHECK_CUDA(cudaFree(this->d_v_dense));
     }
 
     CHECK_CUSPARSE(cusparseDestroySpMat(v_cusparse));
@@ -986,7 +998,7 @@ int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMa
         size_t buf_size = 0;
         void * d_buf = nullptr;
         //CHECK_CUDA(cudaMemset(loc_v->d_v_dense, 0, sizeof(float) * loc_v->k_ * loc_v->t*sqrtp));
-        CHECK_CUSPARSE(cusparseCreateDnMat(&v_dense, loc_v->k_, sqrtp*loc_v->t, sqrtp*loc_v->t, loc_v->d_v_dense, CUDA_R_32F, CUSPARSE_ORDER_ROW));
+        CHECK_CUSPARSE(cusparseCreateDnMat(&v_dense, loc_v->k_, sqrtp*loc_v->t, sqrtp*loc_v->t, V.d_v_dense, CUDA_R_32F, CUSPARSE_ORDER_ROW));
 
         CHECK_CUSPARSE(cusparseSparseToDense_bufferSize(handle.sh(), v_gather, v_dense, CUSPARSE_SPARSETODENSE_ALG_DEFAULT, &buf_size));
         CHECK_CUDA(cudaMalloc(&d_buf, buf_size));
@@ -1001,7 +1013,7 @@ int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMa
                                  sqrtp*loc_v->t, loc_v->k_, sqrtp*loc_v->t,
                                  &alpha, 
                                  loc_k->dM, sqrtp*loc_v->t,
-                                 loc_v->d_v_dense, sqrtp*loc_v->t,
+                                 V.d_v_dense, sqrtp*loc_v->t,
                                  &beta,
                                  loc_e_p->dM,
                                  sqrtp*loc_v->t));

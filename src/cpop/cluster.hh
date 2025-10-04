@@ -164,6 +164,8 @@ struct DistV1D {
   int * d_remote_rowinds;
   int * d_remote_colptrs;
 
+  float * d_v_dense;
+
   cusparseSpMatDescr_t v_cusparse;
 
   DistV1D(int64_t m, int64_t k, bool sparse, std::shared_ptr<ProcessGrid> grid);
