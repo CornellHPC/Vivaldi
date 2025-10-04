@@ -556,8 +556,8 @@ def create_script(path, prefix, account, p, m, k, dataset, alg, d=None, sparse=N
     if not isinstance(alg, list):
         alg = [alg]
 
-    # Max of 30 seconds for one trial estimated through experiments
-    seconds_per_trial = 30
+    # Max of 45 seconds for one trial estimated through experiments
+    seconds_per_trial = 45
     total_time_seconds = seconds_per_trial*len(m)*len(d)*len(k)*len(dataset)*len(alg)
     timestamp = str(datetime.timedelta(seconds=total_time_seconds))
 
