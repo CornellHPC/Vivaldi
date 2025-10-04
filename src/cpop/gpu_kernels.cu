@@ -152,7 +152,7 @@ __global__ void reinit_kernel(float* V_global_values, int* global_assignments,
       // this for loop runs once unless the matrix is extraordinarily large
 
       // todo: the global_assignments[i] call is coalesced, but the global_cluster_sizes[...] call is not!
-      V_global_values[i] = 1.0f / global_cluster_sizes[global_assignments[i]];
+      V_global_values[i] = (global_cluster_sizes[global_assignments[i]] > 0) ? 1.0f / global_cluster_sizes[global_assignments[i]] : 0.0f;
     }
   } else {
     for (int64_t i = blockIdx.x * blockDim.x + threadIdx.x; i < k * m;
@@ -172,7 +172,7 @@ __global__ void init_from_rowinds_kernel(int * d_rowinds, int * d_cluster_sizes,
 {
   for (int64_t i = blockIdx.x * blockDim.x + threadIdx.x; i < nnz; i += blockDim.x * gridDim.x) 
   {
-    d_vals[i] = 1.0f/d_cluster_sizes[d_rowinds[i]];
+    d_vals[i] = (d_cluster_sizes[d_rowinds[i]] > 0 ) ? 1.0f/d_cluster_sizes[d_rowinds[i]] : 0.0f;
   }
 }
 

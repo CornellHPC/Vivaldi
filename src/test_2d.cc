@@ -102,7 +102,7 @@ int main(int argc, char* argv[]) {
   std::shared_ptr<ProcessGrid> grid2d = std::make_shared<ProcessGrid>(grid_size, grid_size, true);
 
   /** Const */
-  bool s = true;
+  bool s = false;
   int m = 2048;
   int n = 8;
   int k = 128;
@@ -131,7 +131,7 @@ int main(int argc, char* argv[]) {
   PT2D.releaseWorkspace();
 
   float * d_T_buf;
-  CHECK_CUDA(cudaMalloc(&d_T_buf, sizeof(float ) * (Vdist.rows+1) * Vdist.cols));
+  CHECK_CUDA(cudaMalloc(&d_T_buf, sizeof(float ) * (Vdist.global_rows) * Vdist.cols));
   DistDnMat_t E({new DnMat_t(Vdist.rows, Vdist.cols), 
                  grid2d});
   DistDnVec_t z({new DnVec_t(Vdist.cols), grid2d});
@@ -149,7 +149,7 @@ int main(int argc, char* argv[]) {
       print_phase("Iteration beginning");
 
       spmm(handle_1d, V, K1D, Ecorrect);
-      spmm2d_bs(handle, Vdist, Vdist_tr, K2D, E, d_T_buf);
+      spmm2d_bs_allgatherv(handle, Vdist, Vdist_tr, K2D, E, d_T_buf);
       //spmm2d(handle, Vdist, K2D, E);
       //print_device_matrix(E.mat->dM, E.mat->h_, E.mat->w_);
       //sleep(1);

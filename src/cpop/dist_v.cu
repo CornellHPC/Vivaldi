@@ -152,7 +152,12 @@ DistV2D::DistV2D(int64_t m, int64_t k, int loc_k, int64_t nnz, std::shared_ptr<P
     CHECK_CUDA(cudaMalloc(&d_minpairs, sizeof(FloatI32) * cols));
     CHECK_CUDA(cudaMalloc(&d_mininds, sizeof(int) * cols));
 
-    CHECK_CUDA(cudaMalloc(&d_v_dense, sizeof(float) * loc_k * cols));
+    CHECK_CUDA(cudaMalloc(&d_v_dense, sizeof(float) * k * cols));
+
+    CHECK_CUDA(cudaMalloc(&d_csr_val, sizeof(float) * cols));
+    CHECK_CUDA(cudaMalloc(&d_csr_colinds, sizeof(int) * cols));
+    CHECK_CUDA(cudaMalloc(&d_csr_rowptrs, sizeof(int) * (loc_k+1)));
+
 
     this->init_cusparse_csc();
 
@@ -219,6 +224,15 @@ DistV2D::~DistV2D()
     }
     if (this->d_v_dense != nullptr) {
         cudaFree(this->d_v_dense);
+    }
+    if (this->d_csr_val!= nullptr) {
+        cudaFree(this->d_csr_val);
+    }
+    if (this->d_csr_colinds!= nullptr) {
+        cudaFree(this->d_csr_colinds);
+    }
+    if (this->d_csr_rowptrs!= nullptr) {
+        cudaFree(this->d_csr_rowptrs);
     }
 
     delete[] tile_rows;

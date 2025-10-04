@@ -90,7 +90,7 @@ int cluster2d(ArgParse args, MPI_Comm comm)
 
   /** Initialize E, z, T, and c */
   float * d_T_buf;
-  CHECK_CUDA(cudaMalloc(&d_T_buf, sizeof(float ) * (V.rows+1) * V.cols));
+  CHECK_CUDA(cudaMalloc(&d_T_buf, sizeof(float ) * (V.global_rows) * V.cols));
   DistDnMat_t E({new DnMat_t(V.rows, V.cols), 
                  grid});
   DistDnVec_t z({new DnVec_t(V.cols), grid});
@@ -127,7 +127,7 @@ int cluster2d(ArgParse args, MPI_Comm comm)
     }
 #endif
 
-    spmm2d_bs(handle, V, V_tr, K, E, d_T_buf);  
+    spmm2d_bs_allgatherv(handle, V, V_tr, K, E, d_T_buf);  
 
 #ifndef BASIC
     MPI_Barrier(comm);

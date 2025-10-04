@@ -185,7 +185,30 @@ struct DistV1D {
 int spmm(Handle& handle, V_t& V, DnMat_t& K, DnMat_t& E);
 int spmm2d(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E);
 int spmm2d_bs(Handle& handle, DistV2D& V, DistV2D& V_tr, DistDnMat_t& K, DistDnMat_t& E, float * d_T);
+int spmm2d_bs_allgatherv(Handle& handle, DistV2D& V, DistV2D& V_tr, DistDnMat_t& K, DistDnMat_t& E, float * d_T);
 int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMat_t& E_p, float * d_tmp, float * d_tmp2);
+
+
+struct AddOffset
+{
+    int offset;
+    __device__ __forceinline__
+    void operator()(int& x)
+    {
+        x += offset;
+    }
+};
+
+template <typename T>
+struct DiffOp
+{
+    DiffOp(){}
+    __host__ __device__ __forceinline__
+    T operator()(const T& lhs, const T& rhs)
+    {
+        return lhs - rhs;
+    }
+};
 
 /**
  * @brief Computes z based on the local V matrix and E (i.e. using the masking strategy)

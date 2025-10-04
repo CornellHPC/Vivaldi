@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <numeric>
 
 #include "cuda_runtime.h"
 #include "mpi.h"
@@ -652,6 +653,229 @@ int spmm2d_bs(Handle& handle, DistV2D& V, DistV2D& V_tr, DistDnMat_t& K, DistDnM
     }
 
     delete[] recv_nnz;
+    return EXIT_SUCCESS;
+}
+
+
+void rownnz_to_rowptrs(int * d_rowptrs, const int nrows)
+{
+    void * d_tmp = NULL;
+    size_t tmp_size = 0;
+    CHECK_CUDA(cub::DeviceScan::InclusiveSum(d_tmp, tmp_size, d_rowptrs+1, nrows));
+    CHECK_CUDA(cudaMalloc(&d_tmp, tmp_size));
+    CHECK_CUDA(cub::DeviceScan::InclusiveSum(d_tmp, tmp_size, d_rowptrs+1, nrows));
+    CHECK_CUDA(cudaFree(d_tmp));
+    CHECK_CUDA(cudaDeviceSynchronize());
+}
+
+
+void rowptrs_to_rownnz(int * d_rowptrs, const int nrows)
+{
+    void * d_tmp = NULL;
+    size_t tmp_size = 0;
+    CHECK_CUDA(cub::DeviceAdjacentDifference::SubtractLeft(d_tmp, tmp_size, d_rowptrs, nrows+1, DiffOp<int>{}));
+    CHECK_CUDA(cudaMalloc(&d_tmp, tmp_size));
+    CHECK_CUDA(cub::DeviceAdjacentDifference::SubtractLeft(d_tmp, tmp_size, d_rowptrs, nrows+1, DiffOp<int>{}));
+    CHECK_CUDA(cudaFree(d_tmp));
+    CHECK_CUDA(cudaDeviceSynchronize());
+}
+
+
+int spmm2d_bs_allgatherv(Handle& handle, DistV2D& V, DistV2D& V_tr, DistDnMat_t& K, DistDnMat_t& E, float * d_T)
+{
+
+    auto grid = V.grid;
+    const int niters = grid->row_size;
+
+
+    cusparseDnMatDescr_t T;
+
+    // Transpose the sparse matrix
+    int tr_rank = (grid->col_rank) * grid->col_size + grid->row_rank;
+    V_tr.nnz = V.tile_nnz[tr_rank];
+
+#ifndef BASIC
+    auto preprocess = hrc::now();
+#endif
+
+    MPI_Sendrecv(V.d_vals, V.nnz, MPI_FLOAT, tr_rank, 100, 
+                 V_tr.d_vals, V_tr.nnz, MPI_FLOAT, tr_rank, 100,
+                 grid->world_comm, MPI_STATUS_IGNORE);
+    MPI_Sendrecv(V.d_rowinds, V.nnz, MPI_INT, tr_rank, 101, 
+                 V_tr.d_rowinds, V_tr.nnz, MPI_INT, tr_rank, 101,
+                 grid->world_comm, MPI_STATUS_IGNORE);
+    MPI_Sendrecv(V.d_colptrs, V.cols+1, MPI_INT, tr_rank, 102, 
+                 V_tr.d_colptrs, V_tr.cols+1, MPI_INT, tr_rank, 102,
+                 grid->world_comm, MPI_STATUS_IGNORE);
+
+
+    // Allgatherv setup
+    std::vector<int> recv_nnz(niters, 0);
+    recv_nnz[grid->row_rank] = V_tr.nnz;
+    MPI_Allreduce(MPI_IN_PLACE, recv_nnz.data(), niters, MPI_INT, MPI_SUM, grid->row_comm);
+
+    std::vector<int> displs(niters, 0);
+    std::exclusive_scan(recv_nnz.begin(), recv_nnz.end(), displs.begin(), 0);
+
+
+    // Convert to CSR
+    size_t buf_size = 0;
+    void * d_buf = nullptr;
+    CHECK_CUSPARSE(cusparseCsr2cscEx2_bufferSize(handle.sh(),
+                                                 V_tr.cols,
+                                                 V_tr.rows,
+                                                 V_tr.nnz,
+                                                 V_tr.d_vals,
+                                                 V_tr.d_rowinds,
+                                                 V_tr.d_colptrs,
+                                                 V_tr.d_csr_val,
+                                                 V_tr.d_csr_rowptrs,
+                                                 V_tr.d_csr_colinds,
+                                                 CUDA_R_32F,
+                                                 CUSPARSE_ACTION_NUMERIC,
+                                                 CUSPARSE_INDEX_BASE_ZERO,
+                                                 CUSPARSE_CSR2CSC_ALG_DEFAULT,
+                                                 &buf_size));
+    CHECK_CUDA(cudaMalloc(&d_buf, buf_size));
+    CHECK_CUSPARSE(cusparseCsr2cscEx2(handle.sh(),
+                                     V_tr.cols,
+                                     V_tr.rows,
+                                     V_tr.nnz,
+                                     V_tr.d_vals,
+                                     V_tr.d_colptrs,
+                                     V_tr.d_rowinds,
+                                     V_tr.d_csr_val,
+                                     V_tr.d_csr_rowptrs,
+                                     V_tr.d_csr_colinds,
+                                     CUDA_R_32F,
+                                     CUSPARSE_ACTION_NUMERIC,
+                                     CUSPARSE_INDEX_BASE_ZERO,
+                                     CUSPARSE_CSR2CSC_ALG_DEFAULT,
+                                     d_buf));
+
+
+    rowptrs_to_rownnz(V_tr.d_csr_rowptrs, V.rows);
+
+#ifndef BASIC
+    timer.e_other += get_time_elapsed(preprocess);
+    auto mpi_start = hrc::now();
+#endif
+
+
+    CHECK_CUDA(cudaMemset(V_tr.d_remote_colptrs,0,sizeof(int)*(V_tr.global_rows + 1)));
+
+    // Allgatherv csr arrays
+    float * d_remote_vals = V_tr.d_remote_vals;
+    int * d_remote_colinds = V_tr.d_remote_rowinds;
+    int * d_remote_rowptrs = V_tr.d_remote_colptrs;
+    MPI_Allgatherv(V_tr.d_csr_val, V_tr.nnz, MPI_FLOAT,
+                   d_remote_vals, recv_nnz.data(), displs.data(),
+                   MPI_FLOAT, grid->row_comm);
+    MPI_Allgatherv(V_tr.d_csr_colinds, V_tr.nnz, MPI_FLOAT,
+                   d_remote_colinds, recv_nnz.data(), displs.data(),
+                   MPI_FLOAT, grid->row_comm);
+    MPI_Allgather(V_tr.d_csr_rowptrs + 1, V.rows, MPI_INT,
+                  d_remote_rowptrs + 1, V.rows, MPI_INT,
+                  grid->row_comm);
+
+    rownnz_to_rowptrs(d_remote_rowptrs, V_tr.global_rows);
+
+#ifndef BASIC
+    timer.e_mpi += get_time_elapsed(mpi_start);
+    auto spmm_start = hrc::now();
+#endif
+
+    //print_device_matrix(d_remote_colinds, 1, V_tr.cols);
+    //print_device_matrix(d_remote_vals, 1, V_tr.cols);
+    //print_device_matrix(d_remote_rowptrs, 1, V_tr.global_rows + 1);
+
+    // Build local csc
+    cusparseSpMatDescr_t loc_V;
+    CHECK_CUSPARSE(cusparseCreateCsr(&loc_V,
+                                     V.global_rows,
+                                     V_tr.cols,
+                                     V_tr.cols,
+                                     d_remote_rowptrs,
+                                     d_remote_colinds,
+                                     d_remote_vals,
+                                     CUSPARSE_INDEX_32I,
+                                     CUSPARSE_INDEX_32I,
+                                     CUSPARSE_INDEX_BASE_ZERO,
+                                     CUDA_R_32F));
+    float alpha = 1.0f;
+    float beta = 0.0f;
+    if (handle.isSparse())
+    {
+        CHECK_CUSPARSE(cusparseCreateDnMat(&T,
+                                           V.global_rows,
+                                           V_tr.cols,
+                                           V_tr.cols,
+                                           d_T,
+                                           CUDA_R_32F,
+                                           CUSPARSE_ORDER_ROW));
+        // Buffer size 
+        size_t buffer_size;
+        void* buffer;
+        CHECK_CUSPARSE(cusparseSpMM_bufferSize(
+            handle.sh(), CUSPARSE_OPERATION_NON_TRANSPOSE,
+            CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, loc_V, K.mat->M, &beta, T,
+            CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, &buffer_size));
+        CHECK_CUDA(cudaMalloc(&buffer, buffer_size));
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        // Perform SpMM
+        CHECK_CUSPARSE(cusparseSpMM(
+            handle.sh(), CUSPARSE_OPERATION_NON_TRANSPOSE,
+            CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, loc_V, K.mat->M, &beta, T,
+            CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, buffer));
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        // Clean up
+        CHECK_CUDA(cudaFree(buffer));
+        CHECK_CUSPARSE(cusparseDestroyDnMat(T));
+
+    }
+    else
+    {
+        cusparseDnMatDescr_t v_dense;
+        size_t buf_size = 0;
+        void * d_buf = nullptr;
+        CHECK_CUSPARSE(cusparseCreateDnMat(&v_dense, V.global_rows, V_tr.cols, V_tr.cols, V_tr.d_v_dense, CUDA_R_32F, CUSPARSE_ORDER_ROW));
+        CHECK_CUSPARSE(cusparseSparseToDense_bufferSize(handle.sh(), loc_V, v_dense, CUSPARSE_SPARSETODENSE_ALG_DEFAULT, &buf_size));
+        CHECK_CUDA(cudaMalloc(&d_buf, buf_size));
+        CHECK_CUSPARSE(cusparseSparseToDense(handle.sh(), loc_V, v_dense, CUSPARSE_SPARSETODENSE_ALG_DEFAULT, d_buf));
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+
+        CHECK_CUDA(cudaFree(d_buf));
+        CHECK_CUSPARSE(cusparseDestroyDnMat(v_dense));
+        CHECK_CUBLAS(cublasSgemm(handle.dh(), 
+                                 CUBLAS_OP_N, CUBLAS_OP_N,
+                                 V_tr.cols, V.global_rows, V_tr.cols,
+                                 &alpha, 
+                                 K.mat->dM, V_tr.cols,
+                                 V_tr.d_v_dense, V_tr.cols,
+                                 &beta,
+                                 d_T,
+                                 V_tr.cols));
+        CHECK_CUDA(cudaDeviceSynchronize());
+    }
+
+    CHECK_CUSPARSE(cusparseDestroySpMat(loc_V));
+
+#ifndef BASIC
+    timer.e_spmm += get_time_elapsed(spmm_start);
+    mpi_start = hrc::now();
+#endif
+
+    // Reduce scatter final result into E
+    int recvcount = E.mat->h_ * E.mat->w_;
+    MPI_Reduce_scatter_block(d_T, E.mat->dM, recvcount, MPI_FLOAT, MPI_SUM, grid->col_comm);
+                                     
+#ifndef BASIC
+    timer.e_mpi += get_time_elapsed(mpi_start);
+#endif
+
     return EXIT_SUCCESS;
 }
 
