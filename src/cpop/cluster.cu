@@ -67,12 +67,17 @@ V_t::V_t(int64_t m, int64_t k, bool sparse, MPI_Comm comm) {
       1e-6f;  // a very small number to start
   previous_local_k_means_objective_score =
       1e-6f;  // a very small number to start
+              
+  CHECK_CUDA(cudaMalloc(&d_csr_colinds, sizeof(int) * (m)));
+  CHECK_CUDA(cudaMalloc(&d_csr_rowptrs, sizeof(int) * (k + 1)));
+  CHECK_CUDA(cudaMalloc(&d_csr_val, sizeof(float) * (m)));
 
   // Implementation-specific initialization
   if (sparse) {
     CHECK_CUDA(cudaMalloc(&values, m * sizeof(float)));
     CHECK_CUDA(cudaMalloc(&global_csc_col_offsets, (m + 1) * sizeof(int)));
     CHECK_CUDA(cudaMalloc(&local_csc_col_offsets, (t + 1) * sizeof(int)));
+
 
     // basic CSC initializations (todo: GPU)
     int* global_csc_col_offsets_ = (int*)calloc(m + 1, sizeof(int));
@@ -197,6 +202,9 @@ V_t::~V_t() {
   CHECK_CUDA(cudaFree(local_k_means_objective_score));
   CHECK_CUDA(cudaFree(local_k_means_objective_delta));
   CHECK_CUDA(cudaFree(prev_point_to_cluster_distances));
+  CHECK_CUDA(cudaFree(d_csr_colinds));
+  CHECK_CUDA(cudaFree(d_csr_rowptrs));
+  CHECK_CUDA(cudaFree(d_csr_val));
   free(t_sizes);
   free(displs);
   if (sparse) {
@@ -317,6 +325,59 @@ int DnVec_t::print() {
 DnVec_t::~DnVec_t() {
   CHECK_CUDA(cudaFree(dz));
   CHECK_CUSPARSE(cusparseDestroyDnVec(z));
+}
+
+void csc_to_csr(Handle& handle, cusparseSpMatDescr_t * spmat, 
+                int64_t rows, int64_t cols, int64_t nnz,
+                float * d_csc_val, int * d_csc_rowinds, int * d_csc_colptrs,
+                float * d_csr_val, int * d_csr_colinds, int * d_csr_rowptrs)
+{
+    size_t buf_size = 0;
+    void * d_buf = nullptr;
+    CHECK_CUSPARSE(cusparseCsr2cscEx2_bufferSize(handle.sh(),
+                                                 cols,
+                                                 rows,
+                                                 nnz,
+                                                 d_csc_val,
+                                                 d_csc_colptrs,
+                                                 d_csc_rowinds,
+                                                 d_csr_val,
+                                                 d_csr_rowptrs,
+                                                 d_csr_colinds,
+                                                 CUDA_R_32F,
+                                                 CUSPARSE_ACTION_NUMERIC,
+                                                 CUSPARSE_INDEX_BASE_ZERO,
+                                                 CUSPARSE_CSR2CSC_ALG_DEFAULT,
+                                                 &buf_size));
+    CHECK_CUDA(cudaMalloc(&d_buf, buf_size));
+    CHECK_CUSPARSE(cusparseCsr2cscEx2(handle.sh(),
+                                     cols,
+                                     rows,
+                                     nnz,
+                                     d_csc_val,
+                                     d_csc_colptrs,
+                                     d_csc_rowinds,
+                                     d_csr_val,
+                                     d_csr_rowptrs,
+                                     d_csr_colinds,
+                                     CUDA_R_32F,
+                                     CUSPARSE_ACTION_NUMERIC,
+                                     CUSPARSE_INDEX_BASE_ZERO,
+                                     CUSPARSE_CSR2CSC_ALG_DEFAULT,
+                                     d_buf));
+
+    CHECK_CUSPARSE(cusparseCreateCsr(spmat,
+                                     rows,
+                                     cols,
+                                     nnz,
+                                     d_csr_rowptrs,
+                                     d_csr_colinds,
+                                     d_csr_val,
+                                     CUSPARSE_INDEX_32I,   
+                                     CUSPARSE_INDEX_32I,   
+                                     CUSPARSE_INDEX_BASE_ZERO, 
+                                     CUDA_R_32F));          
+    CHECK_CUDA(cudaFree(d_buf));
 }
 
 int spmm2d(Handle& handle, DistV2D& V, DistDnMat_t& K, DistDnMat_t& E)
@@ -738,8 +799,8 @@ int spmm2d_bs_allgatherv(Handle& handle, DistV2D& V, DistV2D& V_tr, DistDnMat_t&
                                                  V_tr.rows,
                                                  V_tr.nnz,
                                                  V_tr.d_vals,
-                                                 V_tr.d_rowinds,
                                                  V_tr.d_colptrs,
+                                                 V_tr.d_rowinds,
                                                  V_tr.d_csr_val,
                                                  V_tr.d_csr_rowptrs,
                                                  V_tr.d_csr_colinds,
@@ -765,6 +826,7 @@ int spmm2d_bs_allgatherv(Handle& handle, DistV2D& V, DistV2D& V_tr, DistDnMat_t&
                                      CUSPARSE_CSR2CSC_ALG_DEFAULT,
                                      d_buf));
 
+    CHECK_CUDA(cudaFree(d_buf));
 
     rowptrs_to_rownnz(V_tr.d_csr_rowptrs, V.rows);
 
@@ -958,21 +1020,26 @@ int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMa
 
 
     cusparseSpMatDescr_t v_gather;
-    CHECK_CUSPARSE(cusparseCreateCsc(&v_gather,
-                                     loc_v->k_,
-                                     sqrtp*loc_v->t,
-                                     sqrtp*loc_v->t,
-                                     d_colptrs,
-                                     d_rowinds,
-                                     d_vals,
-                                     CUSPARSE_INDEX_32I,
-                                     CUSPARSE_INDEX_32I,
-                                     CUSPARSE_INDEX_BASE_ZERO,
-                                     CUDA_R_32F));
+    //CHECK_CUSPARSE(cusparseCreateCsc(&v_gather,
+    //                                 loc_v->k_,
+    //                                 sqrtp*loc_v->t,
+    //                                 sqrtp*loc_v->t,
+    //                                 d_colptrs,
+    //                                 d_rowinds,
+    //                                 d_vals,
+    //                                 CUSPARSE_INDEX_32I,
+    //                                 CUSPARSE_INDEX_32I,
+    //                                 CUSPARSE_INDEX_BASE_ZERO,
+    //                                 CUDA_R_32F));
+    csc_to_csr(handle, &v_gather, 
+               loc_v->k_, sqrtp*loc_v->t, sqrtp*loc_v->t,
+               d_vals, d_rowinds, d_colptrs,
+               loc_v->d_csr_val, loc_v->d_csr_colinds, loc_v->d_csr_rowptrs);
     float alpha = 1.0f;
     float beta = 0.0f;
     if (handle.isSparse())
     {
+        
 
         size_t buffer_size;
         void* buffer;
@@ -1092,18 +1159,27 @@ int spmm(Handle& handle, V_t& V, DnMat_t& K, DnMat_t& E) {
 #endif
 
   if (handle.isSparse()) {
+
+    cusparseSpMatDescr_t v_csr;
+
+    csc_to_csr(handle, &v_csr, 
+               V.k_, V.m_, V.m_,
+               V.values, V.global_assignments, V.global_csc_col_offsets,
+               V.d_csr_val, V.d_csr_colinds, V.d_csr_rowptrs);
+
+
     // Allocate workspace buffer
     size_t buffer_size;
     void* buffer;
     CHECK_CUSPARSE(cusparseSpMM_bufferSize(
         handle.sh(), CUSPARSE_OPERATION_NON_TRANSPOSE,
-        CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, V.gV, K.M, &beta, E.M,
+        CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, v_csr, K.M, &beta, E.M,
         CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, &buffer_size));
     CHECK_CUDA(cudaMalloc(&buffer, buffer_size));
 
     // Perform SpMM
     CHECK_CUSPARSE(cusparseSpMM(handle.sh(), CUSPARSE_OPERATION_NON_TRANSPOSE,
-                                CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, V.gV,
+                                CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, v_csr,
                                 K.M, &beta, E.M, CUDA_R_32F,
                                 CUSPARSE_SPMM_ALG_DEFAULT, buffer));
 

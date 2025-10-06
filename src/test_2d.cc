@@ -102,7 +102,7 @@ int main(int argc, char* argv[]) {
   std::shared_ptr<ProcessGrid> grid2d = std::make_shared<ProcessGrid>(grid_size, grid_size, true);
 
   /** Const */
-  bool s = false;
+  bool s = true;
   int m = 2048;
   int n = 8;
   int k = 128;

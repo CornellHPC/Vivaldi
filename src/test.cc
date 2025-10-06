@@ -463,7 +463,7 @@ int main(int argc, char* argv[]) {
   MPI_Comm_size(comm, &size);
 
   /** Const */
-  bool s = false;
+  bool s = true;
   int m = 33;
   int n = 8;
   int k = 2;

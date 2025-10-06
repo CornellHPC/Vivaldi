@@ -70,7 +70,7 @@ int main(int argc, char* argv[]) {
   std::shared_ptr<ProcessGrid> grid1d = std::make_shared<ProcessGrid>(world_size, 1, false);
 
   /** Const */
-  bool s = false;
+  bool s = true;
   int m = 1024;
   int n = 8;
   int k = 32;

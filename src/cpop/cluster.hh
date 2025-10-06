@@ -87,6 +87,10 @@ struct V_t {
   int* global_assignments;      // CSC row indices
   int* global_csc_col_offsets;  // CSC column offsets
   float* values;                // CSC values of global V
+  
+  int * d_csr_colinds;
+  int * d_csr_rowptrs;
+  float * d_csr_val;
 
   // GPU pointers to the components of the local CSC V matrix
   // Aside from local_csc_col_offsets, these are the same as the global ones
@@ -174,6 +178,10 @@ struct DistV1D {
 
 };
 
+void csc_to_csr(Handle& handle, cusparseSpMatDescr_t * spmat,
+                int64_t rows, int64_t cols, int64_t nnz,
+                float * d_csc_val, int * d_csc_rowinds, int * d_csc_colptrs,
+                float * d_csr_val, int * d_csr_colinds, int * d_csr_rowptrs);
 
 /**
  * @brief Computes E by SpMM routine

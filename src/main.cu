@@ -13,7 +13,7 @@ using namespace cpop;
 
 /****************
  * 2D Clustering
- * **************/
+ ****************/
 
 int cluster2d(ArgParse args, MPI_Comm comm) 
 {
@@ -196,6 +196,7 @@ int cluster2d(ArgParse args, MPI_Comm comm)
 
 
 #ifndef BASIC
+    timer.vr_computation += get_time_elapsed(vr_computation_start);
     vr_computation_start = hrc::now();
 #endif
 
@@ -233,7 +234,7 @@ int cluster2d(ArgParse args, MPI_Comm comm)
 
 /****************
  * 1.5D Clustering
- * **************/
+ ****************/
 
 int cluster15d(ArgParse args, MPI_Comm comm) 
 {
@@ -382,6 +383,7 @@ int cluster15d(ArgParse args, MPI_Comm comm)
 
 
 #ifndef BASIC
+    timer.vr_computation += get_time_elapsed(vr_computation_start);
     vr_computation_start = hrc::now();
 #endif
 
@@ -414,7 +416,7 @@ int cluster15d(ArgParse args, MPI_Comm comm)
 
 /****************
  * 1D Clustering
- * **************/
+ ****************/
 /**
  * @brief Cluster the data using the popcorn kernel k-means algorithm.
  * 

@@ -183,15 +183,15 @@ void Timer::save_all(const char* path, float score) {
   } else {
     file << "Dead process counts: Not recorded" << std::endl;
   }
-  if (global_nnz_perproc != nullptr) {
-    file << "NNZ per proc: " << std::endl;
-    for (int i=0; i<niter; ++i) {
-      file << "    Iteration "<<i<<std::endl;
-      for (int j=0; j<size; ++j) {
-        file << "        Process "<<j<<": "<<global_nnz_perproc[j * niter + i]<<std::endl;
-      }
-    }
-  }
+  //if (global_nnz_perproc != nullptr) {
+  //  file << "NNZ per proc: " << std::endl;
+  //  for (int i=0; i<niter; ++i) {
+  //    file << "    Iteration "<<i<<std::endl;
+  //    for (int j=0; j<size; ++j) {
+  //      file << "        Process "<<j<<": "<<global_nnz_perproc[j * niter + i]<<std::endl;
+  //    }
+  //  }
+  //}
       
   file.close();  // Close the file
   std::cout << "-------------------" << std::endl;
@@ -211,6 +211,7 @@ void Timer::save_all(const char* path, float score) {
   std::cout << "C MPI: " << c_mpi << " ms" << std::endl;
   std::cout << "C Computation: " << c_computation << " ms" << std::endl;
   std::cout << "VR Computation: " << vr_computation << " ms" << std::endl;
+  std::cout << "Setup: " << setup << " ms" << std::endl;
   std::cout << "Elapsed: " << elapsed << " ms" << std::endl;
   std::cout << "Iterations before convergence: " << niter << std::endl;
   // std::cout << "Cluster score: " << score << std::endl;
