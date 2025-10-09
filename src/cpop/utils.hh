@@ -76,8 +76,10 @@ struct Timer {
 
   // Vi
   int64_t vi_elapsed = 0;
-
   int64_t setup = 0;
+
+  // Misc.
+  int64_t tmp = 0;
 
   // todo: allgather average over ranks
   // E
@@ -101,6 +103,8 @@ struct Timer {
   int64_t vr_elapsed = 0;
   int64_t vr_mpi = 0;
   int64_t vr_computation = 0;
+  int64_t vr_argmin = 0;
+  int64_t minloc = 0;
 
   // Number of iterations before convergence
   int64_t niter = 0;

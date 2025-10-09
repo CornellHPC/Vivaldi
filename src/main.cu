@@ -182,6 +182,7 @@ int cluster2d(ArgParse args, MPI_Comm comm)
     timer.c_mpi += get_time_elapsed(c_mpi_start);
     timer.c_elapsed += get_time_elapsed(c_start);
     auto vr_computation_start = hrc::now();
+    auto vr_argmin = hrc::now();
 #endif
 
 
@@ -194,8 +195,9 @@ int cluster2d(ArgParse args, MPI_Comm comm)
 
     argmin2d(E, c, V);  // Argmin kernel (compute D matrix)
 
-
 #ifndef BASIC
+    MPI_Barrier(comm);
+    timer.vr_argmin += get_time_elapsed(vr_argmin);
     timer.vr_computation += get_time_elapsed(vr_computation_start);
     vr_computation_start = hrc::now();
 #endif

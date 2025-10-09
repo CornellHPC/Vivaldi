@@ -1020,17 +1020,6 @@ int spmm15d(Handle& handle, DistV1D& V, DistDnMat_t& K, DistDnMat_t& E, DistDnMa
 
 
     cusparseSpMatDescr_t v_gather;
-    //CHECK_CUSPARSE(cusparseCreateCsc(&v_gather,
-    //                                 loc_v->k_,
-    //                                 sqrtp*loc_v->t,
-    //                                 sqrtp*loc_v->t,
-    //                                 d_colptrs,
-    //                                 d_rowinds,
-    //                                 d_vals,
-    //                                 CUSPARSE_INDEX_32I,
-    //                                 CUSPARSE_INDEX_32I,
-    //                                 CUSPARSE_INDEX_BASE_ZERO,
-    //                                 CUDA_R_32F));
     csc_to_csr(handle, &v_gather, 
                loc_v->k_, sqrtp*loc_v->t, sqrtp*loc_v->t,
                d_vals, d_rowinds, d_colptrs,
@@ -1327,8 +1316,13 @@ int argmin2d(DistDnMat_t& E, DistDnVec_t& c, DistV2D& V)
       V.d_minpairs, offset);
   cudaDeviceSynchronize();
 
-
+#ifndef BASIC
+  auto ts = hrc::now();
+#endif
   MPI_Allreduce(MPI_IN_PLACE, V.d_minpairs, V.cols, MPI_FLOAT_INT, MPI_MINLOC, V.grid->col_comm);
+#ifndef BASIC
+  timer.minloc += get_time_elapsed(ts);
+#endif
 
 
   return EXIT_SUCCESS;
@@ -1455,7 +1449,10 @@ int set_V_from_assignments2d(DistV2D& V)
                   0, (int)V.global_rows, (int)V.cols));
   CHECK_CUDA(cudaFree(d_tmp));
   CHECK_CUDA(cudaDeviceSynchronize());
+
+
   MPI_Allreduce(MPI_IN_PLACE, V.d_cluster_sizes, V.global_rows, MPI_INT, MPI_SUM, V.grid->row_comm);
+
 
   int lower = V.tile_rows[0]* V.grid->col_rank;
   int upper = lower + V.tile_rows[0];

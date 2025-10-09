@@ -9,23 +9,26 @@ CMAP = plt.cm.viridis
 MARKERS = ["o", "s", "D", "^", "v", "p"]
 
 ALGS = ["1d", "1dr", "15d", "2d"]
+ALGS = ALGS[3]
+
+MAX_NUM_POINTS = 1600000
 
 DATASETS = [
     {
-        "bin_fname": "data/susy.bin",
-        "txt_fname": "data/susy.txt",
-        "zip_fname": "data/susy.xz",
-        "url": "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/SUSY.xz",
-        "name": "susy",
-        "label": "Susy",
+        "bin_fname": "/pscratch/sd/j/jbellav/cpop_data/kdd.bin",
+        "txt_fname": "/pscratch/sd/j/jbellav/cpop_data/kdd.txt",
+        "zip_fname": "/pscratch/sd/j/jbellav/cpop_data/kdd.bz2",
+        "url": "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/kdda.bz2",
+        "name": "kdd",
+        "label": "KDD",
         "m": 1600000,
-        "d": 18,
+        "d": 10000,
         "k": 2,
     },
     {
-        "bin_fname": "data/HIGGS.bin",
-        "txt_fname": "data/HIGGS.txt",
-        "zip_fname": "data/HIGGS.xz",
+        "bin_fname": "/pscratch/sd/j/jbellav/cpop_data/HIGGS.bin",
+        "txt_fname": "/pscratch/sd/j/jbellav/cpop_data/HIGGS.txt",
+        "zip_fname": "/pscratch/sd/j/jbellav/cpop_data/HIGGS.xz",
         "url": "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/HIGGS.xz",
         "name": "higgs",
         "label": "HIGGS",
@@ -34,9 +37,9 @@ DATASETS = [
         "k": 2,
     },
     {
-        "bin_fname": "data/mnist8m.scale.bin",
-        "txt_fname": "data/mnist8m.scale.txt",
-        "zip_fname": "data/mnist8m.scale.xz",
+        "bin_fname": "/pscratch/sd/j/jbellav/cpop_data/mnist8m.scale.bin",
+        "txt_fname": "/pscratch/sd/j/jbellav/cpop_data/mnist8m.scale.txt",
+        "zip_fname": "/pscratch/sd/j/jbellav/cpop_data/mnist8m.scale.xz",
         "url": "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass/mnist8m.scale.xz",
         "name": "mnist8m",
         "label": "MNIST8m",
@@ -46,7 +49,7 @@ DATASETS = [
     },
 ]
 
-# TODO: Use remaining datasetse
+# TODO: Use remaining datasets
 DATASETS = [DATASETS[-1]]
 
 RANDOM_DATASET = {
@@ -59,6 +62,7 @@ RANDOM_DATASET = {
 
 P = [4, 16, 64, 256]  # number of GPUs (must be divisible by 4)
 K = [16, 32, 64, 128]
+K = K[2]
 C = ["IO", "K", "K Redist", "VI", "E", "E Transpose", "E MPI", "E Reduce", "E Gather", "E SpMM", "E other", "Z", "C", "C MPI", "C Computation", "VR Computation", "Elapsed"]
 
 
@@ -157,9 +161,9 @@ def prepare(dataset):
                     index = int(index) - 1
                     value = np.float32(value)
                     if index < 0 or index >= d:
-                        print(f"Index {index} out of bounds for d={d}")
+                        #print(f"Index {index} out of bounds for d={d}")
                         continue
-                features_vector[index] = value
+                    features_vector[index] = value
                 out.write(features_vector.tobytes())
                 if lines_read >= MAX_NUM_POINTS:
                     print(f"Reached maximum number of points: {MAX_NUM_POINTS}...")
@@ -192,7 +196,7 @@ def read_data(formatted_txt_file) -> np.ndarray:
     return np.array(data)
 
 
-def create_scripts(account, path=os.getcwd(), n_trials=5, base_m=2**17, max_m=2**20):
+def create_scripts(account, path=os.getcwd(), n_trials=1, base_m=192000, max_m=2**21):
     P = [2**i for i in range(2,9,2)]
 
     for p in P:
@@ -246,7 +250,7 @@ def create_script(path, prefix, account, p, m, k, dataset, alg, d=None, sparse=N
     nodes = math.ceil(p /4)
 
     log_dir = os.path.join(path, "logs")
-    results_dir = os.path.join(path, "results")
+    results_dir = os.path.join(path, "./results_minloc")
     scripts_dir = os.path.join(path, "scripts")
 
     os.makedirs(log_dir, exist_ok=True)
@@ -271,18 +275,22 @@ def create_script(path, prefix, account, p, m, k, dataset, alg, d=None, sparse=N
         alg = [alg]
 
     # Max of 45 seconds for one trial estimated through experiments
-    seconds_per_trial = 45
+    seconds_per_trial = 90
     total_time_seconds = seconds_per_trial*len(m)*len(d)*len(k)*len(dataset)*len(alg)
     timestamp = str(datetime.timedelta(seconds=total_time_seconds))
 
     with open(script_fname, "w") as f:
+        if nodes > 4:
+            qos = "premium"
+        else:
+            qos = "regular"
         f.writelines([
             "#!/bin/bash\n",
             f"#SBATCH --nodes={nodes}\n",
             f"#SBATCH --gpus={p}\n",
             f"#SBATCH --time={timestamp}\n",
-            "#SBATCH --constraint=gpu&hbm40g\n",
-            "#SBATCH --qos=regular\n",
+            "#SBATCH --constraint=gpu&hbm80g\n",
+            f"#SBATCH --qos={qos}\n",
             f"#SBATCH --account={account}\n",
             f"#SBATCH --output={log_fname}_%a\n",
             f"#SBATCH --error={log_fname}_%a_err\n",
@@ -301,9 +309,9 @@ def create_script(path, prefix, account, p, m, k, dataset, alg, d=None, sparse=N
                                 _d = _dataset["d"]
                             _m = min(_m, _dataset["m"])
                             if sparse is None:
-                                _sparse = int(_k > 32)
+                                _sparse = True
                             else:
-                                _sparse = int(sparse)
+                                _sparse = True
 
                             name = f"{prefix}_{p}_{_m}_{_d}_{_k}_{niter}_{_sparse}_{gamma}_{c}_{r}_{convergence}_{basic}_{dataset_label}_{_alg}"
                             log_fname = os.path.join(log_dir, f"{name}_out")
@@ -336,7 +344,7 @@ def get_scaling_data(scaling_type, p, m, d, k, niter, sparse, gamma, c, r, conve
     return scaling_data
 
 
-def construct_graphs(path=os.getcwd(), n_trials=5, base_m=2**17):
+def construct_graphs(path=os.getcwd(), n_trials=1, base_m=2**17):
     os.makedirs("graphs", exist_ok=True)
 
     niter = 100
@@ -356,7 +364,8 @@ def construct_graphs(path=os.getcwd(), n_trials=5, base_m=2**17):
         for alg in ALGS:
             y = []
             for p in P:
-                sparse = int(k > 32)
+                sparse = True
+                #sparse = int(k > 32)
                 scaling_data = get_scaling_data("strong", p, m, d, k, niter, sparse, gamma, c, r, convergence, basic, input_dataset_name, alg, n_trials)
                 elapsed = scaling_data["Elapsed"].mean()
                 y.append(elapsed)
@@ -417,7 +426,7 @@ if __name__ == "__main__":
         print(f"Invalid action. Must be one of {usage_legal}")
         sys.exit(1)
     if action == "create_scripts":
-        create_scripts("m4341")
+        create_scripts("m4646")
         print("Generated scripts in experiments/scripts/ directory.")
     if action == "create_random":
         create_random()

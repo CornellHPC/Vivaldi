@@ -169,6 +169,7 @@ void Timer::save_all(const char* path, float score) {
   file << "C MPI: " << c_mpi << std::endl;
   file << "C Computation: " << c_computation << std::endl;
   file << "VR Computation: " << vr_computation << std::endl;
+  file << "VR Argmin: " << vr_argmin << std::endl;
   file << "Elapsed: " << elapsed << std::endl;
   file << "Iterations before convergence: " << niter << std::endl;
   // file << "Cluster score: " << score << std::endl;
@@ -211,6 +212,7 @@ void Timer::save_all(const char* path, float score) {
   std::cout << "C MPI: " << c_mpi << " ms" << std::endl;
   std::cout << "C Computation: " << c_computation << " ms" << std::endl;
   std::cout << "VR Computation: " << vr_computation << " ms" << std::endl;
+  std::cout << "VR Argmin: " << vr_argmin << std::endl;
   std::cout << "Setup: " << setup << " ms" << std::endl;
   std::cout << "Elapsed: " << elapsed << " ms" << std::endl;
   std::cout << "Iterations before convergence: " << niter << std::endl;
@@ -256,6 +258,7 @@ void Timer::save_allranks(const char* path, float score) {
   file << "C MPI: " << c_mpi << std::endl;
   file << "C Computation: " << c_computation << std::endl;
   file << "VR Computation: " << vr_computation << std::endl;
+  file << "Minloc: " << minloc << std::endl;
   file << "Elapsed: " << elapsed << std::endl;
   file << "Iterations before convergence: " << niter << std::endl;
   if (global_nnz_perproc != nullptr) {
@@ -289,7 +292,11 @@ void Timer::save_allranks(const char* path, float score) {
     std::cout << "C MPI: " << c_mpi << " ms" << std::endl;
     std::cout << "C Computation: " << c_computation << " ms" << std::endl;
     std::cout << "VR Computation: " << vr_computation << " ms" << std::endl;
+    std::cout << "VR Argmin: " << vr_argmin << " ms" << std::endl;
+    std::cout << "Minloc: " << minloc << " ms" << std::endl;
+    std::cout << "Setup: " << setup << " ms" << std::endl;
     std::cout << "Elapsed: " << elapsed << " ms" << std::endl;
+    std::cout << "Tmp: " << tmp << " ms" << std::endl;
     std::cout << "Iterations before convergence: " << niter << std::endl;
     // std::cout << "Cluster score: " << score << std::endl;
     std::cout << "Results saved to: " << path << std::endl;
