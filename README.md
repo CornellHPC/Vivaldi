@@ -102,7 +102,7 @@ More rigorous scaling testing should be done from within the `experiments` folde
 ### Additional Profiling
 * `make profile` launches nsys profiling on rand on 1 GPU
 
-### Citation
+## Citation
 
 If you find this repo helpful to your work, please cite our article:
 
@@ -110,6 +110,6 @@ If you find this repo helpful to your work, please cite our article:
 TBD
 ```
 
-### Acknowledgement
+## Acknowledgement
 
 This research used resources of the National Energy Research Scientific Computing Center, a DOE Office of Science User Facility supported by the Office of Science of the U.S. Department of Energy under Contract No. DE-AC02-05CH11231 using NERSC award ASCR-ERCAP0032541. This work was done in collaboration to the Hicrest Laboratory at the University of Trento. 
