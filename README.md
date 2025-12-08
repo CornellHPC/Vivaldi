@@ -101,3 +101,11 @@ More rigorous scaling testing should be done from within the `experiments` folde
 
 ### Additional Profiling
 * `make profile` launches nsys profiling on rand on 1 GPU
+
+### Citation
+
+If you find this repo helpful to your work, please cite our article:
+
+```
+TBD
+```
