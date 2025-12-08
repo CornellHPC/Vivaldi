@@ -1,4 +1,4 @@
-# Kettlecorn: Multi-GPU Kernel K-Means with Sparse Linear Algebra
+# Communication-Avoiding Linear Algebraic Kernel K-Means on GPUs
 
 ## Relevant File Tree
 
@@ -18,7 +18,7 @@
 └── Makefile       - start point for building and testing
 ```
 
-## Relevant Library Requirements
+## Relevant Library Requirement
 
 This library has been tested with the following requirements:
 
