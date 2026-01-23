@@ -107,9 +107,22 @@ More rigorous scaling testing should be done from within the `experiments` folde
 If you find this repo helpful to your work, please cite our article:
 
 ```
-TBD
+@inproceedings{bellavita2026kkmeans,
+  title={Communication-Avoiding Linear Algebraic Kernel K-Means on GPUs},
+  author={Bellavita, Julian and Rubino, Matthew and Iyer, Nakul and Chang, Andrew and Devarakonda, Aditya and Vella, Flavio and Guidi, Giulia},
+  booktitle={Proceedings of the 40th IEEE International Parallel and Distributed Processing Symposium (IPDPS)},
+  year={2026},
+  organization={IEEE},
+  address={to appear},
+  pages={--},
+  doi={},
+}
 ```
 
 ## Acknowledgement
 
-This research used resources of the National Energy Research Scientific Computing Center, a DOE Office of Science User Facility supported by the Office of Science of the U.S. Department of Energy under Contract No. DE-AC02-05CH11231 using NERSC award ASCR-ERCAP0032541. This work was done in collaboration to the Hicrest Laboratory at the University of Trento. 
+This research used resources of the National Energy Research Scientific Computing Center, a DOE Office of Science User Facility supported by the Office of Science of the U.S. Department of Energy under Contract No. DE-AC02-05CH11231, using NERSC award ASCR-ERCAP0030076. 
+This material is based upon work supported by the U.S. Department of Energy, Office of Science, Office of Advanced Scientific Computing Research, Department of Energy Computational Science Graduate Fellowship under Award Number DE-SC0025528.
+The authors acknowledge financial support from \textit{ICSC – Centro Nazionale di Ricerca in High-Performance Computing, Big Data and Quantum Computing}, funded by the European Union -- NextGenerationEU.
+This work received funding from the European High-Performance Computing Joint Undertaking (JU) under grant agreement No. 101175702 and the National Institute of Higher Mathematics Francesco Severi. 
+The second through fourth authors were affiliated with Cornell University at the time this work was conducted. This work was done in collaboration to the Hicrest Laboratory at the University of Trento. 
