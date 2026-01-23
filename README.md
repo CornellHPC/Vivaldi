@@ -118,6 +118,7 @@ If you find this repo helpful to your work, please cite our article:
   doi={},
 }
 ```
+Our algorithms are implemented in the open-source software Vivaldi (named after the composer) and are available in this repository. The sliding window algorithm used as a baseline in the paper is available [here](https://github.com/aditya08/sliding-window-kernel-kmeans).
 
 ## Acknowledgement
 
