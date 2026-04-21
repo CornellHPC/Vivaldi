@@ -1,5 +1,23 @@
 # Communication-Avoiding Linear Algebraic Kernel K-Means on GPUs
 
+## Citation
+
+If you find this repo helpful to your work, please cite our article:
+
+```
+@inproceedings{bellavita2026kkmeans,
+  title={Communication-Avoiding Linear Algebraic Kernel K-Means on GPUs},
+  author={Bellavita, Julian and Rubino, Matthew and Iyer, Nakul and Chang, Andrew and Devarakonda, Aditya and Vella, Flavio and Guidi, Giulia},
+  booktitle={Proceedings of the 40th IEEE International Parallel and Distributed Processing Symposium (IPDPS)},
+  year={2026},
+  organization={IEEE},
+  address={to appear},
+  pages={--},
+  doi={},
+}
+```
+Our algorithms are implemented in the open-source software Vivaldi (named after the composer) and are available in this repository. The sliding window algorithm used as a baseline in the paper is available [here](https://github.com/aditya08/sliding-window-kernel-kmeans).
+
 ## Relevant File Tree
 
 ```
@@ -102,23 +120,6 @@ More rigorous scaling testing should be done from within the `experiments` folde
 ### Additional Profiling
 * `make profile` launches nsys profiling on rand on 1 GPU
 
-## Citation
-
-If you find this repo helpful to your work, please cite our article:
-
-```
-@inproceedings{bellavita2026kkmeans,
-  title={Communication-Avoiding Linear Algebraic Kernel K-Means on GPUs},
-  author={Bellavita, Julian and Rubino, Matthew and Iyer, Nakul and Chang, Andrew and Devarakonda, Aditya and Vella, Flavio and Guidi, Giulia},
-  booktitle={Proceedings of the 40th IEEE International Parallel and Distributed Processing Symposium (IPDPS)},
-  year={2026},
-  organization={IEEE},
-  address={to appear},
-  pages={--},
-  doi={},
-}
-```
-Our algorithms are implemented in the open-source software Vivaldi (named after the composer) and are available in this repository. The sliding window algorithm used as a baseline in the paper is available [here](https://github.com/aditya08/sliding-window-kernel-kmeans).
 
 ## Acknowledgement
 
